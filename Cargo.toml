@@ -1,0 +1,16 @@
+[package]
+name = "lattice-qcd-rs"
+version = "0.1.0"
+authors = [" Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
+license = "MIT"
+categories = ["science"]
+description  = "Lattice QCD"
+keywords  = ["QCD", "Lattice"]
+
+[dependencies]
+nalgebra = "0.18"
+once_cell = "1.5.2"
+approx = "0.4.0"
