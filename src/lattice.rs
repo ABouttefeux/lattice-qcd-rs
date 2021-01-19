@@ -1,29 +1,27 @@
 
-extern crate nalgebra as na;
-
 use na::{
     Vector4
 };
-
 use approx::*;
 use super::Real;
-use std::vec::Vec;
 
 pub type PositiveF64 = Real;
 
 #[derive(Clone, Debug)]
 pub struct LatticeCyclique {
     size: PositiveF64,
-    number_of_points: usize,
-    dim : usize,
+    dim: usize,
 }
 
 impl LatticeCyclique {
-    pub fn get_link_canonical(&self, pos: &[usize; 4], dir: &Direction) -> LatticeLinkCanonical {
-        let mut pos_link: [usize; 4] = [0; 4];
+    
+    pub const DIM: usize = 4;
+    
+    pub fn get_link_canonical(&self, pos: &[usize; LatticeCyclique::DIM], dir: &Direction) -> LatticeLinkCanonical {
+        let mut pos_link: [usize; LatticeCyclique::DIM] = [0; LatticeCyclique::DIM];
         if dir.is_positive() {
             for i in 0..pos.len() {
-                pos_link[i] = pos[i] % self.number_of_points();
+                pos_link[i] = pos[i] % self.dim();
             }
             return LatticeLinkCanonical::new(pos_link, dir.clone()).unwrap();
         }
@@ -32,21 +30,21 @@ impl LatticeCyclique {
             for i in 0..pos.len() {
                 let diff = - vec[i] as usize;
                 if pos[i] == 0 && diff == 1 {
-                    pos_link[i] = self.number_of_points - 1_usize;
+                    pos_link[i] = self.dim - 1_usize;
                 }
                 else {
                     pos_link[i] = pos[i] - diff;
                 }
-                pos_link[i] = pos_link[i] % self.number_of_points();
+                pos_link[i] = pos_link[i] % self.dim();
             }
             return LatticeLinkCanonical::new(pos_link, dir.to_positive()).unwrap();
         }
     }
     
-    pub fn get_link (&self, pos: &[usize; 4], dir: &Direction) -> LatticeLink {
-        let mut pos_link = [0_usize; 4];
+    pub fn get_link (&self, pos: &[usize; LatticeCyclique::DIM], dir: &Direction) -> LatticeLink {
+        let mut pos_link = [0_usize; LatticeCyclique::DIM];
         for i in 0..pos.len() {
-            pos_link[i] = pos[i] % self.number_of_points();
+            pos_link[i] = pos[i] % self.dim();
         }
         LatticeLink::new(pos_link, dir.clone())
     }
@@ -55,30 +53,39 @@ impl LatticeCyclique {
         self.get_link_canonical(l.pos(), l.dir())
     }
     
-    pub fn number_of_points(&self) -> usize {
-        self.number_of_points
+    pub fn dim(&self) -> usize {
+        self.dim
     }
     
     // TODO iterators ?
-    pub fn get_links(&self, time_pos: usize) -> IteratorLatticeLinkCanonical {
-        return IteratorLatticeLinkCanonical::new(&self, &self.get_link_canonical(&[0, 0, 0, time_pos], Direction::POSITIVES.first().unwrap()));
+    pub fn get_links_space(&self, time_pos: usize) -> IteratorLatticeLinkCanonical {
+        return IteratorLatticeLinkCanonical::new(&self, &self.get_link_canonical(&[0, 0, 0, time_pos], Direction::POSITIVES_SPACE.first().unwrap()));
     }
     
     pub fn get_points(&self, time_pos: usize) ->  IteratorLatticePoint{
         return IteratorLatticePoint::new(&self, &[0, 0, 0, time_pos]);
     }
     
-    pub fn new(size: PositiveF64, number_of_points: usize) -> Option<Self>{
+    pub fn new(size: PositiveF64, dim: usize) -> Option<Self>{
         if size < 0_f64 {
             return None;
         }
-        if number_of_points < 2 {
+        if dim < 2 {
             return None;
         }
         return Some(Self {
-            size, number_of_points, dim: 4
+            size, dim
         })
     }
+    
+    pub fn get_number_of_canonical_links_space(&self) -> usize {
+        self.get_number_of_points() * 3
+    }
+    
+    pub fn get_number_of_points(&self) -> usize {
+        self.dim().pow(3)
+    }
+    
 }
 
 #[derive(Clone, Debug)]
@@ -102,16 +109,17 @@ impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
     
     // TODO improve
     fn next(&mut self) -> Option<Self::Item> {
+        const LINK_ARRAY: [Direction; 3] = Direction::POSITIVES_SPACE;
         let previous_el = self.element.clone();
         match &mut self.element {
             Some(element) => {
-                let mut iter_dir = Direction::POSITIVES.iter();
+                let mut iter_dir = LINK_ARRAY.iter();
                 iter_dir.find(|el| *el == element.dir());
                 let new_dir = iter_dir.next();
                 match new_dir {
                     Some(dir) => *element.dir_mut() = dir.clone(),
                     None => {
-                        *element.dir_mut() = Direction::POSITIVES.first().unwrap().clone();
+                        *element.dir_mut() = LINK_ARRAY.first().unwrap().clone();
                         let mut iter = IteratorLatticePoint::new(self.lattice, element.pos());
                         iter.next();
                         match iter.next() {
@@ -134,11 +142,11 @@ impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
 #[derive(Clone, Debug)]
 pub struct IteratorLatticePoint<'a>  {
     lattice: &'a LatticeCyclique,
-    element: Option<LatticePoint4>,
+    element: Option<LatticePoint>,
 }
 
 impl<'a> IteratorLatticePoint<'a> {
-    fn new(lattice: &'a LatticeCyclique, first_el: &LatticePoint4) -> Self {
+    fn new(lattice: &'a LatticeCyclique, first_el: &LatticePoint) -> Self {
         Self {
             lattice,
             element: Some(first_el.clone()),
@@ -148,7 +156,7 @@ impl<'a> IteratorLatticePoint<'a> {
 
 
 impl<'a> Iterator for IteratorLatticePoint<'a> {
-    type Item = LatticePoint4;
+    type Item = LatticePoint;
     
     // TODO improve
     fn next(&mut self) -> Option<Self::Item> {
@@ -157,7 +165,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
             Some(el) => {
                 el[0] += 1;
                 for i in 0..el.len() - 1 {
-                    while el[i] >= self.lattice.number_of_points() {
+                    while el[i] >= self.lattice.dim() {
                         if i <= 1 {
                             el[i + 1] += 1;
                         }   
@@ -165,7 +173,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
                             self.element = None;
                             return previous_el;
                         }
-                        el[i] -= self.lattice.number_of_points()
+                        el[i] -= self.lattice.dim()
                     }
                 }
             },
@@ -176,15 +184,15 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
 }
 
 
-pub type LatticePoint4 = [usize; 4];
+pub type LatticePoint = [usize; 4];
 
-impl From<LatticeLink> for LatticePoint4 {
+impl From<LatticeLink> for LatticePoint {
     fn from(f: LatticeLink) -> Self{
         f.from
     }
 } 
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LatticeLinkCanonical {
     from: [usize; 4],
     dir: Direction,
@@ -221,7 +229,7 @@ impl From<LatticeLinkCanonical> for LatticeLink {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LatticeLink {
     from: [usize; 4],
     dir: Direction,
@@ -249,7 +257,7 @@ impl LatticeLink {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Sign {
     Negative, Positive, Zero
 }
@@ -289,7 +297,7 @@ impl From<f64> for Sign {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
     XPos, XNeg, YPos, YNeg, ZPos, ZNeg, TPos, TNeg,
 }
@@ -382,6 +390,7 @@ impl Direction{
     }
     
     const POSITIVES: [Self; 4] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos];
+    const POSITIVES_SPACE: [Self; 3] = [Direction::XPos, Direction::YPos, Direction::ZPos];
 }
 
 
