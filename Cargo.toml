@@ -9,6 +9,8 @@ license = "MIT"
 categories = ["science"]
 description  = "Lattice QCD"
 keywords  = ["QCD", "Lattice"]
+publish = false
+
 
 [dependencies]
 nalgebra = "0.24.0"
@@ -19,3 +21,11 @@ rand = "0.8.2"
 rand_distr = "0.4.0"
 #t1ha = "0.1.0"
 #seahash = "4.1.0"
+murmur_hash_3 = { version = "0.1.0", git = "https://github.com/ABouttefeux/murmur3-rs", branch = "main" }
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false

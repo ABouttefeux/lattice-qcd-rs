@@ -7,8 +7,10 @@ use super::{
         LatticePoint,
         LatticeCyclique,
         PositiveF64,
+        LatticeLink,
     },
     Vector8,
+    su3,
     su3::{
         MatrixExp,
         GENERATORS,
@@ -29,35 +31,53 @@ use  std::{
 //use t1ha::T1haHashMap;
 
 type HashMapUse<K,V> = HashMap<K,V>;
-type OutputNumber = Real;
+
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Su3Adjoint {
-    data: Vector8<OutputNumber>
+    data: Vector8<Real>
 }
 
 impl Su3Adjoint {
     
-    pub fn data(&self) -> &Vector8<OutputNumber> {
+    pub fn new(data: Vector8<Real>)-> Self {
+        Self {data}
+    }
+    
+    pub fn data(&self) -> &Vector8<Real> {
         &self.data
     }
     
-    pub fn to_matrix(&self) -> Matrix3<na::Complex<OutputNumber>> {
+    pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
         let mut mat = Matrix3::from_element(ZERO);
         for i in 0..self.data.len() {
-            mat += *GENERATORS[i] * na::Complex::<OutputNumber>::from(self.data[i]);
+            mat += *GENERATORS[i] * na::Complex::<Real>::from(self.data[i]);
         }
         return mat;
     }
     
-    pub fn to_su3(self) -> Matrix3<na::Complex<OutputNumber>> {
-        (self.to_matrix() * na::Complex::<OutputNumber>::i() ).exp()
+    pub fn to_su3(self) -> Matrix3<na::Complex<Real>> {
+        //(self.to_matrix() * na::Complex::<Real>::i() ).exp()
+        su3::su3_exp_i(self)
     }
     
-    pub fn random(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<OutputNumber>) -> Self {
+    pub fn exp(self) -> Matrix3<na::Complex<Real>> {
+        su3::su3_exp_r(self)
+    }
+    
+    pub fn random(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
         Self {
-            data : Vector8::<OutputNumber>::from_fn(|_,_| d.sample(rng))
+            data : Vector8::<Real>::from_fn(|_,_| d.sample(rng))
         }
+    }
+    
+    pub fn t(&self) -> na::Complex<Real> {
+        let m = self.to_matrix();
+        - na::Complex::from(0.5_f64) * (m * m).trace()
+    }
+    
+    pub fn d(&self) -> na::Complex<Real> {
+        self.to_matrix().determinant() * I
     }
     
 }
@@ -65,18 +85,17 @@ impl Su3Adjoint {
 #[derive(Debug)]
 pub struct LinkMatrix {
     max_time : usize,
-    data: HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<OutputNumber>>>,
+    data: HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<Real>>>,
 }
 
 impl LinkMatrix {
-        
-    pub fn data(&self) -> &HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<OutputNumber>>> {
+    
+    pub fn data(&self) -> &HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<Real>>> {
         &self.data
     }
     
-    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<OutputNumber>) -> Self {
-        let mut data = HashMapUse::default();
-        data.reserve(l.get_number_of_canonical_links_space());
+    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
+        let mut data = HashMapUse::with_capacity(l.get_number_of_canonical_links_space());
         for i in l.get_links_space(0) {
             let matrix = Su3Adjoint::random(rng, d).to_su3();
             data.insert(i, matrix);
@@ -84,6 +103,24 @@ impl LinkMatrix {
         Self {
             max_time: 0,
             data,
+        }
+    }
+    
+    /// get the link matrix associtate to given link using the notation 
+    /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
+    pub fn get_matrix(&self, l: &LatticeCyclique, link: &LatticeLink)-> Option<Matrix3<na::Complex<Real>>> {
+        let link_c = l.get_canonical(link);
+        let matrix_o = self.data.get(&link_c);
+        match matrix_o {
+            Some(matrix) => {
+                let m_return = matrix.clone();
+                if link_c != *link {
+                    // that means the the link was in the negative direction
+                    return Some(m_return.adjoint());
+                }
+                return Some(m_return);
+            },
+            None => None,
         }
     }
     
@@ -103,9 +140,8 @@ impl EField {
         &self.data
     }
     
-    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<OutputNumber>) -> Self {
-        let mut data = HashMapUse::default();
-        data.reserve(l.dim().pow(3));
+    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
+        let mut data = HashMapUse::with_capacity(l.get_number_of_points());
         for i in l.get_points(0) {
             let p1 = Su3Adjoint::random(rng, d);
             let p2 = Su3Adjoint::random(rng, d);
@@ -133,7 +169,7 @@ impl LatticeSimulation {
         size: PositiveF64,
         number_of_points: usize,
         rng: &mut rand::rngs::ThreadRng,
-        d: &impl rand_distr::Distribution<OutputNumber>,
+        d: &impl rand_distr::Distribution<Real>,
     ) -> Option<Self> {
         let lattice_option = LatticeCyclique::new(size, number_of_points);
         if let None = lattice_option{

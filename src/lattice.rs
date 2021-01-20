@@ -7,6 +7,7 @@ use super::Real;
 
 pub type PositiveF64 = Real;
 
+/// a cyclique lattice in space. Does not store point and links but is used to generate them.
 #[derive(Clone, Debug)]
 pub struct LatticeCyclique {
     size: PositiveF64,
@@ -14,9 +15,12 @@ pub struct LatticeCyclique {
 }
 
 impl LatticeCyclique {
-    
+    /// we use the notation `[x, y, z, t]`
     pub const DIM: usize = 4;
     
+    /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
+    /// that means that a link form `[x, y, z, t]` with direction `-x`
+    /// the link return is `[x - 1, y, z, t]` with direction `+x`
     pub fn get_link_canonical(&self, pos: &[usize; LatticeCyclique::DIM], dir: &Direction) -> LatticeLinkCanonical {
         let mut pos_link: [usize; LatticeCyclique::DIM] = [0; LatticeCyclique::DIM];
         if dir.is_positive() {
@@ -49,23 +53,30 @@ impl LatticeCyclique {
         LatticeLink::new(pos_link, dir.clone())
     }
     
+    /// transform a LatticeLink into a LatticeLinkCanonical, see [`get_link_canonical`] and 
+    /// [`LatticeLinkCanonical`]
     pub fn get_canonical(&self, l: &LatticeLink) -> LatticeLinkCanonical{
         self.get_link_canonical(l.pos(), l.dir())
     }
     
+    /// get the number of numbre of point in a single Direction.
+    /// use [`get_number_of_points`] for the total number of points.
     pub fn dim(&self) -> usize {
         self.dim
     }
     
-    // TODO iterators ?
+    /// get an Iterator over all canonical link oritend in space (i.e. no `t` direction)
+    /// for a given time.
     pub fn get_links_space(&self, time_pos: usize) -> IteratorLatticeLinkCanonical {
         return IteratorLatticeLinkCanonical::new(&self, &self.get_link_canonical(&[0, 0, 0, time_pos], Direction::POSITIVES_SPACE.first().unwrap()));
     }
     
+    /// get an Iterator over all point for a given time.
     pub fn get_points(&self, time_pos: usize) ->  IteratorLatticePoint{
         return IteratorLatticePoint::new(&self, &[0, 0, 0, time_pos]);
     }
     
+    /// create a new lattice, size should be greater than 0 and dime greater or equal to 2
     pub fn new(size: PositiveF64, dim: usize) -> Option<Self>{
         if size < 0_f64 {
             return None;
@@ -78,16 +89,19 @@ impl LatticeCyclique {
         })
     }
     
+    /// total number of canonical links oriented in space for a set time
     pub fn get_number_of_canonical_links_space(&self) -> usize {
         self.get_number_of_points() * 3
     }
     
+    /// total number of point in the lattice for a set time
     pub fn get_number_of_points(&self) -> usize {
         self.dim().pow(3)
     }
     
 }
 
+/// Iterator over [`LatticeLinkCanonical`]
 #[derive(Clone, Debug)]
 pub struct IteratorLatticeLinkCanonical<'a> {
     lattice: &'a LatticeCyclique,
@@ -102,7 +116,6 @@ impl<'a> IteratorLatticeLinkCanonical<'a> {
         }
     }
 }
-
 
 impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
     type Item = LatticeLinkCanonical;
@@ -139,6 +152,7 @@ impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
     }
 }
 
+/// Iterator over [`LatticePoint`]
 #[derive(Clone, Debug)]
 pub struct IteratorLatticePoint<'a>  {
     lattice: &'a LatticeCyclique,
@@ -183,7 +197,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
     }
 }
 
-
+/// we use the representation `[x, y, z, t]`
 pub type LatticePoint = [usize; 4];
 
 impl From<LatticeLink> for LatticePoint {
@@ -192,25 +206,29 @@ impl From<LatticeLink> for LatticePoint {
     }
 } 
 
+/// A canonical link of a lattice. It contain a position and a direction.
+// The direction shoul always be positive.
+/// This object can be used to safly index in a [`std::collections::HashMap`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LatticeLinkCanonical {
-    from: [usize; 4],
+    from: LatticePoint,
     dir: Direction,
 }
 
 impl LatticeLinkCanonical {
-    pub fn new (from: [usize;4], dir: Direction) -> Option<Self> {
+    pub fn new (from: LatticePoint, dir: Direction) -> Option<Self> {
         if dir.is_negative() {
             return None;
         }
         Some(Self {from, dir})
     }
     
-    pub fn pos(&self) -> &[usize; 4]{
+    /// position of the link
+    pub fn pos(&self) -> &LatticePoint{
         &self.from
     }
     
-    pub fn pos_mut(&mut self) -> &mut [usize; 4]{
+    pub fn pos_mut(&mut self) -> &mut LatticePoint{
         &mut self.from
     }
     
@@ -229,22 +247,25 @@ impl From<LatticeLinkCanonical> for LatticeLink {
     }
 }
 
+/// A lattice link, contrary to [`LatticeLinkCanonical`] the direction can be negative.
+/// This means that multiple link can be equivalent but does not have the same data 
+// and therefore hash (hopefully).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LatticeLink {
-    from: [usize; 4],
+    from: LatticePoint,
     dir: Direction,
 }
 
 impl LatticeLink {
-    pub fn new (from: [usize;4], dir: Direction) -> Self {
+    pub fn new (from: LatticePoint, dir: Direction) -> Self {
         Self {from, dir}
     }
     
-    pub fn pos(&self) -> &[usize; 4]{
+    pub fn pos(&self) -> &LatticePoint{
         &self.from
     }
     
-    pub fn pos_mut(&mut self) -> &mut [usize; 4]{
+    pub fn pos_mut(&mut self) -> &mut LatticePoint{
         &mut self.from
     }
     
@@ -255,8 +276,26 @@ impl LatticeLink {
     pub fn dir_mut(&mut self) -> &mut Direction {
         &mut self.dir
     }
+    
+    /// get if the direction of the link is positive
+    pub fn is_dir_positive(&self) -> bool {
+        self.dir.is_positive()
+    }
 }
 
+impl PartialEq<LatticeLink> for LatticeLinkCanonical {
+    fn eq(&self, other: &LatticeLink) -> bool {
+        *self.pos() == *other.pos() && *self.dir() == *other.dir()
+    }
+}
+
+impl PartialEq<LatticeLinkCanonical> for LatticeLink{
+    fn eq(&self, other: &LatticeLinkCanonical) -> bool {
+        *other == *self
+    }
+}
+
+/// Represent a sing
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Sign {
     Negative, Positive, Zero
@@ -297,6 +336,7 @@ impl From<f64> for Sign {
     }
 }
 
+/// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
     XPos, XNeg, YPos, YNeg, ZPos, ZNeg, TPos, TNeg,
@@ -327,7 +367,8 @@ impl Direction{
     pub fn is_negative(&self) -> bool {
         return ! self.is_positive();
     }
-
+    /// find the direction the verctor point the most.
+    /// for a zero vector return [`Direction::XPos`]
     pub fn from_vector(v: &Vector4<Real>) -> Self {
         let mut max = 0_f64;
         let mut index_max: usize = 0;
@@ -374,11 +415,14 @@ impl Direction{
                 }
             },
             _ => {
+                // the code should attain this code. and therefore panicking is not expected.
                 panic!("Implementiation error : invalide index")
             }
         }
     }
-
+    
+    /// return the positive direction associtated, for example `-x` gives `+x`
+    /// and `+x` gives `+x`.
     pub fn to_positive(&self) -> Self {
         match self {
             Direction::XNeg => Direction::XPos,
