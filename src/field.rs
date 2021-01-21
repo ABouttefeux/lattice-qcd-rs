@@ -8,6 +8,7 @@ use super::{
         LatticeCyclique,
         PositiveF64,
         LatticeLink,
+        Direction,
     },
     Vector8,
     su3,
@@ -28,14 +29,14 @@ use  std::{
     collections::HashMap,
     //ops::{Deref, DerefMut},
 };
-//use t1ha::T1haHashMap;
 
+/// esay switch for the hash map used
 type HashMapUse<K,V> = HashMap<K,V>;
 
-
+/// Ajdoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Su3Adjoint {
-    data: Vector8<Real>
+    data: Vector8<Real> // use an [Real ;8] instead ?
 }
 
 impl Su3Adjoint {
@@ -48,6 +49,7 @@ impl Su3Adjoint {
         &self.data
     }
     
+    /// return the su(3) (Lie algebra) matix.
     pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
         let mut mat = Matrix3::from_element(ZERO);
         for i in 0..self.data.len() {
@@ -56,32 +58,57 @@ impl Su3Adjoint {
         return mat;
     }
     
+    /// Return the SU(3) matrix associtaed with this generator.
+    /// Note that the function consume self.
     pub fn to_su3(self) -> Matrix3<na::Complex<Real>> {
+        // TODO should it consume ? the user can manually clone and there is use because
+        // where the value is not necessary anymore.
         //(self.to_matrix() * na::Complex::<Real>::i() ).exp()
         su3::su3_exp_i(self)
     }
     
+    /// return exp( T^a v^a) where v is self.
+    /// Note that the function consume self.
     pub fn exp(self) -> Matrix3<na::Complex<Real>> {
         su3::su3_exp_r(self)
     }
     
+    /// create a new random SU3 adjoint.
     pub fn random(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
         Self {
             data : Vector8::<Real>::from_fn(|_,_| d.sample(rng))
         }
     }
     
+    /// Return the t coeff `t = 1/2 * Tr(X^2).
+    /// Used for [`su3::su3_exp_i`]
     pub fn t(&self) -> na::Complex<Real> {
+        // todo optimize
         let m = self.to_matrix();
         - na::Complex::from(0.5_f64) * (m * m).trace()
     }
     
+    /// Return the t coeff `d = i * det(X).
+    /// Used for [`su3::su3_exp_i`]
     pub fn d(&self) -> na::Complex<Real> {
         self.to_matrix().determinant() * I
     }
     
 }
 
+impl From<Vector8<Real>> for Su3Adjoint {
+    fn from(v: Vector8<Real>) -> Self {
+        Su3Adjoint::new(v)
+    }
+}
+
+impl From<Su3Adjoint> for Vector8<Real> {
+    fn from(v: Su3Adjoint) -> Self {
+        v.data
+    }
+}
+
+/// Reoresent the link matrics
 #[derive(Debug)]
 pub struct LinkMatrix {
     max_time : usize,
@@ -94,7 +121,11 @@ impl LinkMatrix {
         &self.data
     }
     
-    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn new(
+        l: &LatticeCyclique,
+        rng: &mut rand::rngs::ThreadRng,
+        d: &impl rand_distr::Distribution<Real>,
+    ) -> Self {
         let mut data = HashMapUse::with_capacity(l.get_number_of_canonical_links_space());
         for i in l.get_links_space(0) {
             let matrix = Su3Adjoint::random(rng, d).to_su3();
@@ -106,7 +137,7 @@ impl LinkMatrix {
         }
     }
     
-    /// get the link matrix associtate to given link using the notation 
+    /// get the link matrix associtate to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, l: &LatticeCyclique, link: &LatticeLink)-> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(link);
@@ -126,15 +157,15 @@ impl LinkMatrix {
     
 }
 
+/// represent an electric field.
 #[derive(Debug)]
 pub struct EField
 {
     max_time : usize,
-    data: HashMapUse<LatticePoint, Vector4<Su3Adjoint>>,
+    data: HashMapUse<LatticePoint, Vector4<Su3Adjoint>>, // use a [Su3Adjoint; 4] instead ?
 }
 
 impl EField {
-    
     
     pub fn data(&self) -> &HashMapUse<LatticePoint, Vector4<Su3Adjoint>> {
         &self.data
@@ -152,6 +183,18 @@ impl EField {
         Self {
             max_time: 0,
             data,
+        }
+    }
+    
+    pub fn get_e_vec(&self, point: &LatticePoint) -> Option<&Vector4<Su3Adjoint>> {
+        self.data.get(point)
+    }
+    
+    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction) -> Option<&Su3Adjoint> {
+        let value = self.get_e_vec(point);
+        match value {
+            Some(vec) => Some(&vec[dir.to_index()]),
+            None => None,
         }
     }
 }
@@ -174,7 +217,7 @@ impl LatticeSimulation {
         let lattice_option = LatticeCyclique::new(size, number_of_points);
         if let None = lattice_option{
             return None;
-        } 
+        }
         let lattice = lattice_option.unwrap();
         let e_field = EField::new(&lattice, rng, d);
         let link_matrix = LinkMatrix::new(&lattice, rng, d);

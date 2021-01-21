@@ -4,7 +4,7 @@ extern crate approx;
 extern crate num_traits;
 extern crate rand;
 extern crate rand_distr;
-//extern crate t1ha;
+extern crate murmur_hash_3 as m3;
 
 pub mod lattice;
 pub mod su3;

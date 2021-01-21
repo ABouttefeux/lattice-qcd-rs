@@ -53,14 +53,14 @@ impl LatticeCyclique {
         LatticeLink::new(pos_link, dir.clone())
     }
     
-    /// transform a LatticeLink into a LatticeLinkCanonical, see [`get_link_canonical`] and 
-    /// [`LatticeLinkCanonical`]
+    /// transform a LatticeLink into a LatticeLinkCanonical, see
+    /// [`LatticeCyclique::get_link_canonical`] and [`LatticeLinkCanonical`]
     pub fn get_canonical(&self, l: &LatticeLink) -> LatticeLinkCanonical{
         self.get_link_canonical(l.pos(), l.dir())
     }
     
     /// get the number of numbre of point in a single Direction.
-    /// use [`get_number_of_points`] for the total number of points.
+    /// use [`LatticeCyclique::get_number_of_points`] for the total number of points.
     pub fn dim(&self) -> usize {
         self.dim
     }
@@ -182,7 +182,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
                     while el[i] >= self.lattice.dim() {
                         if i <= 1 {
                             el[i + 1] += 1;
-                        }   
+                        }
                         else{
                             self.element = None;
                             return previous_el;
@@ -204,7 +204,7 @@ impl From<LatticeLink> for LatticePoint {
     fn from(f: LatticeLink) -> Self{
         f.from
     }
-} 
+}
 
 /// A canonical link of a lattice. It contain a position and a direction.
 // The direction shoul always be positive.
@@ -248,7 +248,7 @@ impl From<LatticeLinkCanonical> for LatticeLink {
 }
 
 /// A lattice link, contrary to [`LatticeLinkCanonical`] the direction can be negative.
-/// This means that multiple link can be equivalent but does not have the same data 
+/// This means that multiple link can be equivalent but does not have the same data
 // and therefore hash (hopefully).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LatticeLink {
@@ -343,6 +343,10 @@ pub enum Direction {
 }
 
 impl Direction{
+    
+    const POSITIVES: [Self; 4] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos];
+    const POSITIVES_SPACE: [Self; 3] = [Direction::XPos, Direction::YPos, Direction::ZPos];
+    
     pub fn to_vector(&self, a: f64) -> Vector4<Real> {
         match self {
             Direction::XPos => Vector4::<Real>::new(1_f64 * a, 0_f64, 0_f64, 0_f64),
@@ -433,8 +437,21 @@ impl Direction{
         }
     }
     
-    const POSITIVES: [Self; 4] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos];
-    const POSITIVES_SPACE: [Self; 3] = [Direction::XPos, Direction::YPos, Direction::ZPos];
+    pub fn to_index(&self) -> usize {
+        match self {
+            Direction::XPos | Direction::XNeg => 0,
+            Direction::YPos | Direction::YNeg => 1,
+            Direction::ZPos | Direction::ZNeg => 2,
+            Direction::TPos | Direction::TNeg => 3,
+        }
+    }
+    
+}
+
+impl From<Direction> for usize {
+    fn from(d: Direction) -> Self {
+        d.to_index()
+    }
 }
 
 
