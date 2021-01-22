@@ -142,7 +142,12 @@ fn create_sim() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let _simulation = LatticeSimulation::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
-    let _simulation = LatticeSimulation::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
+}
+
+#[test]
+fn creat_sim_threaded() {
+    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let _simulation = LatticeSimulation::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
 }
 
 fn delta(i: usize, j: usize) -> f64{

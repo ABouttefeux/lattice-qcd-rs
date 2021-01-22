@@ -20,7 +20,11 @@ use super::{
     ZERO,
     Complex,
     ONE,
-    thread::run_pool_parallel,
+    thread::{
+        run_pool_parallel,
+        ThreadError,
+        run_pool_parallel_with_initialisation_mutable,
+    },
 };
 use na::{
     Vector4,
@@ -29,7 +33,10 @@ use na::{
 use  std::{
     collections::HashMap,
     //ops::{Deref, DerefMut},
+    sync::{Mutex, Arc, mpsc},
 };
+
+use crossbeam::thread;
 
 /// esay switch for the hash map used
 type HashMapUse<K,V> = HashMap<K,V>;
@@ -122,6 +129,8 @@ impl LinkMatrix {
         &self.data
     }
     
+    /// Single threaded generation with a given random number generator.
+    /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`]
     pub fn new_deterministe(
         l: &LatticeCyclique,
         rng: &mut impl rand::Rng,
@@ -136,6 +145,38 @@ impl LinkMatrix {
             max_time: 0,
             data,
         }
+    }
+    
+    
+    /// Multi threaded generation of random data. Due to the non deterministic way threads
+    /// operate a set cannot be repoduce esealy, In that case use [`LinkMatrix::new_random_threaded`].
+    pub fn new_random_threaded<Distribution>(
+        l: &LatticeCyclique,
+        d: &Distribution,
+        number_of_thread: usize,
+        //s: &thread::Scope,
+    ) -> Result<Self, ThreadError>
+        where Distribution: rand_distr::Distribution<Real> + Sync,
+    {
+        if number_of_thread == 0 {
+            return Err(ThreadError::ThreadNumberIncorect);
+        }
+        else if number_of_thread == 1 {
+            let mut rng = rand::thread_rng();
+            return Ok(LinkMatrix::new_deterministe(l, &mut rng, d));
+        }
+        let data = run_pool_parallel_with_initialisation_mutable(
+            l.get_links_space(0),
+            d,
+            &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
+            || rand::thread_rng(),
+            number_of_thread,
+            l.get_number_of_canonical_links_space()
+        )?;
+        Ok(Self {
+            max_time: 0,
+            data,
+        })
     }
     
     /// get the link matrix associtate to given link using the notation
@@ -172,6 +213,8 @@ impl EField {
         &self.data
     }
     
+    /// Single threaded generation with a given random number generator.
+    /// useful to reproduce a set of data but slower than [`EField::new_random_threaded`]
     pub fn new_deterministe(
         l: &LatticeCyclique,
         rng: &mut impl rand::Rng,
@@ -191,6 +234,16 @@ impl EField {
         }
     }
     
+    /// Single thread generation by seeding a new rng number. Used in [`LatticeSimulation::new_random_threaded`]
+    /// To create a seedable and reproducible set use [`EField::new_random_threaded`].
+    pub fn new_random(
+        l: &LatticeCyclique,
+        d: &impl rand_distr::Distribution<Real>,
+    ) -> Self {
+        let mut rng = rand::thread_rng();
+        EField::new_deterministe(l, &mut rng, d)
+    }
+    
     pub fn get_e_vec(&self, point: &LatticePoint) -> Option<&Vector4<Su3Adjoint>> {
         self.data.get(point)
     }
@@ -205,6 +258,12 @@ impl EField {
 }
 
 #[derive(Debug)]
+pub enum SimulationError {
+    ThreadingError(ThreadError),
+    InitialisationError,
+}
+
+#[derive(Debug)]
 pub struct LatticeSimulation {
     lattice : LatticeCyclique,
     e_field: EField,
@@ -213,6 +272,9 @@ pub struct LatticeSimulation {
 
 impl LatticeSimulation {
     
+    
+    /// Single threaded generation with a given random number generator.
+    /// useful to reproduce a set of data but slower than [`LatticeSimulation::new_random_threaded`]
     pub fn new_deterministe(
         size: PositiveF64,
         number_of_points: usize,
@@ -233,6 +295,47 @@ impl LatticeSimulation {
         })
     }
     
+    /// Multi threaded generation of random data. Due to the non deterministic way threads
+    /// operate a set cannot be repoduce esealy, In that case use [`LatticeSimulation::new_random_threaded`].
+    pub fn new_random_threaded<Distribution>(
+        size: PositiveF64,
+        number_of_points: usize,
+        d: &Distribution,
+        number_of_thread : usize
+    ) -> Result<Self, SimulationError>
+        where Distribution: rand_distr::Distribution<Real> + Sync,
+    {
+        if number_of_thread == 0 {
+            return Err(SimulationError::ThreadingError(ThreadError::ThreadNumberIncorect)); //
+        }
+        else if number_of_thread == 1 {
+            let mut rng = rand::thread_rng();
+            return LatticeSimulation::new_deterministe(size, number_of_points, &mut rng, d)
+                .ok_or(SimulationError::InitialisationError);
+        }
+        let lattice_option = LatticeCyclique::new(size, number_of_points);
+        if let None = lattice_option {
+            return Err(SimulationError::InitialisationError);
+        }
+        let lattice = lattice_option.unwrap();
+        let result = thread::scope(|s| {
+            let lattice_clone = lattice.clone();
+            let handel = s.spawn(move |_| {
+                EField::new_random(&lattice_clone, d)
+            });
+            let link_matrix = LinkMatrix::new_random_threaded(&lattice, d, number_of_points - 1)
+                .map_err(|err| SimulationError::ThreadingError(err))?;
+            
+            let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
+            Ok(Self {
+                lattice,
+                e_field,
+                link_matrix,
+            })
+        }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
+        return result;
+    }
+    
     pub fn e_field(&self) -> &EField {
         &self.e_field
     }
@@ -243,6 +346,6 @@ impl LatticeSimulation {
     
     
     pub fn simulate(&mut self) {
-        
+        todo!()
     }
 }
