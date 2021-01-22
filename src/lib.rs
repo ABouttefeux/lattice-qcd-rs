@@ -5,12 +5,14 @@ extern crate num_traits;
 extern crate rand;
 extern crate rand_distr;
 extern crate murmur_hash_3 as m3;
+extern crate crossbeam;
 
 pub mod lattice;
 pub mod su3;
 pub mod field;
 pub mod number;
 pub mod integrator;
+pub mod thread;
 
 #[cfg(test)]
 mod test;

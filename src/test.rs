@@ -9,6 +9,7 @@ use super::{
     ZERO,
     I,
     Vector8,
+    thread::*,
 };
 use std::{
     f64,
@@ -140,7 +141,8 @@ fn equivalece_exp_r(){
 fn create_sim() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeSimulation::new(1_f64 , 4, &mut rng, &distribution).unwrap();
+    let _simulation = LatticeSimulation::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
+    let _simulation = LatticeSimulation::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
 }
 
 fn delta(i: usize, j: usize) -> f64{
@@ -168,7 +170,7 @@ fn test_generators() {
     }
 }
 
-#[test] 
+#[test]
 fn test_su3_property(){
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
@@ -176,5 +178,15 @@ fn test_su3_property(){
         let m = Su3Adjoint::random(&mut rng, &distribution).to_su3();
         assert!((m.determinant().modulus_squared() - 1_f64).abs() < EPSILON);
         assert!((m * m.adjoint() - CMatrix3::identity()).norm() < EPSILON);
+    }
+}
+
+#[test]
+fn test_thread() {
+    let iter = 1..10000;
+    let c = 5;
+    let result = run_pool_parallel(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000).unwrap();
+    for i in iter {
+        assert_eq!(* result.get(&i).unwrap(), i * i *c);
     }
 }

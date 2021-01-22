@@ -9,6 +9,12 @@ use std::{
     f64,
 };
 
+use rand::{
+    SeedableRng,
+    rngs::StdRng
+};
+
+
 fn get_n(){
     println!("{:?}",ExponentialSu3::new().n());
 }
@@ -16,9 +22,9 @@ fn get_n(){
 fn main() {
     
     let t = Instant::now();
-    let mut rng = rand::thread_rng();
+    let mut rng = StdRng::seed_from_u64(0);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let mut simulation = LatticeSimulation::new(1_f64 , 50, &mut rng, &distribution).unwrap();
+    let mut simulation = LatticeSimulation::new_deterministe(1_f64 , 50, &mut rng, &distribution).unwrap();
     println!("{:?}", t.elapsed());
     get_n();
 }

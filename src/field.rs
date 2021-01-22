@@ -20,6 +20,7 @@ use super::{
     ZERO,
     Complex,
     ONE,
+    thread::run_pool_parallel,
 };
 use na::{
     Vector4,
@@ -74,7 +75,7 @@ impl Su3Adjoint {
     }
     
     /// create a new random SU3 adjoint.
-    pub fn random(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> Self {
         Self {
             data : Vector8::<Real>::from_fn(|_,_| d.sample(rng))
         }
@@ -121,9 +122,9 @@ impl LinkMatrix {
         &self.data
     }
     
-    pub fn new(
+    pub fn new_deterministe(
         l: &LatticeCyclique,
-        rng: &mut rand::rngs::ThreadRng,
+        rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = HashMapUse::with_capacity(l.get_number_of_canonical_links_space());
@@ -171,7 +172,11 @@ impl EField {
         &self.data
     }
     
-    pub fn new(l: &LatticeCyclique, rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn new_deterministe(
+        l: &LatticeCyclique,
+        rng: &mut impl rand::Rng,
+        d: &impl rand_distr::Distribution<Real>,
+    ) -> Self {
         let mut data = HashMapUse::with_capacity(l.get_number_of_points());
         for i in l.get_points(0) {
             let p1 = Su3Adjoint::random(rng, d);
@@ -208,19 +213,19 @@ pub struct LatticeSimulation {
 
 impl LatticeSimulation {
     
-    pub fn new(
+    pub fn new_deterministe(
         size: PositiveF64,
         number_of_points: usize,
-        rng: &mut rand::rngs::ThreadRng,
+        rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Option<Self> {
         let lattice_option = LatticeCyclique::new(size, number_of_points);
-        if let None = lattice_option{
+        if let None = lattice_option {
             return None;
         }
         let lattice = lattice_option.unwrap();
-        let e_field = EField::new(&lattice, rng, d);
-        let link_matrix = LinkMatrix::new(&lattice, rng, d);
+        let e_field = EField::new_deterministe(&lattice, rng, d);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
         Some(Self {
             lattice,
             e_field,
