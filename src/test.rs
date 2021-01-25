@@ -109,7 +109,7 @@ fn equivalece_exp_i(){
         let exp_l = (v.to_matrix() * Complex::new(0_f64, 1_f64)).exp();
         assert!(( exp_r - exp_l).norm() < EPSILON );
     }
-    for _i in 0..100 {
+    for _ in 0..100 {
         let v = Su3Adjoint::random(&mut rng, &d);
         let exp_r = su3_exp_i(v);
         let exp_l = (v.to_matrix() * Complex::new(0_f64, 1_f64)).exp();
@@ -129,7 +129,7 @@ fn equivalece_exp_r(){
         let exp_l = (v.to_matrix() * Complex::new(1_f64, 0_f64)).exp();
         assert!(( exp_r - exp_l).norm() < EPSILON );
     }
-    for _i in 0..100 {
+    for _ in 0..100 {
         let v = Su3Adjoint::random(&mut rng, &d);
         let exp_r = su3_exp_r(v);
         let exp_l = (v.to_matrix() * Complex::new(1_f64, 0_f64)).exp();
@@ -179,7 +179,7 @@ fn test_generators() {
 fn test_su3_property(){
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    for _i in 0..100 {
+    for _ in 0..100 {
         let m = Su3Adjoint::random(&mut rng, &distribution).to_su3();
         assert!((m.determinant().modulus_squared() - 1_f64).abs() < EPSILON);
         assert!((m * m.adjoint() - CMatrix3::identity()).norm() < EPSILON);
@@ -193,5 +193,16 @@ fn test_thread() {
     let result = run_pool_parallel(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000).unwrap();
     for i in iter {
         assert_eq!(* result.get(&i).unwrap(), i * i *c);
+    }
+}
+
+#[test]
+fn test_thread_vec() {
+    let l = LatticeCyclique::new(1_f64, 10).unwrap();
+    let iter = 0..10000;
+    let c = 5;
+    let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, 0).unwrap();
+    for i in iter {
+        assert_eq!(     *result.get(i).unwrap(), i * i *c);
     }
 }

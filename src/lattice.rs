@@ -4,6 +4,7 @@ use na::{
 };
 use approx::*;
 use super::Real;
+use std::ops::{Index, IndexMut};
 
 pub type PositiveF64 = Real;
 
@@ -21,8 +22,8 @@ impl LatticeCyclique {
     /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
     /// that means that a link form `[x, y, z, t]` with direction `-x`
     /// the link return is `[x - 1, y, z, t]` with direction `+x`
-    pub fn get_link_canonical(&self, pos: &[usize; LatticeCyclique::DIM], dir: &Direction) -> LatticeLinkCanonical {
-        let mut pos_link: [usize; LatticeCyclique::DIM] = [0; LatticeCyclique::DIM];
+    pub fn get_link_canonical(&self, pos: &LatticePoint, dir: &Direction) -> LatticeLinkCanonical {
+        let mut pos_link: LatticePoint = LatticePoint::new([0; LatticeCyclique::DIM]);
         if dir.is_positive() {
             for i in 0..pos.len() {
                 pos_link[i] = pos[i] % self.dim();
@@ -45,8 +46,8 @@ impl LatticeCyclique {
         }
     }
     
-    pub fn get_link (&self, pos: &[usize; LatticeCyclique::DIM], dir: &Direction) -> LatticeLink {
-        let mut pos_link = [0_usize; LatticeCyclique::DIM];
+    pub fn get_link (&self, pos: &LatticePoint, dir: &Direction) -> LatticeLink {
+        let mut pos_link = LatticePoint::new([0_usize; LatticeCyclique::DIM]);
         for i in 0..pos.len() {
             pos_link[i] = pos[i] % self.dim();
         }
@@ -68,12 +69,12 @@ impl LatticeCyclique {
     /// get an Iterator over all canonical link oritend in space (i.e. no `t` direction)
     /// for a given time.
     pub fn get_links_space(&self, time_pos: usize) -> IteratorLatticeLinkCanonical {
-        return IteratorLatticeLinkCanonical::new(&self, &self.get_link_canonical(&[0, 0, 0, time_pos], Direction::POSITIVES_SPACE.first().unwrap()));
+        return IteratorLatticeLinkCanonical::new(&self, &self.get_link_canonical(&LatticePoint::from([0, 0, 0, time_pos]), Direction::POSITIVES_SPACE.first().unwrap()));
     }
     
     /// get an Iterator over all point for a given time.
-    pub fn get_points(&self, time_pos: usize) ->  IteratorLatticePoint{
-        return IteratorLatticePoint::new(&self, &[0, 0, 0, time_pos]);
+    pub fn get_points(&self, time_pos: usize) -> IteratorLatticePoint {
+        return IteratorLatticePoint::new(&self, &LatticePoint::from([0, 0, 0, time_pos]));
     }
     
     /// create a new lattice, size should be greater than 0 and dime greater or equal to 2
@@ -97,6 +98,10 @@ impl LatticeCyclique {
     /// total number of point in the lattice for a set time
     pub fn get_number_of_points(&self) -> usize {
         self.dim().pow(3)
+    }
+    
+    pub fn size(&self) -> Real {
+        self.size
     }
     
 }
@@ -198,11 +203,80 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
 }
 
 /// we use the representation `[x, y, z, t]`
-pub type LatticePoint = [usize; 4];
+#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LatticePoint {
+    data: [usize; 4]
+}
+
+impl LatticePoint {
+    pub fn new(data: [usize; 4]) -> Self {
+        Self{data}
+    }
+    
+    pub const fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl Index<usize> for LatticePoint {
+    type Output = usize;
+    
+    fn index(&self, pos: usize) -> &Self::Output{
+        &self.data[pos]
+    }
+}
+
+impl IndexMut<usize> for LatticePoint {
+        
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+        &mut self.data[pos]
+    }
+}
+
+impl From<[usize; 4]> for LatticePoint {
+    fn from(data: [usize; 4]) -> Self {
+        LatticePoint::new(data)
+    }
+}
+
+impl From<LatticePoint> for [usize; 4] {
+    fn from(lattice_point: LatticePoint) -> Self {
+        lattice_point.data
+    }
+}
 
 impl From<LatticeLink> for LatticePoint {
     fn from(f: LatticeLink) -> Self{
         f.from
+    }
+}
+
+/// Get a index for where the associated data is store in a vec
+pub trait LatticeElementToIndex {
+    fn to_index(&self, l: &LatticeCyclique) -> usize;
+}
+
+impl LatticeElementToIndex for LatticePoint {
+    fn to_index(&self, l: &LatticeCyclique) -> usize {
+        self[0] + self[1] * l.dim() + self[2] * l.dim().pow(2)
+    }
+}
+
+impl LatticeElementToIndex for Direction {
+    fn to_index(&self, _: &LatticeCyclique) -> usize {
+        self.to_index()
+    }
+}
+
+impl LatticeElementToIndex for LatticeLinkCanonical {
+    fn to_index(&self, l: &LatticeCyclique) -> usize {
+        self.pos().to_index(l) * 3 + self.dir().to_index()
+    }
+}
+
+impl LatticeElementToIndex for usize {
+    fn to_index(&self, _l: &LatticeCyclique) -> usize {
+        self.clone()
     }
 }
 
@@ -344,8 +418,10 @@ pub enum Direction {
 
 impl Direction{
     
-    const POSITIVES: [Self; 4] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos];
-    const POSITIVES_SPACE: [Self; 3] = [Direction::XPos, Direction::YPos, Direction::ZPos];
+    pub const POSITIVES: [Self; 4] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos];
+    pub const POSITIVES_SPACE: [Self; 3] = [Direction::XPos, Direction::YPos, Direction::ZPos];
+    pub const DIRECTIONS : [Self; 8] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::TPos, Direction::XNeg, Direction::YNeg, Direction::ZNeg, Direction::TNeg];
+    pub const DIRECTIONS_SPACE : [Self; 6] = [Direction::XPos, Direction::YPos, Direction::ZPos, Direction::XNeg, Direction::YNeg, Direction::ZNeg];
     
     pub fn to_vector(&self, a: f64) -> Vector4<Real> {
         match self {

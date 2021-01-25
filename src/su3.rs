@@ -70,7 +70,7 @@ pub static GENERATOR_8: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 
 /// liste of SU(3) generators
 /// they are normalise sur that `Tr(T^a T^b) = \frac{1}{2}\delta^{ab}`
-pub static GENERATORS: Lazy<[&CMatrix3; 8]> = Lazy::new(|| 
+pub static GENERATORS: Lazy<[&CMatrix3; 8]> = Lazy::new(||
     [&GENERATOR_1, &GENERATOR_2, &GENERATOR_3, &GENERATOR_4, &GENERATOR_5, &GENERATOR_6, &GENERATOR_7, &GENERATOR_8]
 );
 
@@ -81,7 +81,7 @@ pub trait MatrixExp<T> {
     fn exp(&self) -> T;
 }
 
-
+/// basic Implementiation of matrix exponential
 impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
     where T: ComplexField + Copy,
     D: na::DimName + na::DimSub<na::U1>,
@@ -129,10 +129,12 @@ impl FactorialStorageDyn {
         Self{data : Vec::new()}
     }
     
+    /// build the storage up to and including `value`
     pub fn build_storage(&mut self, value: usize) {
         self.get_factorial(value);
     }
     
+    /// Get the factorial number. If it is not already computed build internal storage
     pub fn get_factorial(&mut self, value: usize) -> FactorialNumber {
         let mut len = self.data.len();
         if len == 0 {
@@ -148,10 +150,12 @@ impl FactorialStorageDyn {
         return self.data[value];
     }
     
+    /// try get factorial from storage
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
     
+    /// Get facorial but does build the storafe if it is missing
     pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
         let mut value_m : FactorialNumber = self.data[value.min(self.data.len() -1 )];
         for i in self.data.len() - 1..value{
@@ -161,55 +165,15 @@ impl FactorialStorageDyn {
     }
 }
 
-/// struct to eval expontetial of su3() using dynamical factorial store
-pub struct ExponentialSu3 {
-    n: usize,
-    factorial_storage: FactorialStorageDyn,
-}
-
-impl ExponentialSu3 {
-    pub fn new() -> Self{
-        let mut factorial_storage = FactorialStorageDyn::new_const();
-        let mut n : usize = 7;
-        let mut factorial_value = factorial_storage.get_factorial(n - 7);
-        while 1_f64 / (factorial_value as Real) >= Real::EPSILON {
-            n = n + 1;
-            factorial_value = factorial_storage.get_factorial(n - 7);
-        }
-        Self{
-            factorial_storage,
-            n
-        }
+/// Get the minimum number to compute factorial value statically for [`su3_exp_i`] and [`su3_exp_r`].
+pub fn get_factorial_size_for_exp() -> usize {
+    let mut n : usize = 7;
+    let mut factorial_value = 1;
+    while 1_f64 / (factorial_value as Real) >= Real::EPSILON {
+        n += 1;
+        factorial_value *= n - 7;
     }
-    
-    pub fn n(&self) -> usize {
-        self.n
-    }
-    
-    pub fn su3_exp_dyn(&mut self, v: Su3Adjoint){
-        su3_exp_mut_storage(v, self.n, &mut self.factorial_storage);
-    }
-}
-
-/// givent a Su3 adjoin return the SU3 correspondig matrix
-fn su3_exp_mut_storage(v: Su3Adjoint, n: usize, factorial_storage: &mut FactorialStorageDyn) -> CMatrix3 {
-    let m = v.to_matrix();
-    let mut q0: Complex = Complex::from(1f64 / factorial_storage.get_factorial(n) as f64);
-    let mut q1: Complex = Complex::from(0_f64);
-    let mut q2: Complex = Complex::from(0_f64);
-    let d: Complex = v.d();
-    let t: Complex = v.t();
-    for i in (0..n).rev() {
-        let q0_n = Complex::from(1f64 / factorial_storage.get_factorial(i) as f64) - I * d * q2;
-        let q1_n = q0 - t * q2;
-        let q2_n = q1;
-        
-        q0 = q0_n;
-        q1 = q1_n;
-        q2 = q2_n;
-    }
-    
-    return CMatrix3::identity() * q0 + m * q1 + m * m * q2;
+    return n;
 }
 
 /// size of the factorial storage
@@ -226,70 +190,62 @@ impl FactorialStorageStatic {
         let mut data : [FactorialNumber; N] = [1; N];
         // cant do for in constant function :(
         let i = 1;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 2;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 3;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 4;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 5;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 6;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 7;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 8;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 9;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 10;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 11;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 12;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 13;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 14;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 15;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 16;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 17;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 18;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 19;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 20;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 21;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 22;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 23;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 24;
-        data[i] = data[i-1] * i as FactorialNumber;
+        data[i] = data[i - 1] * i as FactorialNumber;
         let i = 25;
-        data[i] = data[i-1] * i as FactorialNumber;
-        Self {
-            data
-        }
+        data[i] = data[i - 1] * i as FactorialNumber;
+        Self {data}
     }
     
-    /// access in O(1)
+    /// access in O(1). Return None if `value` is bigger than 25
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
-    
-    // # Panic
-    // panic if value is bigger or equal to [`N`]
-    //pub const fn get(&self, value: usize) -> FactorialNumber{
-    //    self.data[value]
-    //}
 }
 
 /// factorial number storage in order to find the exponential in O(1) for a set storage
@@ -298,7 +254,7 @@ const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::
 
 /// give the SU3 matrix from the ajoint rep, i.e compute $`exp(i v^a T^a )`$
 pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
-    // todo optimize event more using f64 to reduce the number of operation using complex that might be useless
+    // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
     let m = v.to_matrix();
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
@@ -316,7 +272,7 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
-    return CMatrix3::identity() * q0 + m * q1 + m * m * q2;
+    return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
 }
 
 /// return $`exp(v^a T^a )`$
@@ -338,12 +294,12 @@ pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
-    return CMatrix3::identity() * q0 + m * q1 + m * m * q2;
+    return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
 }
 
 #[cfg(test)]
 #[test]
 /// test that [`N`] is indeed what we need
 fn test_constante(){
-    assert_eq!(N, ExponentialSu3::new().n() +1)
+    assert_eq!(N, get_factorial_size_for_exp() + 1)
 }

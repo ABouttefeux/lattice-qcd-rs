@@ -9,37 +9,36 @@ use super::{
         PositiveF64,
         LatticeLink,
         Direction,
+        LatticeElementToIndex,
     },
     Vector8,
     su3,
     su3::{
-        MatrixExp,
         GENERATORS,
     },
     I,
     ZERO,
     Complex,
-    ONE,
     thread::{
-        run_pool_parallel,
         ThreadError,
-        run_pool_parallel_with_initialisation_mutable,
+        run_pool_parallel_vec_with_initialisation_mutable,
     },
+    integrator::Integrator,
 };
 use na::{
-    Vector4,
-    Matrix3
+    Vector3,
+    Matrix3,
+    ComplexField
 };
 use  std::{
-    collections::HashMap,
-    //ops::{Deref, DerefMut},
-    sync::{Mutex, Arc, mpsc},
+    ops::{Index, IndexMut, Mul, Add},
+    vec::Vec,
 };
 
 use crossbeam::thread;
 
-/// esay switch for the hash map used
-type HashMapUse<K,V> = HashMap<K,V>;
+// easy switch for the hash map used
+//type HashMapUse<K,V> = HashMap<K,V>;
 
 /// Ajdoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -102,6 +101,53 @@ impl Su3Adjoint {
         self.to_matrix().determinant() * I
     }
     
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl Mul<Real> for Su3Adjoint {
+    type Output = Self;
+    fn mul(mut self, rhs: Real) -> Self::Output {
+        self.data *= rhs;
+        self
+    }
+}
+
+impl Mul<Su3Adjoint> for Real {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: Su3Adjoint) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Add<Su3Adjoint> for Su3Adjoint {
+    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self::Output{
+        self.data += rhs.data();
+        self
+    }
+}
+
+impl Default for Su3Adjoint {
+    fn default() -> Self{
+        Su3Adjoint::new(Vector8::from_element(0_f64))
+    }
+}
+
+impl Index<usize> for Su3Adjoint {
+    type Output = Real;
+    
+    fn index(&self, pos: usize) -> &Self::Output{
+        &self.data[pos]
+    }
+}
+
+impl IndexMut<usize> for Su3Adjoint {
+        
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+        &mut self.data[pos]
+    }
 }
 
 impl From<Vector8<Real>> for Su3Adjoint {
@@ -120,12 +166,16 @@ impl From<Su3Adjoint> for Vector8<Real> {
 #[derive(Debug)]
 pub struct LinkMatrix {
     max_time : usize,
-    data: HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<Real>>>,
+    data: Vec<Matrix3<na::Complex<Real>>>,
 }
 
 impl LinkMatrix {
     
-    pub fn data(&self) -> &HashMapUse<LatticeLinkCanonical, Matrix3<na::Complex<Real>>> {
+    pub fn new (data: Vec<Matrix3<na::Complex<Real>>>) -> Self{
+        Self{data, max_time: 0}
+    }
+    
+    pub fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         &self.data
     }
     
@@ -136,10 +186,11 @@ impl LinkMatrix {
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
-        let mut data = HashMapUse::with_capacity(l.get_number_of_canonical_links_space());
-        for i in l.get_links_space(0) {
+        let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
+        for _ in l.get_links_space(0) {
+            // the iterator *should* be in order
             let matrix = Su3Adjoint::random(rng, d).to_su3();
-            data.insert(i, matrix);
+            data.push(matrix);
         }
         Self {
             max_time: 0,
@@ -165,13 +216,15 @@ impl LinkMatrix {
             let mut rng = rand::thread_rng();
             return Ok(LinkMatrix::new_deterministe(l, &mut rng, d));
         }
-        let data = run_pool_parallel_with_initialisation_mutable(
+        let data = run_pool_parallel_vec_with_initialisation_mutable(
             l.get_links_space(0),
             d,
             &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
             || rand::thread_rng(),
             number_of_thread,
-            l.get_number_of_canonical_links_space()
+            l.get_number_of_canonical_links_space(),
+            l,
+            CMatrix3::zeros(),
         )?;
         Ok(Self {
             max_time: 0,
@@ -183,7 +236,7 @@ impl LinkMatrix {
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, l: &LatticeCyclique, link: &LatticeLink)-> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(link);
-        let matrix_o = self.data.get(&link_c);
+        let matrix_o = self.data.get(link_c.to_index(l));
         match matrix_o {
             Some(matrix) => {
                 let m_return = matrix.clone();
@@ -204,12 +257,20 @@ impl LinkMatrix {
 pub struct EField
 {
     max_time : usize,
-    data: HashMapUse<LatticePoint, Vector4<Su3Adjoint>>, // use a [Su3Adjoint; 4] instead ?
+    data: Vec<Vector3<Su3Adjoint>>, // use a [Su3Adjoint; 4] instead ?
 }
 
 impl EField {
     
-    pub fn data(&self) -> &HashMapUse<LatticePoint, Vector4<Su3Adjoint>> {
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+    
+    pub fn new (data: Vec<Vector3<Su3Adjoint>>) -> Self{
+        Self{data, max_time: 0}
+    }
+    
+    pub fn data(&self) -> &Vec<Vector3<Su3Adjoint>> {
         &self.data
     }
     
@@ -220,13 +281,13 @@ impl EField {
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
-        let mut data = HashMapUse::with_capacity(l.get_number_of_points());
-        for i in l.get_points(0) {
+        let mut data = Vec::with_capacity(l.get_number_of_points());
+        for _ in l.get_points(0) {
+            // iterator *should* be ordoned
             let p1 = Su3Adjoint::random(rng, d);
             let p2 = Su3Adjoint::random(rng, d);
             let p3 = Su3Adjoint::random(rng, d);
-            let p4 = Su3Adjoint::random(rng, d);
-            data.insert(i, Vector4::new(p1, p2, p3, p4));
+            data.push(Vector3::new(p1, p2, p3));
         }
         Self {
             max_time: 0,
@@ -244,12 +305,12 @@ impl EField {
         EField::new_deterministe(l, &mut rng, d)
     }
     
-    pub fn get_e_vec(&self, point: &LatticePoint) -> Option<&Vector4<Su3Adjoint>> {
-        self.data.get(point)
+    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector3<Su3Adjoint>> {
+        self.data.get(point.to_index(l))
     }
     
-    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction) -> Option<&Su3Adjoint> {
-        let value = self.get_e_vec(point);
+    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction, l: &LatticeCyclique) -> Option<&Su3Adjoint> {
+        let value = self.get_e_vec(point, l);
         match value {
             Some(vec) => Some(&vec[dir.to_index()]),
             None => None,
@@ -268,10 +329,14 @@ pub struct LatticeSimulation {
     lattice : LatticeCyclique,
     e_field: EField,
     link_matrix: LinkMatrix,
+    t: usize,
 }
 
 impl LatticeSimulation {
     
+    pub fn new(lattice: LatticeCyclique, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Self {
+        Self {lattice, e_field, link_matrix, t}
+    }
     
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data but slower than [`LatticeSimulation::new_random_threaded`]
@@ -292,6 +357,7 @@ impl LatticeSimulation {
             lattice,
             e_field,
             link_matrix,
+            t: 0,
         })
     }
     
@@ -331,6 +397,7 @@ impl LatticeSimulation {
                 lattice,
                 e_field,
                 link_matrix,
+                t: 0,
             })
         }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
         return result;
@@ -344,8 +411,64 @@ impl LatticeSimulation {
         &self.link_matrix
     }
     
+    pub fn lattice(&self) -> &LatticeCyclique {
+        &self.lattice
+    }
     
-    pub fn simulate(&mut self) {
-        todo!()
+    pub fn t(&self) -> usize {
+        self.t
+    }
+    
+    const CA: Real = 3_f64;
+    
+    
+    pub fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+        let c = Complex::new(0_f64, 2_f64 * LatticeSimulation::CA ).sqrt();
+        let u_i = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::from(link.clone()));
+        match u_i {
+            Some(u_i) => {
+                let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice());
+                match e_i {
+                    Some(e_i) => {
+                        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
+                    }
+                    None => return None,
+                }
+            }
+            None => return None,
+        }
+        
+    }
+    
+    pub fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+        let c = - Complex::new(2_f64 / LatticeSimulation::CA, 0_f64).sqrt();
+        let mut derivative = Vector3::from_element(Su3Adjoint::default());
+        for dir in Direction::POSITIVES_SPACE.iter() {
+            let derivative_i = &mut derivative[dir.to_index()];
+            let u_i = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point.clone(), dir.clone()))?;
+            let mut sum_s = CMatrix3::zeros();
+            for dir_2 in Direction::DIRECTIONS_SPACE.iter() {
+                if dir_2.to_positive() != *dir {
+                    let u_j = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point.clone(), dir_2.clone()))?;
+                    let mut point_pj = point.clone();
+                    point_pj[dir_2.to_index()] += 1;
+                    let u_i_p_j = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point_pj, dir.clone()))?;
+                    let mut point_pi = point.clone();
+                    point_pi[dir.to_index()] += 1;
+                    let u_j_d = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point_pi, dir.clone()))?.adjoint();
+                    let s_ij = u_j * u_i_p_j * u_j_d;
+                    sum_s += s_ij.adjoint();
+                }
+            }
+            for b in 0..derivative_i.len(){
+                let derivative_i_b = &mut derivative_i[b];
+                *derivative_i_b += (c * (su3::GENERATORS[b] * u_i * sum_s).trace().im).re / self.lattice().size();
+            }
+        }
+        return Some(derivative);
+    }
+    
+    pub fn simulate<I>(&self, delta_t: Real, number_of_thread: usize) -> Result<Self, SimulationError> where I: Integrator {
+        I::integrate(&self, delta_t, number_of_thread).map_err(|err| SimulationError::ThreadingError(err))
     }
 }
