@@ -4,7 +4,7 @@ use na::{
 };
 use approx::*;
 use super::Real;
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Neg};
 
 pub type PositiveF64 = Real;
 
@@ -102,6 +102,23 @@ impl LatticeCyclique {
     
     pub fn size(&self) -> Real {
         self.size
+    }
+    
+    pub fn add_point_direction(&self, mut l: LatticePoint, dir: &Direction) -> LatticePoint {
+        if dir.is_positive() {
+            l[dir.to_index()] = (l[dir.to_index()] + 1) % self.dim();
+            return l;
+        }
+        else {
+            let dir_pos = dir.to_positive();
+            if l[dir_pos.to_index()] == 0 {
+                l[dir_pos.to_index()] = self.dim() - 1;
+            }
+            else {
+                l[dir_pos.to_index()] = (l[dir_pos.to_index()] - 1) % self.dim();
+            }
+            return l;
+        }
     }
     
 }
@@ -522,6 +539,23 @@ impl Direction{
         }
     }
     
+}
+
+impl Neg for Direction{
+    type Output = Self;
+    
+    fn neg(self) -> Self::Output{
+        match self {
+            Direction::XPos => Direction::XNeg,
+            Direction::XNeg => Direction::XPos,
+            Direction::YPos => Direction::YNeg,
+            Direction::YNeg => Direction::YPos,
+            Direction::ZPos => Direction::ZNeg,
+            Direction::ZNeg => Direction::ZPos,
+            Direction::TPos => Direction::TNeg,
+            Direction::TNeg => Direction::TPos,
+        }
+    }
 }
 
 impl From<Direction> for usize {

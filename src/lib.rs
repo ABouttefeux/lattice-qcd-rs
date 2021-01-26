@@ -6,6 +6,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate murmur_hash_3 as m3;
 extern crate crossbeam;
+extern crate rayon;
 
 pub mod lattice;
 pub mod su3;

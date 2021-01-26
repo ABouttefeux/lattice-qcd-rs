@@ -4,7 +4,7 @@ use na::{
 };
 use super::{
     field::{
-        LatticeSimulation,
+        LatticeSimulationState,
         Su3Adjoint,
         EField,
         LinkMatrix,
@@ -21,7 +21,7 @@ use super::{
 };
 
 pub trait Integrator {
-    fn integrate(l: &LatticeSimulation, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulation, ThreadError>;
+    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, ThreadError>;
 }
 pub trait SymplecticIntegrator where Self:Integrator {}
 
@@ -42,7 +42,7 @@ impl Default for EulerIntegrator{
 impl SymplecticIntegrator for EulerIntegrator{}
 
 impl Integrator for  EulerIntegrator {
-    fn integrate(l: &LatticeSimulation, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulation, ThreadError> {
+    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, ThreadError> {
         let link_matrix = run_pool_parallel_vec(
             l.lattice().get_links_space(l.t()),
             l,
@@ -74,6 +74,6 @@ impl Integrator for  EulerIntegrator {
             Vector3::from_element(Su3Adjoint::default()),
         )?;
         
-        Ok(LatticeSimulation::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1))
+        Ok(LatticeSimulationState::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1))
     }
 }

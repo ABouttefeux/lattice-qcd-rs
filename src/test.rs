@@ -10,6 +10,7 @@ use super::{
     I,
     Vector8,
     thread::*,
+    integrator::*,
 };
 use std::{
     f64,
@@ -141,13 +142,13 @@ fn equivalece_exp_r(){
 fn create_sim() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeSimulation::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
+    let _simulation = LatticeSimulationState::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
 }
 
 #[test]
 fn creat_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeSimulation::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
+    let _simulation = LatticeSimulationState::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
 }
 
 fn delta(i: usize, j: usize) -> f64{
@@ -204,5 +205,35 @@ fn test_thread_vec() {
     let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, 0).unwrap();
     for i in iter {
         assert_eq!(     *result.get(i).unwrap(), i * i *c);
+    }
+}
+
+#[test]
+fn test_sim_hamiltonian() {
+    let mut rng = rand::thread_rng();
+    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
+    let h = simulation.get_hamiltonian();
+    let sim2 = simulation.simulate::<EulerIntegrator>(0.0001, 8).unwrap();
+    let h2 = sim2.get_hamiltonian();
+    println!("h1: {}, h2: {}", h, h2);
+    assert!(h - h2 < 0.01_f64 );
+}
+
+#[test]
+fn test_gauss_law() {
+    let mut rng = rand::thread_rng();
+    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
+    let sim2 = simulation.simulate::<EulerIntegrator>(0.000001, 8).unwrap();
+    let iter_g_1 = simulation.lattice().get_points(0).map(|el| {
+        simulation.get_gauss(&el).unwrap()
+    });
+    let mut iter_g_2 = simulation.lattice().get_points(0).map(|el| {
+        sim2.get_gauss(&el).unwrap()
+    });
+    for g1 in iter_g_1 {
+        let g2 = iter_g_2.next().unwrap();
+        assert!((g1 - g2).norm() < 0.001);
     }
 }

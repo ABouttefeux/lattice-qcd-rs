@@ -21,7 +21,7 @@ fn bench_simulation_creation_deterministe(
     rng: &mut rand::rngs::ThreadRng,
     d: &impl rand_distr::Distribution<Real>,
 ) {
-    let _simulation = LatticeSimulation::new_deterministe(1_f64, size, rng, d).unwrap();
+    let _simulation = LatticeSimulationState::new_deterministe(1_f64, size, rng, d).unwrap();
 }
 
 fn bench_simulation_creation_threaded<D>(
@@ -31,7 +31,7 @@ fn bench_simulation_creation_threaded<D>(
 )
     where D: rand_distr::Distribution<Real> + Sync,
 {
-    let _simulation = LatticeSimulation::new_random_threaded(1_f64, size, d, number_of_thread).unwrap();
+    let _simulation = LatticeSimulationState::new_random_threaded(1_f64, size, d, number_of_thread).unwrap();
 }
 
 

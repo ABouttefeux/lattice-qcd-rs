@@ -1,5 +1,5 @@
 
-use  std::{
+use std::{
     collections::HashMap,
     iter::Iterator,
     sync::{
@@ -14,8 +14,9 @@ use  std::{
 use crossbeam::{
     thread,
 };
-
 use super::lattice::{LatticeCyclique, LatticeElementToIndex};
+
+// TODO gives option to use rayon
 
 #[derive(Debug)]
 pub enum ThreadError {
@@ -174,6 +175,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     }
     else {
         let result = thread::scope(|s| {
+            // I try to put the thread cration in a function but the life time anotaion were a mess.
+            // I did not manage to make it working.
             let mutex_iter = Arc::new(Mutex::new(iter));
             let mut threads = vec![];
             let (result_tx, result_rx) = mpsc::channel::<(Key, Data)>();
@@ -209,6 +212,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     }
 }
 
+/// try seting the value inside the vec at position `pos`. If the position is not the array,
+/// build the array with default value up to `pos - 1` and insert data at `pos`.
 pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_data: &Data)
     where Data: Clone,
 {

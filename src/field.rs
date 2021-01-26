@@ -34,6 +34,8 @@ use  std::{
     ops::{Index, IndexMut, Mul, Add},
     vec::Vec,
 };
+use rayon::iter::ParallelBridge;
+use rayon::prelude::ParallelIterator;
 
 use crossbeam::thread;
 
@@ -236,18 +238,29 @@ impl LinkMatrix {
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, l: &LatticeCyclique, link: &LatticeLink)-> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(link);
-        let matrix_o = self.data.get(link_c.to_index(l));
-        match matrix_o {
-            Some(matrix) => {
-                let m_return = matrix.clone();
-                if link_c != *link {
-                    // that means the the link was in the negative direction
-                    return Some(m_return.adjoint());
-                }
-                return Some(m_return);
-            },
-            None => None,
+        let matrix = self.data.get(link_c.to_index(l))?.clone();
+        if link_c != *link {
+            // that means the the link was in the negative direction
+            return Some(matrix.adjoint());
         }
+        else {
+            return Some(matrix);
+        }
+    }
+    
+    pub fn get_sij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
+        let u_j = self.get_matrix(lattice, &LatticeLink::new(point.clone(), dir_j.clone()))?;
+        let point_pj = lattice.add_point_direction(point.clone(), dir_j);
+        let u_i_p_j = self.get_matrix(lattice, &LatticeLink::new(point_pj, dir_i.clone()))?;
+        let point_pi = lattice.add_point_direction(point.clone(), dir_i);
+        let u_j_pi_d = self.get_matrix(lattice, &LatticeLink::new(point_pi, dir_j.clone()))?.adjoint();
+        Some(u_j * u_i_p_j * u_j_pi_d)
+    }
+    
+    pub fn get_pij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
+        let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
+        let u_i = self.get_matrix(lattice, &LatticeLink::new(point.clone(), dir_i.clone()))?;
+        Some(u_i * s_ij.adjoint())
     }
     
 }
@@ -325,14 +338,14 @@ pub enum SimulationError {
 }
 
 #[derive(Debug)]
-pub struct LatticeSimulation {
+pub struct LatticeSimulationState {
     lattice : LatticeCyclique,
     e_field: EField,
     link_matrix: LinkMatrix,
     t: usize,
 }
 
-impl LatticeSimulation {
+impl LatticeSimulationState {
     
     pub fn new(lattice: LatticeCyclique, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Self {
         Self {lattice, e_field, link_matrix, t}
@@ -376,7 +389,7 @@ impl LatticeSimulation {
         }
         else if number_of_thread == 1 {
             let mut rng = rand::thread_rng();
-            return LatticeSimulation::new_deterministe(size, number_of_points, &mut rng, d)
+            return LatticeSimulationState::new_deterministe(size, number_of_points, &mut rng, d)
                 .ok_or(SimulationError::InitialisationError);
         }
         let lattice_option = LatticeCyclique::new(size, number_of_points);
@@ -419,29 +432,20 @@ impl LatticeSimulation {
         self.t
     }
     
+    
     const CA: Real = 3_f64;
     
-    
+    /// Get the derive of U_i(x)
     pub fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
-        let c = Complex::new(0_f64, 2_f64 * LatticeSimulation::CA ).sqrt();
-        let u_i = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::from(link.clone()));
-        match u_i {
-            Some(u_i) => {
-                let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice());
-                match e_i {
-                    Some(e_i) => {
-                        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
-                    }
-                    None => return None,
-                }
-            }
-            None => return None,
-        }
-        
+        let c = Complex::new(0_f64, 2_f64 * LatticeSimulationState::CA ).sqrt();
+        let u_i = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::from(link.clone()))?;
+        let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
+        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
     }
     
+    /// get the derive of E(x) ( as a vector of Su3Adjoint)
     pub fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
-        let c = - Complex::new(2_f64 / LatticeSimulation::CA, 0_f64).sqrt();
+        let c = - Complex::new(2_f64 / LatticeSimulationState::CA, 0_f64).sqrt();
         let mut derivative = Vector3::from_element(Su3Adjoint::default());
         for dir in Direction::POSITIVES_SPACE.iter() {
             let derivative_i = &mut derivative[dir.to_index()];
@@ -449,14 +453,7 @@ impl LatticeSimulation {
             let mut sum_s = CMatrix3::zeros();
             for dir_2 in Direction::DIRECTIONS_SPACE.iter() {
                 if dir_2.to_positive() != *dir {
-                    let u_j = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point.clone(), dir_2.clone()))?;
-                    let mut point_pj = point.clone();
-                    point_pj[dir_2.to_index()] += 1;
-                    let u_i_p_j = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point_pj, dir.clone()))?;
-                    let mut point_pi = point.clone();
-                    point_pi[dir.to_index()] += 1;
-                    let u_j_d = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point_pi, dir.clone()))?.adjoint();
-                    let s_ij = u_j * u_i_p_j * u_j_d;
+                    let s_ij = self.link_matrix().get_sij(point, dir, dir_2, self.lattice())?;
                     sum_s += s_ij.adjoint();
                 }
             }
@@ -466,6 +463,38 @@ impl LatticeSimulation {
             }
         }
         return Some(derivative);
+    }
+    
+    pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
+        let mut g_return = CMatrix3::zeros();
+        // TODO use Iter
+        for dir in Direction::POSITIVES_SPACE.iter() {
+            let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
+            let u_mi = self.link_matrix().get_matrix(self.lattice(), &LatticeLink::new(point.clone(), - dir.clone()))?;
+            let p_mi = self.lattice().add_point_direction(point.clone(), & - dir.clone());
+            let e_m_i = self.e_field().get_e_field(&p_mi, dir, self.lattice())?;
+            g_return += e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint();
+        }
+        Some(g_return)
+    }
+    
+    pub fn get_hamiltonian(&self) -> Real {
+        // todo iter
+        self.lattice().get_points(0).par_bridge().map(|el| {
+            let mut sum_plaquette = 0_f64;
+            let mut sum_trace_e = 0_f64;
+            for dir_i in Direction::POSITIVES_SPACE.iter(){
+                for dir_j in Direction::POSITIVES_SPACE.iter(){
+                    if dir_i.to_index() < dir_j.to_index() {
+                        sum_plaquette += 1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice()).unwrap().trace().re / LatticeSimulationState::CA;
+                    }
+                }
+                // TODO optimize
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
+                sum_trace_e += (e_i * e_i).trace().re;
+            }
+            return sum_plaquette + sum_trace_e;
+        }).sum()
     }
     
     pub fn simulate<I>(&self, delta_t: Real, number_of_thread: usize) -> Result<Self, SimulationError> where I: Integrator {
