@@ -60,7 +60,7 @@ impl Su3Adjoint {
     ///
     /// let su3 = Su3Adjoint::new(nalgebra::VectorN::<f64, nalgebra::U8>::from_element(1_f64));
     /// ```
-    pub fn new(data: Vector8<Real>) -> Self {
+    pub const fn new(data: Vector8<Real>) -> Self {
         Self {data}
     }
     
@@ -75,7 +75,7 @@ impl Su3Adjoint {
     }
     
     /// get the data inside the Su3Adjoint.
-    pub fn data(&self) -> &Vector8<Real> {
+    pub const fn data(&self) -> &Vector8<Real> {
         &self.data
     }
     
@@ -281,12 +281,12 @@ pub struct LinkMatrix {
 impl LinkMatrix {
     
     /// Creat a new link matrix field
-    pub fn new (data: Vec<Matrix3<na::Complex<Real>>>) -> Self{
+    pub const fn new (data: Vec<Matrix3<na::Complex<Real>>>) -> Self{
         Self {data}
     }
     
     /// Get the raw data.
-    pub fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
+    pub const fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         &self.data
     }
     
@@ -315,7 +315,7 @@ impl LinkMatrix {
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
-        for _ in l.get_links_space(0) {
+        for _ in l.get_links_space() {
             // the iterator *should* be in order
             let matrix = Su3Adjoint::random(rng, d).to_su3();
             data.push(matrix);
@@ -341,7 +341,7 @@ impl LinkMatrix {
             return Ok(LinkMatrix::new_deterministe(l, &mut rng, d));
         }
         let data = run_pool_parallel_vec_with_initialisation_mutable(
-            l.get_links_space(0),
+            l.get_links_space(),
             d,
             &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
             || rand::thread_rng(),
@@ -403,12 +403,12 @@ pub struct EField
 impl EField {
     
     /// Create a new "Electrical" field.
-    pub fn new (data: Vec<Vector3<Su3Adjoint>>) -> Self{
-        Self{data}
+    pub const fn new (data: Vec<Vector3<Su3Adjoint>>) -> Self {
+        Self {data}
     }
     
     /// Get the raw data.
-    pub fn data(&self) -> &Vec<Vector3<Su3Adjoint>> {
+    pub const fn data(&self) -> &Vec<Vector3<Su3Adjoint>> {
         &self.data
     }
     
@@ -442,7 +442,7 @@ impl EField {
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.get_number_of_points());
-        for _ in l.get_points(0) {
+        for _ in l.get_points() {
             // iterator *should* be ordoned
             let p1 = Su3Adjoint::random(rng, d);
             let p2 = Su3Adjoint::random(rng, d);
@@ -483,8 +483,8 @@ fn test_get_e_field_pos_neg() {
     let l = LatticeCyclique::new(1_f64, 4).unwrap();
     let e = EField::new(vec![Vector3::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]) ]) ]);
     assert_eq!(
-        e.get_e_field(&LatticePoint::new([0,0,0,0]), &Direction::XPos, &l),
-        e.get_e_field(&LatticePoint::new([0,0,0,0]), &Direction::XNeg, &l)
+        e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XPos, &l),
+        e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XNeg, &l)
     );
 }
 
@@ -599,20 +599,20 @@ impl LatticeSimulationState {
         return result;
     }
     
-    pub fn e_field(&self) -> &EField {
+    pub const fn e_field(&self) -> &EField {
         &self.e_field
     }
     
-    pub fn link_matrix(&self) -> &LinkMatrix {
+    pub const fn link_matrix(&self) -> &LinkMatrix {
         &self.link_matrix
     }
     
-    pub fn lattice(&self) -> &LatticeCyclique {
+    pub const fn lattice(&self) -> &LatticeCyclique {
         &self.lattice
     }
     
     /// return the time state, i.e. the number of time the simulation ran.
-    pub fn t(&self) -> usize {
+    pub const fn t(&self) -> usize {
         self.t
     }
     
@@ -665,8 +665,9 @@ impl LatticeSimulationState {
     
     /// Get the Hamiltonian of the state.
     pub fn get_hamiltonian(&self) -> Real {
-        // todo iter
-        self.lattice().get_points(0).par_bridge().map(|el| {
+        // todo iter$
+        // here it is ok to use par_bridge() as we do not care for the order
+        self.lattice().get_points().par_bridge().map(|el| {
             let mut sum_plaquette = 0_f64;
             let mut sum_trace_e = 0_f64;
             for dir_i in Direction::POSITIVES_SPACE.iter(){
@@ -684,9 +685,9 @@ impl LatticeSimulationState {
     }
     
     /// Do one simulation step.
-    pub fn simulate<I>(&self, delta_t: Real, number_of_thread: usize) -> Result<Self, SimulationError>
+    pub fn simulate<I>(&self, delta_t: Real, integrator: I) -> Result<Self, SimulationError>
         where I: Integrator
     {
-        I::integrate(&self, delta_t, number_of_thread)
+        integrator.integrate(&self, delta_t)
     }
 }

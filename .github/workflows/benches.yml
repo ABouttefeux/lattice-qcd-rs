@@ -3,14 +3,13 @@ name: Benches
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  bench:
     name: Run checks for Lattice QCD rs
     runs-on: ubuntu-latest
     env:
@@ -18,10 +17,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install Rust stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - name: Run benchmarks
         run: |
           # run benchmarks and save baseline in a directory called "new"
-          cargo bench -- --verbose
+          cargo bench
       - name: Upload benchmarks
         run: |
           # upload the files

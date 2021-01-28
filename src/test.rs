@@ -27,10 +27,10 @@ const EPSILON: f64 = 0.000000001_f64;
 /// test the size of iterators
 fn test_itrerator(points: usize){
     let l = LatticeCyclique::new(1_f64, points).unwrap();
-    let array: Vec<LatticeLinkCanonical> = l.get_links_space(0).collect();
+    let array: Vec<LatticeLinkCanonical> = l.get_links_space().collect();
     assert_eq!(array.len(), 3 * points * points * points);
     assert_eq!(3 * points * points * points, l.get_number_of_canonical_links_space());
-    let array: Vec<LatticePoint> = l.get_points(0).collect();
+    let array: Vec<LatticePoint> = l.get_points().collect();
     assert_eq!(array.len(), points * points * points);
     assert_eq!(array.len(), l.get_number_of_points());
 }
@@ -232,7 +232,7 @@ fn test_sim_hamiltonian() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian();
-    let sim2 = simulation.simulate::<SymplecticEuler>(0.0001, 8).unwrap();
+    let sim2 = simulation.simulate::<SymplecticEuler>(0.0001, SymplecticEuler::new(8)).unwrap();
     let h2 = sim2.get_hamiltonian();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64 );
@@ -244,11 +244,43 @@ fn test_gauss_law() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
-    let sim2 = simulation.simulate::<SymplecticEuler>(0.000001, 8).unwrap();
-    let iter_g_1 = simulation.lattice().get_points(0).map(|el| {
+    let sim2 = simulation.simulate::<SymplecticEuler>(0.000001, SymplecticEuler::new(8)).unwrap();
+    let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
     });
-    let mut iter_g_2 = simulation.lattice().get_points(0).map(|el| {
+    let mut iter_g_2 = simulation.lattice().get_points().map(|el| {
+        sim2.get_gauss(&el).unwrap()
+    });
+    for g1 in iter_g_1 {
+        let g2 = iter_g_2.next().unwrap();
+        assert!((g1 - g2).norm() < 0.001);
+    }
+}
+
+#[test]
+/// test if Hamiltonian is more or less conserved over simulation
+fn test_sim_hamiltonian_rayon() {
+    let mut rng = rand::thread_rng();
+    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
+    let h = simulation.get_hamiltonian();
+    let sim2 = simulation.simulate::<SymplecticEulerRayon>(0.0001, SymplecticEulerRayon::new()).unwrap();
+    let h2 = sim2.get_hamiltonian();
+    println!("h1: {}, h2: {}", h, h2);
+    assert!(h - h2 < 0.01_f64 );
+}
+
+#[test]
+/// test if Gauss parameter is more or less conserved over simulation
+fn test_gauss_law_rayon() {
+    let mut rng = rand::thread_rng();
+    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
+    let sim2 = simulation.simulate::<SymplecticEulerRayon>(0.000001, SymplecticEulerRayon::new()).unwrap();
+    let iter_g_1 = simulation.lattice().get_points().map(|el| {
+        simulation.get_gauss(&el).unwrap()
+    });
+    let mut iter_g_2 = simulation.lattice().get_points().map(|el| {
         sim2.get_gauss(&el).unwrap()
     });
     for g1 in iter_g_1 {

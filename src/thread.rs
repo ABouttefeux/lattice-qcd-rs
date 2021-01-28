@@ -13,10 +13,11 @@ use std::{
     hash::Hash,
     vec::Vec
 };
-use crossbeam::{
-    thread,
-};
+use crossbeam::thread;
 use super::lattice::{LatticeCyclique, LatticeElementToIndex};
+use rayon::iter::IntoParallelIterator;
+use rayon::prelude::ParallelIterator;
+
 
 // TODO gives option to use rayon
 
@@ -125,7 +126,6 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 /// ```
 /// extern crate rand;
 /// extern crate rand_distr;
-/// extern crate nalgebra;
 /// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
@@ -133,7 +133,7 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 /// let l = LatticeCyclique::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_with_initialisation_mutable(
-///     l.get_links_space(0),
+///     l.get_links_space(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     || rand::thread_rng(),
@@ -222,7 +222,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// let l = LatticeCyclique::new(1_f64, 4).unwrap();
 /// let c = 5_usize;
 /// let result = run_pool_parallel_vec(
-///     l.get_points(0),
+///     l.get_points(),
 ///     &c,
 ///     &|i: &LatticePoint, c: &usize| i[0] * c,
 ///     4,
@@ -230,7 +230,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 ///     &l,
 ///     0,
 /// ).unwrap();
-/// let point = LatticePoint::new([3, 0, 5, 0]);
+/// let point = LatticePoint::new([3, 0, 5]);
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
@@ -243,7 +243,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
     default_data: Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync + LatticeElementToIndex,
+    Key: Eq + Send + Clone + Sync + LatticeElementToIndex,
     Data: Send + Clone,
     F: Fn(&Key, &CommonData) -> Data,
     F: Sync + Clone,
@@ -270,7 +270,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// let l = LatticeCyclique::new(1_f64, 50).unwrap();
-/// let iter = l.get_points(0);
+/// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
@@ -304,7 +304,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// let l = LatticeCyclique::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
-///     l.get_links_space(0),
+///     l.get_links_space(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     || rand::thread_rng(),
@@ -325,7 +325,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     default_data: Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Send + Clone + Sync,
     Data: Send + Clone,
     F: Fn(&mut InitData, &Key, &CommonData) -> Data,
     F: Sync + Clone,
@@ -398,6 +398,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
 /// assert_eq!(vec, vec![1, 0, 0, 9]);
 /// insert_in_vec(&mut vec, 5, 10, &1);
 /// assert_eq!(vec, vec![1, 0, 0, 9, 1, 10]);
+/// insert_in_vec(&mut vec, 1, 3, &1);
+/// assert_eq!(vec, vec![1, 3, 0, 9, 1, 10]);
 /// ```
 pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_data: &Data)
     where Data: Clone,
@@ -411,4 +413,37 @@ pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_
         }
         vec.push(data);
     }
+}
+
+
+/// Run a parallel pool using external crate [`rayon`].
+///
+/// # Example.
+/// ```
+/// # use lattice_qcd_rs::thread::run_pool_parallel_rayon;
+/// let iter = 0..1000;
+/// let c = 5;
+/// let result = run_pool_parallel_rayon(iter, &c, |i, c1| i * i  * c1);
+/// assert_eq!(result[687], 687 * 687 * c);
+/// assert_eq!(result[10], 10 * 10 * c);
+/// ```
+/// # Panic.
+/// panic if the closure panic at any point during the evalutation
+/// ```should_panic
+/// # use lattice_qcd_rs::thread::run_pool_parallel_rayon;
+/// let iter = 0..10;
+/// let result = run_pool_parallel_rayon(iter, &(), |_, _| panic!("message"));
+/// ```
+pub fn run_pool_parallel_rayon<Key, Data, CommonData, F>(
+    iter: impl Iterator<Item = Key> + Send,
+    common_data: &CommonData,
+    closure: F,
+) -> Vec<Data>
+    where CommonData: Sync,
+    Key: Eq + Send,
+    Data: Send,
+    F: Fn(&Key, &CommonData) -> Data,
+    F: Sync,
+{
+    iter.collect::<Vec<Key>>().into_par_iter().map(|el| closure(&el, common_data)).collect()
 }
