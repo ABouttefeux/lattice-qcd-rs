@@ -1,0 +1,28 @@
+name: Benches
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Run checks for Lattice QCD rs
+    runs-on: ubuntu-latest
+    env:
+      CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Run benchmarks
+        run: |
+          # run benchmarks and save baseline in a directory called "new"
+          cargo bench -- --verbose
+      - name: Upload benchmarks
+        run: |
+          # upload the files
+          bash <(curl -s https://criterion.dev/bash)

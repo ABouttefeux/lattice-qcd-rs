@@ -1,13 +1,13 @@
 
+//! Module for SU(3) matrices and su(3) (that is the generators of SU(3) )
+//!
+//! The module defines the SU(3) generator we use the same matrices as on [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices) **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+
 use na::{
     ComplexField,
     MatrixN,
     base::allocator::Allocator,
     DefaultAllocator,
-};
-use std::{
-     convert::{From},
-     vec::Vec,
 };
 use super::{
     Complex,
@@ -20,68 +20,119 @@ use super::{
 };
 use once_cell::sync::Lazy;
 
+/// SU(3) generator
+/// ```math
+/// 0    0.5  0
+/// 0.5  0    0
+/// 0    0    0
+/// ```
 pub static GENERATOR_1: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ONE, ZERO,
         ONE, ZERO, ZERO,
         ZERO, ZERO, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0   -i/2   0
+/// i/2  0     0
+/// 0    0     0
+/// ```
 pub static GENERATOR_2: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, -I, ZERO,
         I, ZERO, ZERO,
         ZERO, ZERO, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0.5  0    0
+/// 0   -0.5  0
+/// 0    0    0
+/// ```
 pub static GENERATOR_3: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ONE, ZERO, ZERO,
         ZERO, -ONE, ZERO,
         ZERO, ZERO, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0    0    0.5
+/// 0    0    0
+/// 0.5  0    0
+/// ```
 pub static GENERATOR_4: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ZERO, ONE,
         ZERO, ZERO, ZERO,
         ONE, ZERO, ZERO,
 ) * Complex::from(0.5_f64) );
 
+/// SU(3) generator
+/// ```math
+/// 0    0   -i/2
+/// 0    0    0
+/// i/2  0    0
+/// ```
 pub static GENERATOR_5: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ZERO, -I,
         ZERO, ZERO, ZERO,
         I, ZERO, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0    0    0
+/// 0    0    0.5
+/// 0    0.5  0
+/// ```
 pub static GENERATOR_6: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ZERO, ZERO,
         ZERO, ZERO, ONE,
         ZERO, ONE, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0    0    0
+/// 0    0   -i/2
+/// 0    i/2  0
+/// ```
 pub static GENERATOR_7: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ZERO, ZERO,
         ZERO, ZERO, -I,
         ZERO, I, ZERO,
 ) * Complex::from(0.5_f64));
 
+/// SU(3) generator
+/// ```math
+/// 0.5/sqrt(3)  0            0
+/// 0            0.5/sqrt(3)  0
+/// 0            0           -1/sqrt(3)
+/// ```
 pub static GENERATOR_8: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         Complex::new(1_f64, 0_f64), ZERO, ZERO,
         ZERO, Complex::new(1_f64, 0_f64), ZERO,
         ZERO, ZERO, Complex::new(-2_f64, 0_f64),
 ) * Complex::from(0.5_f64 / 3_f64.sqrt()));
 
-/// liste of SU(3) generators
-/// they are normalise sur that `Tr(T^a T^b) = \frac{1}{2}\delta^{ab}`
+/// list of SU(3) generators
+/// they are normalize such that `Tr(T^a T^b) = \frac{1}{2}\delta^{ab}`
 pub static GENERATORS: Lazy<[&CMatrix3; 8]> = Lazy::new(||
     [&GENERATOR_1, &GENERATOR_2, &GENERATOR_3, &GENERATOR_4, &GENERATOR_5, &GENERATOR_6, &GENERATOR_7, &GENERATOR_8]
 );
 
 
-/// exponential of marices
-/// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible
+/// Exponential of matrices.
+///
+/// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
 pub trait MatrixExp<T> {
     fn exp(&self) -> T;
 }
 
-/// basic Implementiation of matrix exponential
+/// Basic implementation of matrix exponential for complex matrices.
+/// It does it by first diagonalizing the matrix then exponentiate the diagonal
+/// and retransforms it back to the original basis.
 impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
     where T: ComplexField + Copy,
     D: na::DimName + na::DimSub<na::U1>,
@@ -106,66 +157,12 @@ impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
     
 }
 
-// u64 is juste not enought
+// u64 is just not enough.
 type FactorialNumber = u128;
 
-/// return n!, for type of number n < 26 prefer using the static store [`FactorialStorageStatic`]
-pub const fn factorial(n: usize) -> FactorialNumber {
-    if n == 0 {
-        return 1
-    }
-    else{
-        return n as FactorialNumber * factorial(n-1)
-    }
-}
-
-/// Dynamical size factorial store
-pub struct FactorialStorageDyn {
-    data: Vec<FactorialNumber>
-}
-
-impl FactorialStorageDyn {
-    pub const fn new_const() -> Self{
-        Self{data : Vec::new()}
-    }
-    
-    /// build the storage up to and including `value`
-    pub fn build_storage(&mut self, value: usize) {
-        self.get_factorial(value);
-    }
-    
-    /// Get the factorial number. If it is not already computed build internal storage
-    pub fn get_factorial(&mut self, value: usize) -> FactorialNumber {
-        let mut len = self.data.len();
-        if len == 0 {
-            self.data.push(1);
-            len = 1;
-        }
-        if len > value{
-            return self.data[value];
-        }
-        for i in len..value + 1{
-            self.data.push(self.data[i - 1] * i as FactorialNumber);
-        }
-        return self.data[value];
-    }
-    
-    /// try get factorial from storage
-    pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
-        self.data.get(value)
-    }
-    
-    /// Get facorial but does build the storafe if it is missing
-    pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
-        let mut value_m : FactorialNumber = self.data[value.min(self.data.len() -1 )];
-        for i in self.data.len() - 1..value{
-            value_m *= (i + 1) as FactorialNumber;
-        }
-        return value_m;
-    }
-}
-
-/// Get the minimum number to compute factorial value statically for [`su3_exp_i`] and [`su3_exp_r`].
+/// Return N such that `1/(N-7)! < [`f64::EPSILON`].
+///
+/// This number is needed for the computation of exponential matrix
 pub fn get_factorial_size_for_exp() -> usize {
     let mut n : usize = 7;
     let mut factorial_value = 1;
@@ -177,15 +174,15 @@ pub fn get_factorial_size_for_exp() -> usize {
 }
 
 /// size of the factorial storage
-const N: usize = 26;
+const N: usize = 26; // TODO verify accuracy
 
-/// static store for factorial numbre
+/// static store for factorial number
 struct FactorialStorageStatic {
     data: [FactorialNumber; N]
 }
 
 impl FactorialStorageStatic {
-    /// compile time evaluation
+    /// compile time evaluation of all 25 factorial numbers
     pub const fn new() -> Self {
         let mut data : [FactorialNumber; N] = [1; N];
         // cant do for in constant function :(
@@ -249,10 +246,17 @@ impl FactorialStorageStatic {
 }
 
 /// factorial number storage in order to find the exponential in O(1) for a set storage
-/// the set if for all number $`N`$ such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`$
+/// the set if for all number `N` such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`
 const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::new();
 
-/// give the SU3 matrix from the ajoint rep, i.e compute $`exp(i v^a T^a )`$
+/// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
+///
+/// The algorithm use is much more efficient the diagonalization method.
+/// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
+/// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
+/// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
+/// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
+/// exp(i X).
 pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
@@ -275,7 +279,12 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
     return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
 }
 
-/// return $`exp(v^a T^a )`$
+/// gives the value `exp(v^a T^a )`
+///
+/// The algorithm use is much more efficient the diagonalization method.
+/// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
+/// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
+/// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
     let n = N - 1;
     let m = v.to_matrix();

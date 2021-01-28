@@ -1,4 +1,6 @@
 
+//! Module for testes
+
 use super::{
     lattice::*,
     su3::*,
@@ -19,9 +21,10 @@ use std::{
 use approx::*;
 use na::ComplexField;
 
+/// Defines a small value to compare f64.
 const EPSILON: f64 = 0.000000001_f64;
 
-
+/// test the size of iterators
 fn test_itrerator(points: usize){
     let l = LatticeCyclique::new(1_f64, points).unwrap();
     let array: Vec<LatticeLinkCanonical> = l.get_links_space(0).collect();
@@ -33,12 +36,14 @@ fn test_itrerator(points: usize){
 }
 
 #[test]
+/// test the size of iterators
 fn test_itrerator_length(){
     test_itrerator(2);
     test_itrerator(10);
     test_itrerator(26);
 }
 
+/// test the exponential of matrix
 fn test_exp(factor : Complex){
     let m_g1_exp = CMatrix3::new(
         factor.cosh(), factor.sinh(), ZERO,
@@ -55,6 +60,7 @@ fn test_exp(factor : Complex){
 }
 
 #[test]
+/// test the [`MatrixExp`] trait implementation
 fn test_exp_old(){
     test_exp(ONE);
     test_exp(Complex::new(2_f64, 0_f64));
@@ -64,6 +70,7 @@ fn test_exp_old(){
     test_exp(Complex::new(11.64_f64, -12.876_f64));
 }
 
+/// test [`su3_exp_i`] and [`Su3Adjoint::to_su3`]
 fn test_exp_su3(factor: f64){
     let factor_i = Complex::from(factor) * I;
     let m_g1_exp = CMatrix3::new(
@@ -92,6 +99,7 @@ fn test_exp_su3(factor: f64){
 }
 
 #[test]
+/// basic test of [`su3_exp_i`] and [`Su3Adjoint::to_su3`]
 fn test_exp_basic(){
     test_exp_su3(1_f64);
     test_exp_su3(2_f64);
@@ -99,6 +107,7 @@ fn test_exp_basic(){
 }
 
 #[test]
+/// test equivalence of [`su3_exp_i`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_i(){
     let mut rng = rand::thread_rng();
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
@@ -119,6 +128,7 @@ fn equivalece_exp_i(){
 }
 
 #[test]
+/// test equivalence of [`su3_exp_r`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_r(){
     let mut rng = rand::thread_rng();
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
@@ -139,6 +149,7 @@ fn equivalece_exp_r(){
 }
 
 #[test]
+/// test creation of sim ( single threaded)
 fn create_sim() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
@@ -146,11 +157,13 @@ fn create_sim() {
 }
 
 #[test]
+/// test creation of sim multi threaded
 fn creat_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let _simulation = LatticeSimulationState::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
 }
 
+/// return 1 if i==j 0 otherwise
 fn delta(i: usize, j: usize) -> f64{
     if i == j {
         return 1_f64;
@@ -161,6 +174,7 @@ fn delta(i: usize, j: usize) -> f64{
 }
 
 #[test]
+/// Test the properties of generators
 fn test_generators() {
     for i in 0..7{
         assert_eq!( GENERATORS[i].determinant(), ZERO);
@@ -177,6 +191,7 @@ fn test_generators() {
 }
 
 #[test]
+/// test the SU(3) properties of [`Su3Adjoint::to_su3`]
 fn test_su3_property(){
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
@@ -188,6 +203,7 @@ fn test_su3_property(){
 }
 
 #[test]
+/// test [`run_pool_parallel`]
 fn test_thread() {
     let iter = 1..10000;
     let c = 5;
@@ -198,34 +214,37 @@ fn test_thread() {
 }
 
 #[test]
+/// test [`run_pool_parallel_vec`]
 fn test_thread_vec() {
     let l = LatticeCyclique::new(1_f64, 10).unwrap();
     let iter = 0..10000;
     let c = 5;
     let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, 0).unwrap();
     for i in iter {
-        assert_eq!(     *result.get(i).unwrap(), i * i *c);
+        assert_eq!(*result.get(i).unwrap(), i * i *c);
     }
 }
 
 #[test]
+/// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian();
-    let sim2 = simulation.simulate::<EulerIntegrator>(0.0001, 8).unwrap();
+    let sim2 = simulation.simulate::<SymplecticEuler>(0.0001, 8).unwrap();
     let h2 = sim2.get_hamiltonian();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64 );
 }
 
 #[test]
+/// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
-    let sim2 = simulation.simulate::<EulerIntegrator>(0.000001, 8).unwrap();
+    let sim2 = simulation.simulate::<SymplecticEuler>(0.000001, 8).unwrap();
     let iter_g_1 = simulation.lattice().get_points(0).map(|el| {
         simulation.get_gauss(&el).unwrap()
     });

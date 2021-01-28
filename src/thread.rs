@@ -1,4 +1,6 @@
 
+//! tool for easy use of mutli threading.
+
 use std::{
     collections::HashMap,
     iter::Iterator,
@@ -20,10 +22,51 @@ use super::lattice::{LatticeCyclique, LatticeElementToIndex};
 
 #[derive(Debug)]
 pub enum ThreadError {
+    /// Tried to run some jobs with 0 threads
     ThreadNumberIncorect,
+    /// One of the thread panicked. inside the [`Box`] is the panic message.
+    /// see [`run_pool_parallel`] example.
     Panic(Box<dyn Any + Send + 'static>),
 }
 
+/// run jobs in parallel.
+///
+/// The pool of job is given by `iter`. the job is given by `closure` that have the form `|key,common_data| -> Data`.
+/// `number_of_thread` determine the number of job done in parallel and should be greater than 0,
+/// otherwise return [`ThreadError::ThreadNumberIncorect`].
+/// `capacity` is used to determine the capacity of the [`HashMap`] upon initisation (see [`HashMap::with_capacity`])
+///
+/// # Example
+/// let us computes the value of `i^2 * c` for i in [2,9999] with 4 threads
+/// ```
+/// # use lattice_qcd_rs::thread::run_pool_parallel;
+/// let iter = 2..10000;
+/// let c = 5;
+/// // we could have put 4 inside the closure but this demonstrate how to use common data
+/// let result = run_pool_parallel(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000 - 2).unwrap();
+/// assert_eq!(*result.get(&40).unwrap(), 40 * 40 * c);
+/// assert_eq!(result.get(&1), None);
+/// ```
+/// In the next example a thread will panic, we demonstrate the return type.
+/// ```should_panic
+/// # use lattice_qcd_rs::thread::{run_pool_parallel, ThreadError};
+/// let iter = 0..10;
+/// let result = run_pool_parallel(iter.clone(), &(), &|_, _| {panic!("panic message")}, 4, 10);
+/// result.unwrap(); // this propagate the panic.
+/// ```
+/// This give the following panic message
+/// ```ignore
+/// ---- src\thread.rs - thread::run_pool_parallel (line 51) stdout ----
+/// Test executable failed (exit code 101).
+///
+/// stderr:
+/// thread '<unnamed>' panicked at 'thread 'panic message', src\thread.rs:6:60
+/// note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+/// <unnamed>' panicked at 'panic message', src\thread.rs:6:60
+/// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:60
+/// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:60
+/// thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Panic(Any)', src\thread.rs:7:8
+/// ```
 
 pub fn run_pool_parallel<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
@@ -49,6 +92,55 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
     )
 }
 
+/// run jobs in parallel. Similar to [`run_pool_parallel`] but with initiation.
+///
+/// see [`run_pool_parallel`]. Moreover let some data to be initialize per thread.
+/// closure_init is run once per thread and store inside a mutable data which closure can modify.
+///
+/// # Examples
+/// Let us create some value but we will greet the user from the threads
+/// ```
+/// # use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// let iter = 0_u128..100000_u128;
+/// let c = 5_u128;
+/// // we could have put 4 inside the closure but this demonstrate how to use common data
+/// let result = run_pool_parallel_with_initialisation_mutable(
+///     iter.clone(),
+///     &c,
+///     &|has_greeted: &mut bool, i, c| {
+///          if ! *has_greeted {
+///              *has_greeted = true;
+///              println!("Hello from the thread");
+///          }
+///          i * i * c
+///     },
+///     || {false},
+///     4,
+///     100000
+/// ).unwrap();
+/// ```
+/// will print "Hello from the thread" four times.
+///
+/// Another useful application is to use an rng
+/// ```
+/// extern crate rand;
+/// extern crate rand_distr;
+/// extern crate nalgebra;
+/// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::LatticeCyclique;
+/// use lattice_qcd_rs::field::Su3Adjoint;
+///
+/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+/// let result = run_pool_parallel_with_initialisation_mutable(
+///     l.get_links_space(0),
+///     &distribution,
+///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
+///     || rand::thread_rng(),
+///     4,
+///     l.get_number_of_canonical_links_space(),
+/// ).unwrap();
+/// ```
 pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -98,7 +190,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
                 });
                 threads.push(handel);
             }
-            // we drop channel so we can proprely assert if they are closed
+            // we drop channel so we can properly assert if they are closed
             drop(result_tx);
             let mut hash_map = HashMap::<Key, Data>::with_capacity(capacity);
             for message in result_rx {
@@ -114,6 +206,33 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
     }
 }
 
+/// run jobs in parallel. Similar to [`run_pool_parallel`] but return a vector.
+///
+/// Now a reference to the lattice must be given and `key` must implement the trait [`super::lattice::LatticeElementToIndex`].
+/// [`super::lattice::LatticeElementToIndex::to_index`] will be use to insert the data inside the vector.
+/// While computing because the thread can operate out of order, fill the data not yet computed by `default_data`
+/// `capacity` is used to determine the capacity of the [`std::vec::Vec`] upon initiation
+/// (see [`std::vec::Vec::with_capacity`]).
+/// # Example
+/// ```
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec;
+/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
+/// use lattice_qcd_rs::field::Su3Adjoint;
+///
+/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let c = 5_usize;
+/// let result = run_pool_parallel_vec(
+///     l.get_points(0),
+///     &c,
+///     &|i: &LatticePoint, c: &usize| i[0] * c,
+///     4,
+///     l.get_number_of_canonical_links_space(),
+///     &l,
+///     0,
+/// ).unwrap();
+/// let point = LatticePoint::new([3, 0, 5, 0]);
+/// assert_eq!(result[point.to_index(&l)], point[0] * c)
+/// ```
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -124,11 +243,10 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
     default_data: Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Hash + Send + Clone + Sync + LatticeElementToIndex,
     Data: Send + Clone,
     F: Fn(&Key, &CommonData) -> Data,
     F: Sync + Clone,
-    Key: LatticeElementToIndex,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
@@ -143,6 +261,59 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 }
 
 // TODO convert closure for conversion key -> usize
+
+/// run jobs in parallel. Similar to [`run_pool_parallel_vec`] but with initiation.
+///
+/// # Examples
+/// Let us create some value but we will greet the user from the threads
+/// ```
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
+/// let l = LatticeCyclique::new(1_f64, 50).unwrap();
+/// let iter = l.get_points(0);
+/// let c = 5_usize;
+/// // we could have put 4 inside the closure but this demonstrate how to use common data
+/// let result = run_pool_parallel_vec_with_initialisation_mutable(
+///     iter.clone(),
+///     &c,
+///     &|has_greeted: &mut bool, i: &LatticePoint,  c: &usize| {
+///          if ! *has_greeted {
+///              *has_greeted = true;
+///              println!("Hello from the thread");
+///          }
+///          i[0] * c
+///     },
+///     || {false},
+///     4,
+///     100000,
+///     &l,
+///     0,
+/// ).unwrap();
+/// ```
+/// will print "Hello from the thread" four times.
+///
+/// Another useful application is to use an rng
+/// ```
+/// extern crate rand;
+/// extern crate rand_distr;
+/// extern crate nalgebra;
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::LatticeCyclique;
+/// use lattice_qcd_rs::field::Su3Adjoint;
+///
+/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+/// let result = run_pool_parallel_vec_with_initialisation_mutable(
+///     l.get_links_space(0),
+///     &distribution,
+///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
+///     || rand::thread_rng(),
+///     4,
+///     l.get_number_of_canonical_links_space(),
+///     &l,
+///     nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
+/// ).unwrap();
+/// ```
 pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -175,7 +346,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     }
     else {
         let result = thread::scope(|s| {
-            // I try to put the thread cration in a function but the life time anotaion were a mess.
+            // I try to put the thread creation in a function but the life time annotation were a mess.
             // I did not manage to make it working.
             let mutex_iter = Arc::new(Mutex::new(iter));
             let mut threads = vec![];
@@ -212,8 +383,22 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     }
 }
 
-/// try seting the value inside the vec at position `pos`. If the position is not the array,
+/// Try setting the value inside the vec at position `pos`. If the position is not the array,
 /// build the array with default value up to `pos - 1` and insert data at `pos`.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::thread::insert_in_vec;
+/// use std::vec::Vec;
+///
+/// let mut vec = vec![];
+/// insert_in_vec(&mut vec, 0, 1, &0);
+/// assert_eq!(vec, vec![1]);
+/// insert_in_vec(&mut vec, 3, 9, &0);
+/// assert_eq!(vec, vec![1, 0, 0, 9]);
+/// insert_in_vec(&mut vec, 5, 10, &1);
+/// assert_eq!(vec, vec![1, 0, 0, 9, 1, 10]);
+/// ```
 pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_data: &Data)
     where Data: Clone,
 {

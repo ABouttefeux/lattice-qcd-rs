@@ -104,10 +104,16 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("matrix exp new r", |b| {
         b.iter(|| matrix_exp_r(&mut rng, &d))
     });
+}
+
+fn benchmark_base(c: &mut Criterion) {
+    let mut rng = rand::thread_rng();
+    let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     c.bench_function("creation time random SU3 adj", |b| b.iter(|| create_su3_adj(&mut rng, &d)));
     c.bench_function("creation time Vec", |b| b.iter(|| create_vec(&mut rng, &d)));
     c.bench_function("creation time HashMap", |b| b.iter(|| create_hash_map(&mut rng, &d)));
 }
 
-criterion_group!(benches, criterion_benchmark);
+
+criterion_group!(benches, criterion_benchmark, benchmark_base);
 criterion_main!(benches);

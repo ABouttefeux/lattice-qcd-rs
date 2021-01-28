@@ -1,3 +1,7 @@
+//! Work in progress
+//!
+//! module to represent numbers.
+
 /*
 pub struct Rng<T, V>
     where T: rand_distr::Distribution<V>,
@@ -6,7 +10,7 @@ pub struct Rng<T, V>
     distribution: T
 }
 
-impl<T, V> Rng<T,V> 
+impl<T, V> Rng<T,V>
     where T: rand_distr::Distribution<V>,
 {
     pub fn get_random_number(&mut self) -> V {
@@ -19,6 +23,7 @@ impl<T, V> Rng<T,V>
 }
 */
 
+//! Fix point number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
@@ -31,7 +36,7 @@ pub struct FixedPointNumber<I, D>
 
 impl<I, D> FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy, 
+    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     pub fn integer(&self) -> I {
         self.integer
@@ -51,7 +56,7 @@ impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
 {
     type Output = Self;
     
-     fn neg(self) -> Self::Output {
+     fn neg(mut self) -> Self::Output {
         self.integer = - self.integer;
         if self.decimal != 0 {
             self.integer += 1;
@@ -63,7 +68,7 @@ impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
 */
 
 /*
-impl<I, D> num_traits::Num for  FixedPointNumber<I, D>
+impl<I, D> num_traits::Num for FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {

@@ -1,4 +1,6 @@
 
+//! Numerical integrators to carry out simulations.
+
 use na::{
     Vector3,
 };
@@ -8,10 +10,10 @@ use super::{
         Su3Adjoint,
         EField,
         LinkMatrix,
+        SimulationError,
     },
     thread::{
         run_pool_parallel_vec,
-        ThreadError,
     },
     Complex,
     lattice::{
@@ -20,35 +22,28 @@ use super::{
     CMatrix3,
 };
 
+/// Define an numerical integrator
 pub trait Integrator {
-    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, ThreadError>;
+    /// Do one simulation step
+    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, SimulationError>;
 }
+
+/// Define an symplectic numerical integrator
 pub trait SymplecticIntegrator where Self:Integrator {}
 
-pub struct EulerIntegrator {}
+/// Basic symplectic Euler integrator
+pub struct SymplecticEuler {}
 
-impl EulerIntegrator {
-    pub fn new() -> Self {
-        Self{}
-    }
-}
+impl SymplecticIntegrator for SymplecticEuler{}
 
-impl Default for EulerIntegrator{
-    fn default() -> Self {
-        EulerIntegrator::new()
-    }
-}
-
-impl SymplecticIntegrator for EulerIntegrator{}
-
-impl Integrator for  EulerIntegrator {
-    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, ThreadError> {
+impl Integrator for  SymplecticEuler {
+    fn integrate(l: &LatticeSimulationState, delta_t: f64, number_of_thread: usize) ->  Result<LatticeSimulationState, SimulationError> {
         let link_matrix = run_pool_parallel_vec(
             l.lattice().get_links_space(l.t()),
             l,
             &|link, l| {
                 let canonical_link = LatticeLink::from(link.clone());
-                let initial_value = l.link_matrix().get_matrix(l.lattice(), &canonical_link).unwrap();
+                let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
                 return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
             },
             number_of_thread,
@@ -74,6 +69,6 @@ impl Integrator for  EulerIntegrator {
             Vector3::from_element(Su3Adjoint::default()),
         )?;
         
-        Ok(LatticeSimulationState::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1))
+        LatticeSimulationState::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }

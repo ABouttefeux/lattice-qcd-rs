@@ -5,12 +5,10 @@ authors = [" Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
 edition = "2018"
 readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
-license = "MIT"
 categories = ["science"]
 description  = "Lattice QCD"
 keywords  = ["QCD", "Lattice"]
 publish = false
-
 
 [dependencies]
 nalgebra = "0.24.0"
@@ -19,7 +17,6 @@ approx = "0.4.0"
 num-traits = "0.2.14"
 rand = "0.8.2"
 rand_distr = "0.4.0"
-murmur_hash_3 = { version = "0.1.0", git = "https://github.com/ABouttefeux/murmur3-rs", branch = "main" }
 crossbeam = "0.8.0"
 rayon = "1.5.0"
 
@@ -31,4 +28,4 @@ name = "bench"
 harness = false
 
 [profile.test]
-opt-level = 3 # in orderm to have resonable test time
+opt-level = 3 # in order to have resonable test time
