@@ -87,11 +87,9 @@ impl Su3Adjoint {
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
     pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
-        let mut mat = Matrix3::from_element(ZERO);
-        for i in 0..self.data.len() {
-            mat += *GENERATORS[i] * na::Complex::<Real>::from(self.data[i]);
-        }
-        return mat;
+        self.data.iter().enumerate()
+            .map(|(pos, el)|  *GENERATORS[pos] * na::Complex::<Real>::from(el))
+            .sum()
     }
     
     /// Return the SU(3) matrix associated with this generator.
@@ -314,6 +312,8 @@ impl LinkMatrix {
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
+        // l.get_links_space().map(|_|  Su3Adjoint::random(rng, d).to_su3()).collect()
+        // using a for loop imporves performance. ( probably because the vector is pre allocated).
         let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
         for _ in l.get_links_space() {
             // the iterator *should* be in order
@@ -350,22 +350,20 @@ impl LinkMatrix {
             l,
             CMatrix3::zeros(),
         )?;
-        Ok(Self {
-            data,
-        })
+        Ok(Self {data})
     }
     
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique)-> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(link);
-        let matrix = self.data.get(link_c.to_index(l))?.clone();
+        let matrix = self.data.get(link_c.to_index(l))? ;
         if link.is_dir_negative() {
             // that means the the link was in the negative direction
             return Some(matrix.adjoint());
         }
         else {
-            return Some(matrix);
+            return Some(*matrix);
         }
     }
     
@@ -554,11 +552,8 @@ impl LatticeSimulationState {
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Result<Self, SimulationError> {
-        let lattice_option = LatticeCyclique::new(size, number_of_points);
-        if let None = lattice_option {
-            return Err(SimulationError::InitialisationError);
-        }
-        let lattice = lattice_option.unwrap();
+        let lattice = LatticeCyclique::new(size, number_of_points)
+                .ok_or(SimulationError::InitialisationError)?;
         let e_field = EField::new_deterministe(&lattice, rng, d);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
         LatticeSimulationState::new(lattice, e_field, link_matrix, 0)
@@ -599,10 +594,12 @@ impl LatticeSimulationState {
         return result;
     }
     
+    /// The "Electrical" field of this state.
     pub const fn e_field(&self) -> &EField {
         &self.e_field
     }
     
+    /// The link matrices of this state.
     pub const fn link_matrix(&self) -> &LinkMatrix {
         &self.link_matrix
     }

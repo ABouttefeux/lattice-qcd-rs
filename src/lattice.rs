@@ -1,5 +1,5 @@
 
-//! Defines lattices and lattice component
+//! Defines lattices and lattice component.
 
 use na::{
     Vector4
@@ -69,7 +69,7 @@ impl LatticeCyclique {
     /// Transform a [`LatticeLink`] into a [`LatticeLinkCanonical`].
     ///
     /// See [`LatticeCyclique::get_link_canonical`] and [`LatticeLinkCanonical`].
-    pub fn get_canonical(&self, l: &LatticeLink) -> LatticeLinkCanonical{
+    pub fn get_canonical(&self, l: &LatticeLink) -> LatticeLinkCanonical {
         self.get_link_canonical(l.pos(), l.dir())
     }
     
@@ -248,7 +248,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
                 el[0] += 1;
                 for i in 0..el.len() {
                     while el[i] >= self.lattice.dim() {
-                        if i <= 1 {
+                        if i <= 1 { // the first two elements
                             el[i + 1] += 1;
                         }
                         else{
@@ -438,6 +438,14 @@ impl LatticeLinkCanonical {
         }
         self.dir = dir;
     }
+    
+    /// Set the direction using positive direction. i.e. if a direction `-x` is passed
+    /// the direction assigned will be `+x`.
+    ///
+    /// This is equivalent to `link.set_dir(dir.to_positive())`.
+    pub fn set_dir_positive(&mut self, dir: Direction) {
+        self.dir = dir.to_positive();
+    }
 }
 
 impl From<LatticeLinkCanonical> for LatticeLink {
@@ -623,6 +631,7 @@ impl Direction{
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
+        // TODO try fold ?
         for i in 0..Direction::POSITIVES.len() {
             let scalar_prod = v.dot(&Direction::POSITIVES[i].to_vector(1_f64));
             if scalar_prod.abs() > max {
