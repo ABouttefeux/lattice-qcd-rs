@@ -19,15 +19,18 @@ use super::{
     Complex,
     lattice::{
         LatticeLink,
+        LatticeLinkCanonical,
+        LatticePoint,
     },
     CMatrix3,
+    Real,
 };
 
 
 /// Define an numerical integrator
 pub trait Integrator {
     /// Do one simulation step
-    fn integrate(&self, l: &LatticeSimulationState, delta_t: f64) ->  Result<LatticeSimulationState, SimulationError>;
+    fn integrate(&self, l: &LatticeSimulationState, delta_t: Real) ->  Result<LatticeSimulationState, SimulationError>;
 }
 
 /// Define an symplectic numerical integrator
@@ -56,17 +59,30 @@ impl Default for SymplecticEuler {
 
 impl SymplecticIntegrator for SymplecticEuler {}
 
+/// closure for link intregration
+const INTEGRATE_LINK_CLOSURE: &dyn Fn(&LatticeLinkCanonical, &LatticeSimulationState, Real) -> CMatrix3 = &|link, l, delta_t| {
+    let canonical_link = LatticeLink::from(link.clone());
+    let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
+    return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
+};
+
+/// closure for "Electrical" field intregration
+const INTEGRATE_EFIELD_CLOSURE: &dyn Fn(&LatticePoint, &LatticeSimulationState, Real) -> Vector3<Su3Adjoint> = &|point, l, delta_t| {
+    let mut initial_value = l.e_field().get_e_vec(point, l.lattice()).unwrap().clone();
+    let deriv = l.get_derivative_e(point).unwrap();
+    for i in 0..initial_value.len() {
+        initial_value[i] = initial_value[i] + deriv[i] * delta_t;
+    }
+    return initial_value;
+};
+
 impl Integrator for  SymplecticEuler {
-    fn integrate(&self, l: &LatticeSimulationState, delta_t: f64) ->  Result<LatticeSimulationState, SimulationError> {
+    fn integrate(&self, l: &LatticeSimulationState, delta_t: Real) ->  Result<LatticeSimulationState, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = run_pool_parallel_vec(
             l.lattice().get_links_space(),
             l,
-            &|link, l| {
-                let canonical_link = LatticeLink::from(link.clone());
-                let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-                return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-            },
+            &|link, l| INTEGRATE_LINK_CLOSURE(link, l, delta_t),
             number_of_thread,
             l.lattice().get_number_of_canonical_links_space(),
             l.lattice(),
@@ -76,14 +92,7 @@ impl Integrator for  SymplecticEuler {
         let e_field = run_pool_parallel_vec(
             l.lattice().get_points(),
             l,
-            &|point, l| {
-                let mut initial_value = l.e_field().get_e_vec(point, l.lattice()).unwrap().clone();
-                let deriv = l.get_derivative_e(point).unwrap();
-                for i in 0..initial_value.len() {
-                    initial_value[i] = initial_value[i] + deriv[i] * delta_t;
-                }
-                return initial_value;
-            },
+            &|point, l| INTEGRATE_EFIELD_CLOSURE(point, l, delta_t),
             number_of_thread,
             l.lattice().get_number_of_points(),
             l.lattice(),
@@ -114,25 +123,18 @@ impl Default for SymplecticEulerRayon {
 impl SymplecticIntegrator for SymplecticEulerRayon {}
 
 impl Integrator for  SymplecticEulerRayon {
-    fn integrate(&self, l: &LatticeSimulationState, delta_t: f64) ->  Result<LatticeSimulationState, SimulationError> {
+    fn integrate(&self, l: &LatticeSimulationState, delta_t: Real) ->  Result<LatticeSimulationState, SimulationError> {
         
-        let link_matrix = run_pool_parallel_rayon(l.lattice().get_links_space(), l, |link, l| {
-            let canonical_link = LatticeLink::from(link.clone());
-            let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-            return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-        });
+        let link_matrix = run_pool_parallel_rayon(
+            l.lattice().get_links_space(),
+            l,
+            |link, l| INTEGRATE_LINK_CLOSURE(link, l, delta_t),
+        );
         
         let e_field = run_pool_parallel_rayon(
             l.lattice().get_points(),
             l,
-            |point, l| {
-                let mut initial_value = l.e_field().get_e_vec(point, l.lattice()).unwrap().clone();
-                let deriv = l.get_derivative_e(point).unwrap();
-                for i in 0..initial_value.len() {
-                    initial_value[i] = initial_value[i] + deriv[i] * delta_t;
-                }
-                return initial_value;
-            },
+            |point, l| INTEGRATE_EFIELD_CLOSURE(point, l, delta_t),
         );
         
         LatticeSimulationState::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)

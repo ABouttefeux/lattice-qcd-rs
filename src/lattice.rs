@@ -274,6 +274,7 @@ pub struct LatticePoint {
 }
 
 impl LatticePoint {
+    
     /// Create a new point from the given coordinate.
     pub const fn new(data: [usize; 3]) -> Self {
         Self {data}

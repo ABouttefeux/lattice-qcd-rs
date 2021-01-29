@@ -146,10 +146,7 @@ impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
         let decomposition = self.clone().schur();
         // a complex matrix is always diagonalisable
         let eigens = decomposition.eigenvalues().unwrap();
-        let mut new_matrix = Self::identity();
-        for i in 0..new_matrix.nrows() {
-            new_matrix[(i, i)] = eigens[i].exp();
-        }
+        let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
         let (q, _) = decomposition.unpack();
         // q is always invertible
         return q.clone() * new_matrix * q.try_inverse().unwrap();

@@ -19,7 +19,6 @@ use super::{
         GENERATORS,
     },
     I,
-    ZERO,
     Complex,
     thread::{
         ThreadError,
@@ -169,6 +168,21 @@ impl Su3Adjoint {
     /// ```
     pub fn len(&self) -> usize {
         self.data.len()
+    }
+    
+    /// Get an iterator over the ellements.
+    pub fn iter(&self) -> impl Iterator<Item = &Real> {
+        self.data.iter()
+    }
+    
+    /// Get an iterator over the mutable ref of ellements.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
+        self.data.iter_mut()
+    }
+    
+    /// Get a mutlable reference over the data.
+    pub fn data_mut(&mut self) -> &mut Vector8<Real> {
+        &mut self.data
     }
 }
 
@@ -572,7 +586,7 @@ impl LatticeSimulationState {
         where Distribution: rand_distr::Distribution<Real> + Sync,
     {
         if number_of_thread == 0 {
-            return Err(SimulationError::ThreadingError(ThreadError::ThreadNumberIncorect)); //
+            return Err(SimulationError::ThreadingError(ThreadError::ThreadNumberIncorect));
         }
         else if number_of_thread == 1 {
             let mut rng = rand::thread_rng();
@@ -626,58 +640,57 @@ impl LatticeSimulationState {
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
     pub fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
-        let c = - Complex::new(2_f64 / LatticeSimulationState::CA, 0_f64).sqrt();
-        let mut derivative = Vector3::from_element(Su3Adjoint::default());
-        for dir in Direction::POSITIVES_SPACE.iter() {
-            let derivative_i = &mut derivative[dir.to_index()];
+        let c = - (2_f64 / LatticeSimulationState::CA).sqrt();
+        let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
             let u_i = self.link_matrix().get_matrix(&LatticeLink::new(point.clone(), dir.clone()), self.lattice())?;
-            let mut sum_s = CMatrix3::zeros();
-            for dir_2 in Direction::DIRECTIONS_SPACE.iter() {
+            let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter().map(|dir_2| {
                 if dir_2.to_positive() != *dir {
-                    let s_ij = self.link_matrix().get_sij(point, dir, dir_2, self.lattice())?;
-                    sum_s += s_ij.adjoint();
+                    self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
+                        .map(|el| el.adjoint())
                 }
-            }
-            for b in 0..derivative_i.len(){
-                let derivative_i_b = &mut derivative_i[b];
-                *derivative_i_b += (c * (su3::GENERATORS[b] * u_i * sum_s).trace().imaginary()).real() / self.lattice().size();
-            }
-        }
-        return Some(derivative);
+                else{
+                    Some(CMatrix3::zeros())
+                }
+            }).sum::<Option<CMatrix3>>()?;
+            Some(Su3Adjoint::new(
+                Vector8::<Real>::from_iterator( (0_usize..8_usize).map(|index| {
+                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / self.lattice().size()
+                }))
+            ))
+        });
+        // TODO cleanup
+        Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
     }
     
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
-        let mut g_return = CMatrix3::zeros();
-        // TODO use Iter
-        for dir in Direction::POSITIVES_SPACE.iter() {
+        Direction::POSITIVES_SPACE.iter().map(|dir| {
             let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
             let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(point.clone(), - dir.clone()), self.lattice())?;
             let p_mi = self.lattice().add_point_direction(point.clone(), & - dir.clone());
             let e_m_i = self.e_field().get_e_field(&p_mi, dir, self.lattice())?;
-            g_return += e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint();
-        }
-        Some(g_return)
+            Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
+        }).sum::<Option<CMatrix3>>()
     }
     
     /// Get the Hamiltonian of the state.
     pub fn get_hamiltonian(&self) -> Real {
-        // todo iter$
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            let mut sum_plaquette = 0_f64;
-            let mut sum_trace_e = 0_f64;
-            for dir_i in Direction::POSITIVES_SPACE.iter(){
-                for dir_j in Direction::POSITIVES_SPACE.iter(){
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                let sum_plaquette = Direction::POSITIVES_SPACE.iter().map(|dir_j| {
                     if dir_i.to_index() < dir_j.to_index() {
-                        sum_plaquette += 1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice()).unwrap().trace().real() / LatticeSimulationState::CA;
+                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice()).unwrap().trace().real() / LatticeSimulationState::CA
                     }
-                }
+                    else{
+                        0_f64
+                    }
+                }).sum::<Real>();
                 // TODO optimize
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
-                sum_trace_e += (e_i * e_i).trace().real();
-            }
-            return sum_plaquette + sum_trace_e;
+                let sum_trace_e = (e_i * e_i).trace().real();
+                sum_trace_e + sum_plaquette
+            }).sum::<Real>()
         }).sum()
     }
     

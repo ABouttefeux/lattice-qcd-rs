@@ -6,7 +6,6 @@ use lattice_qcd_rs::{
     Real,
     su3::su3_exp_i,
     su3::su3_exp_r,
-    lattice::*,
     integrator::*,
 };
 use std::{
@@ -14,7 +13,7 @@ use std::{
     collections::HashMap,
     vec::Vec,
 };
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput, AxisScale, PlotConfiguration};
+use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
 
 fn bench_simulation_creation_deterministe(
     size: usize,
@@ -86,8 +85,6 @@ fn simulate_euler_rayon(simulation: &mut LatticeSimulationState) {
 
 fn criterion_benchmark(c: &mut Criterion) {
     
-    let plot_config_log = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
-    
     let mut rng = rand::thread_rng();
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
@@ -106,7 +103,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     let gp_size = 20;
     groupe_creation_threaded.sample_size(50);
     groupe_creation_threaded.throughput(Throughput::Elements((gp_size * gp_size * gp_size) as u64));
-    groupe_creation_threaded.plot_config(plot_config_log.clone());
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
         groupe_creation_threaded.bench_with_input(BenchmarkId::new("thread", n), n,
@@ -131,7 +127,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut groupe_sim = c.benchmark_group("simulations");
     groupe_sim.sample_size(10);
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
-    groupe_sim.plot_config(plot_config_log);
     for n in thread_count.iter(){
         let mut sim = LatticeSimulationState::new_random_threaded(1_f64, 20, &d, 4).unwrap();
         groupe_sim.bench_with_input(BenchmarkId::new("thread", n), n,
