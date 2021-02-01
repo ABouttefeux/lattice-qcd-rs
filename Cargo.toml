@@ -29,3 +29,7 @@ harness = false
 
 [profile.test]
 opt-level = 3 # in order to have resonable test time
+
+[profile.release]
+codegen-units = 1
+lto = true

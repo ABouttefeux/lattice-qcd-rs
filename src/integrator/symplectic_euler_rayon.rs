@@ -60,7 +60,7 @@ impl<State> Integrator<State, State> for  SymplecticEulerRayon
         
         // closure for link intregration
         let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State, delta_t| {
-            let canonical_link = LatticeLink::from(link.clone());
+            let canonical_link = LatticeLink::from(*link);
             let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
             return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
         };
@@ -163,7 +163,7 @@ impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToSync
         
         // closure for link intregration
         let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State1, delta_t| {
-            let canonical_link = LatticeLink::from(link.clone());
+            let canonical_link = LatticeLink::from(*link);
             let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
             return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
         };

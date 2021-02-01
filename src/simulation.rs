@@ -104,8 +104,8 @@ pub trait LatticeSimulationStateDefault
     fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
         Direction::POSITIVES_SPACE.iter().map(|dir| {
             let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
-            let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(*point, - dir.clone()), self.lattice())?;
-            let p_mi = self.lattice().add_point_direction(*point, & - dir.clone());
+            let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(*point, - *dir), self.lattice())?;
+            let p_mi = self.lattice().add_point_direction(*point, & - *dir);
             let e_m_i = self.e_field().get_e_field(&p_mi, dir, self.lattice())?;
             Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
         }).sum::<Option<CMatrix3>>()
@@ -119,7 +119,7 @@ impl<T> SimulationState for T
     /// Get the derive of U_i(x).
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
-        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(link.clone()), self.lattice())?;
+        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
         let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
         return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
     }
@@ -128,7 +128,7 @@ impl<T> SimulationState for T
     fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
-            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, dir.clone()), self.lattice())?;
+            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
             let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {

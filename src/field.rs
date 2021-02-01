@@ -402,7 +402,7 @@ impl LinkMatrix {
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique)-> Option<Matrix3<na::Complex<Real>>> {
-        let link_c = l.get_canonical(link);
+        let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))? ;
         if link.is_dir_negative() {
             // that means the the link was in the negative direction
@@ -415,18 +415,18 @@ impl LinkMatrix {
     
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
     pub fn get_sij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
-        let u_j = self.get_matrix(&LatticeLink::new(*point, dir_j.clone()), lattice)?;
+        let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
-        let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, dir_i.clone()), lattice)?;
+        let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
         let point_pi = lattice.add_point_direction(*point, dir_i);
-        let u_j_pi_d = self.get_matrix(&LatticeLink::new(point_pi, dir_j.clone()), lattice)?.adjoint();
+        let u_j_pi_d = self.get_matrix(&LatticeLink::new(point_pi, *dir_j), lattice)?.adjoint();
         Some(u_j * u_i_p_j * u_j_pi_d)
     }
     
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
     pub fn get_pij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
-        let u_i = self.get_matrix(&LatticeLink::new(*point, dir_i.clone()), lattice)?;
+        let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
     }
     
