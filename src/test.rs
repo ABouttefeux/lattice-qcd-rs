@@ -13,6 +13,7 @@ use super::{
     Vector8,
     thread::*,
     integrator::*,
+    simulation::*,
 };
 use std::{
     f64,
@@ -153,14 +154,14 @@ fn equivalece_exp_r(){
 fn create_sim() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeSimulationState::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
+    let _simulation = LatticeSimulationStateSync::new_deterministe(1_f64 , 4, &mut rng, &distribution).unwrap();
 }
 
 #[test]
 /// test creation of sim multi threaded
 fn creat_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeSimulationState::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
+    let _simulation = LatticeSimulationStateSync::new_random_threaded(1_f64, 4, &distribution, 2).unwrap();
 }
 
 /// return 1 if i==j 0 otherwise
@@ -230,7 +231,7 @@ fn test_thread_vec() {
 fn test_sim_hamiltonian() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
+    let simulation = LatticeSimulationStateSync::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian();
     let sim2 = simulation.simulate::<SymplecticEuler>(0.0001, SymplecticEuler::new(8)).unwrap();
     let h2 = sim2.get_hamiltonian();
@@ -243,7 +244,7 @@ fn test_sim_hamiltonian() {
 fn test_gauss_law() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
+    let simulation = LatticeSimulationStateSync::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate::<SymplecticEuler>(0.000001, SymplecticEuler::new(8)).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
@@ -262,7 +263,7 @@ fn test_gauss_law() {
 fn test_sim_hamiltonian_rayon() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeSimulationState::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
+    let simulation = LatticeSimulationStateSync::new_deterministe(100_f64 , 20, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian();
     let sim2 = simulation.simulate::<SymplecticEulerRayon>(0.0001, SymplecticEulerRayon::new()).unwrap();
     let h2 = sim2.get_hamiltonian();
@@ -275,7 +276,7 @@ fn test_sim_hamiltonian_rayon() {
 fn test_gauss_law_rayon() {
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeSimulationState::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
+    let simulation = LatticeSimulationStateSync::new_deterministe(1_f64 , 20, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate::<SymplecticEulerRayon>(0.000001, SymplecticEulerRayon::new()).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()

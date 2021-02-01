@@ -21,14 +21,15 @@
 //! ```
 //! extern crate rand;
 //! extern crate rand_distr;
-//! use lattice_qcd_rs::field::LatticeSimulationState;
+//! use lattice_qcd_rs::simulation::LatticeSimulationStateSync;
+//! use lattice_qcd_rs::simulation::SimulationState;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
 //!
 //! let mut rng = rand::thread_rng();
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeSimulationState::new_deterministe(100_f64 , 8, &mut rng, &distribution)
+//! let state1 = LatticeSimulationStateSync::new_deterministe(100_f64 , 8, &mut rng, &distribution)
 //!     .unwrap();
 //! let state2 = state1.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
 //! let state3 = state2.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
@@ -37,14 +38,15 @@
 //! ```
 //! # extern crate rand;
 //! # extern crate rand_distr;
-//! # use lattice_qcd_rs::field::LatticeSimulationState;
+//! # use lattice_qcd_rs::simulation::LatticeSimulationStateSync;
+//! # use lattice_qcd_rs::simulation::SimulationState;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
 //! #
 //! # let mut rng = rand::thread_rng();
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeSimulationState::new_deterministe(100_f64 , 8, &mut rng, &distribution)
+//! # let state1 = LatticeSimulationStateSync::new_deterministe(100_f64 , 8, &mut rng, &distribution)
 //! #     .unwrap();
 //! # let state2 = state1.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
 //! # let state3 = state2.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
@@ -68,6 +70,7 @@ pub mod number;
 pub mod integrator;
 pub mod thread;
 pub mod utils;
+pub mod simulation;
 
 #[cfg(test)]
 mod test;

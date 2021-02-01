@@ -6,7 +6,6 @@ use super::{
     Real,
     CMatrix3,
     lattice::{
-        LatticeLinkCanonical,
         LatticePoint,
         LatticeCyclique,
         LatticeLink,
@@ -19,25 +18,19 @@ use super::{
         GENERATORS,
     },
     I,
-    Complex,
     thread::{
         ThreadError,
         run_pool_parallel_vec_with_initialisation_mutable,
     },
-    integrator::Integrator,
 };
 use na::{
     Vector3,
     Matrix3,
-    ComplexField
 };
 use  std::{
-    ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign},
+    ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
     vec::Vec,
 };
-use rayon::iter::ParallelBridge;
-use rayon::prelude::ParallelIterator;
-use crossbeam::thread;
 
 
 
@@ -222,6 +215,41 @@ impl MulAssign<f64> for Su3Adjoint {
 }
 
 
+impl Div<Real> for Su3Adjoint {
+    type Output = Self;
+    fn div(mut self, rhs: Real) -> Self::Output {
+        self /= rhs;
+        self
+    }
+}
+
+impl DivAssign<f64> for Su3Adjoint {
+    fn div_assign(&mut self, rhs: f64) {
+        self.data /= rhs;
+    }
+}
+
+impl Sub<Su3Adjoint> for Su3Adjoint {
+    type Output = Self;
+    fn sub(mut self, rhs: Self) -> Self::Output{
+        self -= rhs;
+        self
+    }
+}
+
+impl SubAssign for Su3Adjoint {
+    fn sub_assign(&mut self, other: Self) {
+        self.data -= other.data()
+    }
+}
+
+impl Neg for Su3Adjoint {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Su3Adjoint::new(- self.data)
+    }
+}
+
 /// Return the representation for the zero matrix.
 impl Default for Su3Adjoint {
     /// Return the representation for the zero matrix.
@@ -367,6 +395,10 @@ impl LinkMatrix {
         Ok(Self {data})
     }
     
+    pub fn new_cold(l: &LatticeCyclique) -> Self{
+        Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
+    }
+    
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique)-> Option<Matrix3<na::Complex<Real>>> {
@@ -383,10 +415,10 @@ impl LinkMatrix {
     
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
     pub fn get_sij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
-        let u_j = self.get_matrix(&LatticeLink::new(point.clone(), dir_j.clone()), lattice)?;
-        let point_pj = lattice.add_point_direction(point.clone(), dir_j);
+        let u_j = self.get_matrix(&LatticeLink::new(*point, dir_j.clone()), lattice)?;
+        let point_pj = lattice.add_point_direction(*point, dir_j);
         let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, dir_i.clone()), lattice)?;
-        let point_pi = lattice.add_point_direction(point.clone(), dir_i);
+        let point_pi = lattice.add_point_direction(*point, dir_i);
         let u_j_pi_d = self.get_matrix(&LatticeLink::new(point_pi, dir_j.clone()), lattice)?.adjoint();
         Some(u_j * u_i_p_j * u_j_pi_d)
     }
@@ -394,7 +426,7 @@ impl LinkMatrix {
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
     pub fn get_pij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
-        let u_i = self.get_matrix(&LatticeLink::new(point.clone(), dir_i.clone()), lattice)?;
+        let u_i = self.get_matrix(&LatticeLink::new(*point, dir_i.clone()), lattice)?;
         Some(u_i * s_ij.adjoint())
     }
     
@@ -474,6 +506,11 @@ impl EField {
         EField::new_deterministe(l, &mut rng, d)
     }
     
+    
+    pub fn new_cold(l: &LatticeCyclique) -> Self {
+        let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
+        Self {data: vec![Vector3::new(p1, p1, p1); l.get_number_of_points()]}
+    }
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
     pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector3<Su3Adjoint>> {
         self.data.get(point.to_index(l))
@@ -498,206 +535,4 @@ fn test_get_e_field_pos_neg() {
         e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XPos, &l),
         e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XNeg, &l)
     );
-}
-
-/// Error returned by simulation.
-#[derive(Debug)]
-pub enum SimulationError {
-    /// multithreading error, see [`ThreadError`].
-    ThreadingError(ThreadError),
-    /// Error while initialising.
-    InitialisationError,
-}
-
-impl From<ThreadError> for SimulationError{
-    fn from(err: ThreadError) -> Self{
-        SimulationError::ThreadingError(err)
-    }
-}
-
-/// Represent a simulation state at a set time.
-#[derive(Debug, PartialEq, Clone)]
-pub struct LatticeSimulationState {
-    lattice : LatticeCyclique,
-    e_field: EField,
-    link_matrix: LinkMatrix,
-    t: usize,
-}
-
-impl LatticeSimulationState {
-    
-    /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
-    /// amount of data compared to lattice it fails to create the state.
-    /// `t` is the number of time the simulation ran. i.e. the time sate.
-    pub fn new(lattice: LatticeCyclique, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
-        if lattice.get_number_of_points() != e_field.len() ||
-            lattice.get_number_of_canonical_links_space() != link_matrix.len() {
-            return Err(SimulationError::InitialisationError);
-        }
-        Ok(Self {lattice, e_field, link_matrix, t})
-    }
-    
-    /// Generate a random initial state.
-    ///
-    /// Single threaded generation with a given random number generator.
-    /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
-    /// in each spatial dimension of the lattice. See [LatticeCyclique::new] for more info.
-    ///
-    /// useful to reproduce a set of data but slower than [`LatticeSimulationState::new_random_threaded`]
-    /// # Example
-    /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{field::LatticeSimulationState, lattice::LatticeCyclique};
-    /// use rand::{SeedableRng,rngs::StdRng};
-    ///
-    /// let mut rng_1 = StdRng::seed_from_u64(0);
-    /// let mut rng_2 = StdRng::seed_from_u64(0);
-    /// // They have the same seed and should generate the same numbers
-    /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
-    /// assert_eq!(
-    ///     LatticeSimulationState::new_deterministe(1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeSimulationState::new_deterministe(1_f64, 4, &mut rng_2, &distribution).unwrap()
-    /// );
-    /// ```
-    pub fn new_deterministe(
-        size: Real,
-        number_of_points: usize,
-        rng: &mut impl rand::Rng,
-        d: &impl rand_distr::Distribution<Real>,
-    ) -> Result<Self, SimulationError> {
-        let lattice = LatticeCyclique::new(size, number_of_points)
-                .ok_or(SimulationError::InitialisationError)?;
-        let e_field = EField::new_deterministe(&lattice, rng, d);
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
-        LatticeSimulationState::new(lattice, e_field, link_matrix, 0)
-    }
-    
-    /// Generate a random initial state.
-    ///
-    /// Multi threaded generation of random data. Due to the non deterministic way threads
-    /// operate a set cannot be reproduce easily, In that case use [`LatticeSimulationState::new_deterministe`].
-    pub fn new_random_threaded<Distribution>(
-        size: Real,
-        number_of_points: usize,
-        d: &Distribution,
-        number_of_thread : usize
-    ) -> Result<Self, SimulationError>
-        where Distribution: rand_distr::Distribution<Real> + Sync,
-    {
-        if number_of_thread == 0 {
-            return Err(SimulationError::ThreadingError(ThreadError::ThreadNumberIncorect));
-        }
-        else if number_of_thread == 1 {
-            let mut rng = rand::thread_rng();
-            return LatticeSimulationState::new_deterministe(size, number_of_points, &mut rng, d);
-        }
-        let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
-        let result = thread::scope(|s| {
-            let lattice_clone = lattice.clone();
-            let handel = s.spawn(move |_| {
-                EField::new_random(&lattice_clone, d)
-            });
-            let link_matrix = LinkMatrix::new_random_threaded(&lattice, d, number_of_points - 1)
-                .map_err(|err| SimulationError::ThreadingError(err))?;
-            
-            let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
-            // not very clean: TODO imporve
-            Ok(LatticeSimulationState::new(lattice, e_field, link_matrix, 0)?)
-        }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
-        return result;
-    }
-    
-    /// The "Electrical" field of this state.
-    pub const fn e_field(&self) -> &EField {
-        &self.e_field
-    }
-    
-    /// The link matrices of this state.
-    pub const fn link_matrix(&self) -> &LinkMatrix {
-        &self.link_matrix
-    }
-    
-    pub const fn lattice(&self) -> &LatticeCyclique {
-        &self.lattice
-    }
-    
-    /// return the time state, i.e. the number of time the simulation ran.
-    pub const fn t(&self) -> usize {
-        self.t
-    }
-    
-    /// The `C_A` constant.
-    const CA: Real = 3_f64;
-    
-    /// Get the derive of U_i(x).
-    pub fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
-        let c = Complex::new(0_f64, 2_f64 * LatticeSimulationState::CA ).sqrt();
-        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(link.clone()), self.lattice())?;
-        let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
-        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
-    }
-    
-    /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    pub fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
-        let c = - (2_f64 / LatticeSimulationState::CA).sqrt();
-        let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
-            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(point.clone(), dir.clone()), self.lattice())?;
-            let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter().map(|dir_2| {
-                if dir_2.to_positive() != *dir {
-                    self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
-                        .map(|el| el.adjoint())
-                }
-                else{
-                    Some(CMatrix3::zeros())
-                }
-            }).sum::<Option<CMatrix3>>()?;
-            Some(Su3Adjoint::new(
-                Vector8::<Real>::from_iterator( (0_usize..8_usize).map(|index| {
-                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / self.lattice().size()
-                }))
-            ))
-        });
-        // TODO cleanup
-        Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
-    }
-    
-    /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
-    pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
-        Direction::POSITIVES_SPACE.iter().map(|dir| {
-            let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
-            let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(point.clone(), - dir.clone()), self.lattice())?;
-            let p_mi = self.lattice().add_point_direction(point.clone(), & - dir.clone());
-            let e_m_i = self.e_field().get_e_field(&p_mi, dir, self.lattice())?;
-            Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
-        }).sum::<Option<CMatrix3>>()
-    }
-    
-    /// Get the Hamiltonian of the state.
-    pub fn get_hamiltonian(&self) -> Real {
-        // here it is ok to use par_bridge() as we do not care for the order
-        self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
-                let sum_plaquette = Direction::POSITIVES_SPACE.iter().map(|dir_j| {
-                    if dir_i.to_index() < dir_j.to_index() {
-                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice()).unwrap().trace().real() / LatticeSimulationState::CA
-                    }
-                    else{
-                        0_f64
-                    }
-                }).sum::<Real>();
-                // TODO optimize
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
-                let sum_trace_e = (e_i * e_i).trace().real();
-                sum_trace_e + sum_plaquette
-            }).sum::<Real>()
-        }).sum()
-    }
-    
-    /// Do one simulation step.
-    pub fn simulate<I>(&self, delta_t: Real, integrator: I) -> Result<Self, SimulationError>
-        where I: Integrator
-    {
-        integrator.integrate(&self, delta_t)
-    }
 }

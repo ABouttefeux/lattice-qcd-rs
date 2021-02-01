@@ -44,7 +44,7 @@ pub enum ThreadError {
 /// let iter = 2..10000;
 /// let c = 5;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
-/// let result = run_pool_parallel(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000 - 2).unwrap();
+/// let result = run_pool_parallel(iter, &c, &|i, c| {i * i * c} , 4, 10000 - 2).unwrap();
 /// assert_eq!(*result.get(&40).unwrap(), 40 * 40 * c);
 /// assert_eq!(result.get(&1), None);
 /// ```
@@ -52,11 +52,11 @@ pub enum ThreadError {
 /// ```should_panic
 /// # use lattice_qcd_rs::thread::{run_pool_parallel, ThreadError};
 /// let iter = 0..10;
-/// let result = run_pool_parallel(iter.clone(), &(), &|_, _| {panic!("panic message")}, 4, 10);
+/// let result = run_pool_parallel(iter, &(), &|_, _| {panic!("panic message")}, 4, 10);
 /// result.unwrap(); // this propagate the panic.
 /// ```
 /// This give the following panic message
-/// ```ignore
+/// ```textrust
 /// ---- src\thread.rs - thread::run_pool_parallel (line 51) stdout ----
 /// Test executable failed (exit code 101).
 ///
@@ -106,7 +106,7 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 /// let c = 5_u128;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
 /// let result = run_pool_parallel_with_initialisation_mutable(
-///     iter.clone(),
+///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i, c| {
 ///          if ! *has_greeted {
@@ -274,7 +274,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
-///     iter.clone(),
+///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i: &LatticePoint,  c: &usize| {
 ///          if ! *has_greeted {

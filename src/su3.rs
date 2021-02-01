@@ -257,7 +257,6 @@ const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::
 pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
-    let m = v.to_matrix();
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
@@ -273,6 +272,7 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
+    let m = v.to_matrix();
     return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
 }
 
@@ -284,7 +284,6 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
     let n = N - 1;
-    let m = v.to_matrix();
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
@@ -300,6 +299,7 @@ pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
+    let m = v.to_matrix();
     return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
 }
 
