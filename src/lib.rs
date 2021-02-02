@@ -31,8 +31,8 @@
 //! );
 //! let state1 = LatticeSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
 //!     .unwrap();
-//! let state2 = state1.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
-//! let state3 = state2.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
+//! let state2 = state1.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! let state3 = state2.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! ```
 //! Let us then compute and compare the Hamiltonian.
 //! ```
@@ -48,8 +48,8 @@
 //! # );
 //! # let state1 = LatticeSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
 //! #     .unwrap();
-//! # let state2 = state1.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
-//! # let state3 = state2.simulate(0.0001_f64, SymplecticEuler::new(8)).unwrap();
+//! # let state2 = state1.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! # let state3 = state2.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let h = state1.get_hamiltonian();
 //! let h2 = state3.get_hamiltonian();
 //! println!("The error on the Hamiltonian is {}", h - h2);
