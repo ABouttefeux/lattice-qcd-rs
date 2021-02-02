@@ -13,28 +13,54 @@ use super::{
         },
         thread::{
             run_pool_parallel_vec,
-        },
-        Complex,
-        lattice::{
-            LatticeLink,
-            LatticeLinkCanonical,
-            LatticePoint,
+            ThreadError,
         },
         CMatrix3,
         Real,
         simulation::{
             SimulationError,
-            SimulationState,
-            LatticeSimulationStateDefault,
+            LatticeSimulationState,
             SimulationStateSynchrone,
             SimulationStateLeapFrog,
         },
     },
     Integrator,
     SymplecticIntegrator,
+    integrate_link,
+    integrate_efield,
 };
+use std::vec::Vec;
+
+fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
+    where State: LatticeSimulationState
+{
+    run_pool_parallel_vec(
+        l.lattice().get_links_space(),
+        l,
+        &|link, l| integrate_link(link, l, delta_t),
+        number_of_thread,
+        l.lattice().get_number_of_canonical_links_space(),
+        l.lattice(),
+        CMatrix3::zeros(),
+    )
+}
+
+fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector3<Su3Adjoint>>, ThreadError>
+    where State: LatticeSimulationState
+{
+    run_pool_parallel_vec(
+        l.lattice().get_points(),
+        l,
+        &|point, l| integrate_efield(point, l, delta_t),
+        number_of_thread,
+        l.lattice().get_number_of_points(),
+        l.lattice(),
+        Vector3::from_element(Su3Adjoint::default()),
+    )
+}
 
 /// Basic symplectic Euler integrator
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEuler
 {
     number_of_thread: usize,
@@ -45,7 +71,6 @@ impl SymplecticEuler {
     pub const fn new(number_of_thread: usize) -> Self {
         Self {number_of_thread}
     }
-    
 }
 
 impl Default for SymplecticEuler {
@@ -57,55 +82,24 @@ impl Default for SymplecticEuler {
 }
 
 impl<State> SymplecticIntegrator<State, State> for SymplecticEuler
-    where State: LatticeSimulationStateDefault
+    where State: LatticeSimulationState
 {}
 
 
 impl<State> Integrator<State, State> for  SymplecticEuler
-    where State: LatticeSimulationStateDefault
+    where State: LatticeSimulationState
 {
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
-        
-        // closure for link intregration
-        let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State, delta_t| {
-            let canonical_link = LatticeLink::from(*link);
-            let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-            return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-        };
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            return initial_value + deriv.map(|el| el * delta_t);
-        };
-        
         let number_of_thread = self.number_of_thread;
-        let link_matrix = run_pool_parallel_vec(
-            l.lattice().get_links_space(),
-            l,
-            &|link, l| integrate_link_closure(link, l, delta_t),
-            number_of_thread,
-            l.lattice().get_number_of_canonical_links_space(),
-            l.lattice(),
-            CMatrix3::zeros(),
-        )?;
-        
-        let e_field = run_pool_parallel_vec(
-            l.lattice().get_points(),
-            l,
-            &|point, l| integrate_efield_closure(point, l, delta_t),
-            number_of_thread,
-            l.lattice().get_number_of_points(),
-            l.lattice(),
-            Vector3::from_element(Su3Adjoint::default()),
-        )?;
+        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
         
         State::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
 
 /// Basic symplectic Euler integrator used for switching between syn and leapfrog
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerToLeap
 {
     number_of_thread: usize,
@@ -116,7 +110,6 @@ impl SymplecticEulerToLeap {
     pub const fn new(number_of_thread: usize) -> Self {
         Self {number_of_thread}
     }
-    
 }
 
 impl Default for SymplecticEulerToLeap{
@@ -128,39 +121,24 @@ impl Default for SymplecticEulerToLeap{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToLeap
-where State1: LatticeSimulationStateDefault + SimulationStateSynchrone,
-State2: LatticeSimulationStateDefault + SimulationStateLeapFrog
+    where State1: LatticeSimulationState + SimulationStateSynchrone,
+    State2: LatticeSimulationState + SimulationStateLeapFrog
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToLeap
-    where State1: LatticeSimulationStateDefault + SimulationStateSynchrone,
-    State2: LatticeSimulationStateDefault + SimulationStateLeapFrog
+    where State1: LatticeSimulationState + SimulationStateSynchrone,
+    State2: LatticeSimulationState + SimulationStateLeapFrog
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State1, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            return initial_value + deriv.map(|el| el * delta_t / 2_f64);
-        };
-        
         let number_of_thread = self.number_of_thread;
-        let e_field = run_pool_parallel_vec(
-            l.lattice().get_points(),
-            l,
-            &|point, l| integrate_efield_closure(point, l, delta_t),
-            number_of_thread,
-            l.lattice().get_number_of_points(),
-            l.lattice(),
-            Vector3::from_element(Su3Adjoint::default()),
-        )?;
+        let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
         State2::new(l.lattice().clone(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
 }
 
 /// Basic symplectic Euler integrator used for switching between syn and leapfrog
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerToSynch
 {
     number_of_thread: usize,
@@ -171,7 +149,6 @@ impl SymplecticEulerToSynch {
     pub const fn new(number_of_thread: usize) -> Self {
         Self {number_of_thread}
     }
-    
 }
 
 impl Default for SymplecticEulerToSynch{
@@ -183,51 +160,18 @@ impl Default for SymplecticEulerToSynch{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToSynch
-where State1: LatticeSimulationStateDefault + SimulationStateLeapFrog,
-State2: LatticeSimulationStateDefault + SimulationStateSynchrone
+    where State1: LatticeSimulationState + SimulationStateLeapFrog,
+    State2: LatticeSimulationState + SimulationStateSynchrone
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToSynch
-    where State1: LatticeSimulationStateDefault + SimulationStateLeapFrog,
-    State2: LatticeSimulationStateDefault + SimulationStateSynchrone
+    where State1: LatticeSimulationState + SimulationStateLeapFrog,
+    State2: LatticeSimulationState + SimulationStateSynchrone
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
-        
-        let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State1, delta_t| {
-            let canonical_link = LatticeLink::from(*link);
-            let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-            return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-        };
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State1, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            // we do half a step in the velocity direction to go back to synchrone data
-            return initial_value + deriv.map(|el| el * delta_t / 2.0);
-        };
-        
         let number_of_thread = self.number_of_thread;
-        let link_matrix = run_pool_parallel_vec(
-            l.lattice().get_links_space(),
-            l,
-            &|link, l| integrate_link_closure(link, l, delta_t),
-            number_of_thread,
-            l.lattice().get_number_of_canonical_links_space(),
-            l.lattice(),
-            CMatrix3::zeros(),
-        )?;
-        
-        let number_of_thread = self.number_of_thread;
-        let e_field = run_pool_parallel_vec(
-            l.lattice().get_points(),
-            l,
-            &|point, l| integrate_efield_closure(point, l, delta_t),
-            number_of_thread,
-            l.lattice().get_number_of_points(),
-            l.lattice(),
-            Vector3::from_element(Su3Adjoint::default()),
-        )?;
+        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
         State2::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }

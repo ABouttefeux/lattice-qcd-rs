@@ -42,6 +42,7 @@ pub struct Su3Adjoint {
     data: Vector8<Real>
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl Su3Adjoint {
     
     /// create a new Su3Adjoint representation where `M = M^a T^a`, where `T` are generators given in [`su3::GENERATORS`].
@@ -386,7 +387,7 @@ impl LinkMatrix {
             l.get_links_space(),
             d,
             &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
-            || rand::thread_rng(),
+            rand::thread_rng,
             number_of_thread,
             l.get_number_of_canonical_links_space(),
             l,
@@ -435,6 +436,9 @@ impl LinkMatrix {
         self.data.len()
     }
     
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
 }
 
 /// Represent an electric field.
@@ -523,6 +527,10 @@ impl EField {
             Some(vec) => Some(&vec[dir.to_index()]),
             None => None,
         }
+    }
+    
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 }
 

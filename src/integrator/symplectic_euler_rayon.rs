@@ -10,29 +10,49 @@ use super::{
         field::{
             EField,
             LinkMatrix,
+            Su3Adjoint,
         },
         thread::{
             run_pool_parallel_rayon,
         },
-        Complex,
-        lattice::{
-            LatticeLink,
-            LatticeLinkCanonical,
-            LatticePoint,
-        },
         Real,
         simulation::{
             SimulationError,
-            SimulationState,
-            LatticeSimulationStateDefault,
+            LatticeSimulationState,
             SimulationStateSynchrone,
             SimulationStateLeapFrog,
         },
     },
     Integrator,
     SymplecticIntegrator,
+    integrate_link,
+    integrate_efield,
+    CMatrix3,
 };
+use std::vec::Vec;
+use na::Vector3;
 
+fn get_link_matrix_integrate<State> (l: &State, delta_t: Real) -> Vec<CMatrix3>
+    where State: LatticeSimulationState
+{
+    run_pool_parallel_rayon(
+        l.lattice().get_links_space(),
+        l,
+        |link, l| integrate_link(link, l, delta_t),
+    )
+}
+
+fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector3<Su3Adjoint>>
+    where State: LatticeSimulationState
+{
+    run_pool_parallel_rayon(
+        l.lattice().get_points(),
+        l,
+        |point, l| integrate_efield(point, l, delta_t),
+    )
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerRayon {}
 
 impl SymplecticEulerRayon {
@@ -50,45 +70,22 @@ impl Default for SymplecticEulerRayon {
 }
 
 impl<State> SymplecticIntegrator<State, State> for SymplecticEulerRayon
-    where State: LatticeSimulationStateDefault
+    where State: LatticeSimulationState
 {}
 
 impl<State> Integrator<State, State> for  SymplecticEulerRayon
-    where State: LatticeSimulationStateDefault
+    where State: LatticeSimulationState
 {
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
-        
-        // closure for link intregration
-        let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State, delta_t| {
-            let canonical_link = LatticeLink::from(*link);
-            let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-            return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-        };
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            return initial_value + deriv.map(|el| el * delta_t);
-        };
-        
-        let link_matrix = run_pool_parallel_rayon(
-            l.lattice().get_links_space(),
-            l,
-            |link, l| integrate_link_closure(link, l, delta_t),
-        );
-        
-        let e_field = run_pool_parallel_rayon(
-            l.lattice().get_points(),
-            l,
-            |point, l| integrate_efield_closure(point, l, delta_t),
-        );
+        let link_matrix = get_link_matrix_integrate(l, delta_t);
+        let e_field = get_e_field_integrate(l, delta_t);
         
         State::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
 
 // Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerRayonToLeap {}
 
 impl SymplecticEulerRayonToLeap {
@@ -106,34 +103,23 @@ impl Default for SymplecticEulerRayonToLeap {
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToLeap
-where State1: LatticeSimulationStateDefault + SimulationStateSynchrone,
-State2: LatticeSimulationStateDefault + SimulationStateLeapFrog
+    where State1: LatticeSimulationState + SimulationStateSynchrone,
+    State2: LatticeSimulationState + SimulationStateLeapFrog
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToLeap
-    where State1: LatticeSimulationStateDefault + SimulationStateSynchrone,
-    State2: LatticeSimulationStateDefault + SimulationStateLeapFrog
+    where State1: LatticeSimulationState + SimulationStateSynchrone,
+    State2: LatticeSimulationState + SimulationStateLeapFrog
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State1, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            return initial_value + deriv.map(|el| el * delta_t / 2_f64);
-        };
-        
-        let e_field = run_pool_parallel_rayon(
-            l.lattice().get_points(),
-            l,
-            |point, l| integrate_efield_closure(point, l, delta_t),
-        );
+        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
         State2::new(l.lattice().clone(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
 }
 
 // Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
+#[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerRayonToSync {}
 
 impl SymplecticEulerRayonToSync {
@@ -151,41 +137,17 @@ impl Default for SymplecticEulerRayonToSync {
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToSync
-where State1: LatticeSimulationStateDefault + SimulationStateLeapFrog,
-State2: LatticeSimulationStateDefault + SimulationStateSynchrone
+    where State1: LatticeSimulationState + SimulationStateLeapFrog,
+    State2: LatticeSimulationState + SimulationStateSynchrone
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToSync
-    where State1: LatticeSimulationStateDefault + SimulationStateLeapFrog,
-    State2: LatticeSimulationStateDefault + SimulationStateSynchrone
+    where State1: LatticeSimulationState + SimulationStateLeapFrog,
+    State2: LatticeSimulationState + SimulationStateSynchrone
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
-        
-        // closure for link intregration
-        let integrate_link_closure = |link: &LatticeLinkCanonical, l: &State1, delta_t| {
-            let canonical_link = LatticeLink::from(*link);
-            let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-            return initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t);
-        };
-        
-        // closure for "Electrical" field intregration
-        let integrate_efield_closure = |point: &LatticePoint, l: &State1, delta_t| {
-            let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-            let deriv = l.get_derivative_e(point).unwrap();
-            return initial_value + deriv.map(|el| el * delta_t / 2_f64);
-        };
-        
-        let link_matrix = run_pool_parallel_rayon(
-            l.lattice().get_links_space(),
-            l,
-            |link, l| integrate_link_closure(link, l, delta_t),
-        );
-        
-        let e_field = run_pool_parallel_rayon(
-            l.lattice().get_points(),
-            l,
-            |point, l| integrate_efield_closure(point, l, delta_t),
-        );
+        let link_matrix = get_link_matrix_integrate(l, delta_t);
+        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
         // we advace the counter by one
         State2::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)

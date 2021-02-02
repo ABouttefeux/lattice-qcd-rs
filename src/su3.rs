@@ -255,14 +255,14 @@ const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 #[inline]
-pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
+pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
-    let d: Complex = v.d();
-    let t: Complex = v.t();
+    let d: Complex = su3_adj.d();
+    let t: Complex = su3_adj.t();
     for i in (0..n).rev() {
         let q0_n = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
@@ -273,8 +273,8 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
-    let m = v.to_matrix();
-    return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
+    let m = su3_adj.to_matrix();
+    CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
 }
 
 /// gives the value `exp(v^a T^a )`
@@ -284,13 +284,13 @@ pub fn su3_exp_i(v: Su3Adjoint) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 #[inline]
-pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
+pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     let n = N - 1;
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
-    let d: Complex = v.d();
-    let t: Complex = v.t();
+    let d: Complex = su3_adj.d();
+    let t: Complex = su3_adj.t();
     for i in (0..n).rev() {
         let q0_n = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
@@ -301,8 +301,8 @@ pub fn su3_exp_r(v: Su3Adjoint) -> CMatrix3 {
         q2 = q2_n;
     }
     
-    let m = v.to_matrix();
-    return CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2;
+    let m = su3_adj.to_matrix();
+    CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
 }
 
 #[cfg(test)]

@@ -67,7 +67,7 @@ impl FactorialStorageDyn {
         for i in len..value + 1{
             self.data.push(self.data[i - 1] * i as FactorialNumber);
         }
-        return self.data[value];
+        self.data[value]
     }
     
     /// try get factorial from storage
@@ -99,7 +99,7 @@ impl FactorialStorageDyn {
         for i in self.data.len() - 1..value{
             value_m *= (i + 1) as FactorialNumber;
         }
-        return value_m;
+        value_m
     }
 }
 

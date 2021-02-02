@@ -22,7 +22,7 @@
 //! extern crate rand;
 //! extern crate rand_distr;
 //! use lattice_qcd_rs::simulation::LatticeSimulationStateSync;
-//! use lattice_qcd_rs::simulation::SimulationState;
+//! use lattice_qcd_rs::simulation::LatticeSimulationState;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
 //!
 //! let mut rng = rand::thread_rng();
@@ -39,7 +39,7 @@
 //! # extern crate rand;
 //! # extern crate rand_distr;
 //! # use lattice_qcd_rs::simulation::LatticeSimulationStateSync;
-//! # use lattice_qcd_rs::simulation::SimulationState;
+//! # use lattice_qcd_rs::simulation::LatticeSimulationState;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
 //! #
 //! # let mut rng = rand::thread_rng();
@@ -54,6 +54,8 @@
 //! let h2 = state3.get_hamiltonian();
 //! println!("The error on the Hamiltonian is {}", h - h2);
 //! ```
+
+#![allow(clippy::needless_return)]
 
 extern crate nalgebra as na;
 extern crate approx;

@@ -49,9 +49,9 @@ impl LatticeCyclique {
             pos_link = self.add_point_direction(pos_link, &dir);
         }
         for i in 0..pos.len() {
-            pos_link[i] = pos_link[i] % self.dim();
+            pos_link[i] %= self.dim();
         }
-        return LatticeLinkCanonical::new(pos_link, dir.to_positive()).unwrap();
+        LatticeLinkCanonical::new(pos_link, dir.to_positive()).unwrap()
     }
     
     /// Return a link build form `pos` and `dir`.
@@ -89,7 +89,7 @@ impl LatticeCyclique {
     
     /// Get an Iterator over all point for a given time.
     pub fn get_points(&self) -> IteratorLatticePoint {
-        return IteratorLatticePoint::new(&self, LatticePoint::from([0, 0, 0]));
+        IteratorLatticePoint::new(&self, LatticePoint::from([0, 0, 0]))
     }
     
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
@@ -133,21 +133,20 @@ impl LatticeCyclique {
     /// // In the following case we get [_, 3, _] because `dim = 4`, and this lattice is cyclique.
     /// assert_eq!(lattice.add_point_direction(point, &Direction::YNeg), LatticePoint::from([1, 3, 2]) );
     /// ```
-    pub fn add_point_direction(&self, mut p: LatticePoint, dir: &Direction) -> LatticePoint {
+    pub fn add_point_direction(&self, mut point: LatticePoint, dir: &Direction) -> LatticePoint {
         if dir.is_positive() {
-            p[dir.to_index()] = (p[dir.to_index()] + 1) % self.dim();
-            return p;
+            point[dir.to_index()] = (point[dir.to_index()] + 1) % self.dim();
         }
         else {
             let dir_pos = dir.to_positive();
-            if p[dir_pos.to_index()] == 0 {
-                p[dir_pos.to_index()] = self.dim() - 1;
+            if point[dir_pos.to_index()] == 0 {
+                point[dir_pos.to_index()] = self.dim() - 1;
             }
             else {
-                p[dir_pos.to_index()] = (p[dir_pos.to_index()] - 1) % self.dim();
+                point[dir_pos.to_index()] = (point[dir_pos.to_index()] - 1) % self.dim();
             }
-            return p;
         }
+        point
     }
 }
 
@@ -272,6 +271,7 @@ pub struct LatticePoint {
     data: [usize; 3]
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl LatticePoint {
     
     /// Create a new point from the given coordinate.
@@ -542,7 +542,7 @@ impl Sign {
         if relative_eq!(f, 0_f64) {
             return Sign::Zero;
         }
-        if f > 0_f64{
+        else if f > 0_f64{
             return Sign::Positive;
         }
         else {
@@ -615,7 +615,7 @@ impl Direction{
     
     /// Get if the position is Negative. see [`Direction::is_positive`]
     pub const fn is_negative(&self) -> bool {
-        return ! self.is_positive();
+        ! self.is_positive()
     }
     /// Find the direction the vector point the most.
     /// For a zero vector return [`Direction::XPos`].

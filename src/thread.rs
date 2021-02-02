@@ -136,7 +136,7 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 ///     l.get_links_space(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
-///     || rand::thread_rng(),
+///     rand::thread_rng,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 /// ).unwrap();
@@ -307,13 +307,14 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 ///     l.get_links_space(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
-///     || rand::thread_rng(),
+///     rand::thread_rng,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
 /// ).unwrap();
 /// ```
+#[allow(clippy::too_many_arguments)]
 pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
