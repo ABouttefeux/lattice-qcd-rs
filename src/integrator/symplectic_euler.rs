@@ -45,7 +45,7 @@ fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t
     )
 }
 
-fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector3<Su3Adjoint>>, ThreadError>
+fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector3<Su3Adjoint<Real>>>, ThreadError>
     where State: LatticeSimulationState
 {
     run_pool_parallel_vec(

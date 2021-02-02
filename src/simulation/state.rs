@@ -62,7 +62,7 @@ pub trait LatticeSimulationState
     const CA: Real;
     
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>>;
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint<Real>>>;
     fn get_hamiltonian(&self) -> Real;
         
     fn simulate<I>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
@@ -325,7 +325,7 @@ impl LatticeSimulationState for LatticeSimulationStateSync {
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint<Real>>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
             let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
@@ -432,7 +432,7 @@ impl<State> LatticeSimulationState for SimulationStateLeap<State>
         self.state().beta()
     }
     
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint<Real>>> {
         self.state().get_derivative_e(point)
     }
     

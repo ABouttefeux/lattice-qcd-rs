@@ -51,7 +51,7 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) 
 }
 
 /// function for "Electrical" field intregration
-fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector3<Su3Adjoint>
+fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector3<Su3Adjoint<Real>>
     where State: LatticeSimulationState,
 {
     let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();

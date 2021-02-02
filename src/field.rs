@@ -31,6 +31,7 @@ use  std::{
     ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
     vec::Vec,
 };
+use simba::scalar::RealField;
 
 
 
@@ -38,12 +39,16 @@ use  std::{
 /// See [`su3::GENERATORS`] to view the order of generators.
 /// Note that the generators are normalize such that `Tr[T^a T^b] = \delta^{ab} / 2`
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Su3Adjoint {
-    data: Vector8<Real>
+pub struct Su3Adjoint<F>
+    where F: RealField
+{
+    data: Vector8<F>
 }
 
 #[allow(clippy::len_without_is_empty)]
-impl Su3Adjoint {
+impl<F> Su3Adjoint<F>
+    where F: RealField
+{
     
     /// create a new Su3Adjoint representation where `M = M^a T^a`, where `T` are generators given in [`su3::GENERATORS`].
     /// # Example
@@ -53,7 +58,7 @@ impl Su3Adjoint {
     ///
     /// let su3 = Su3Adjoint::new(nalgebra::VectorN::<f64, nalgebra::U8>::from_element(1_f64));
     /// ```
-    pub const fn new(data: Vector8<Real>) -> Self {
+    pub const fn new(data: Vector8<F>) -> Self {
         Self {data}
     }
     
@@ -63,47 +68,13 @@ impl Su3Adjoint {
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::new_from_array([0_f64; 8]);
     /// ```
-    pub fn new_from_array(data: [Real; 8]) -> Self {
+    pub fn new_from_array(data: [F; 8]) -> Self {
         Su3Adjoint::new(Vector8::from(data))
     }
     
     /// get the data inside the Su3Adjoint.
-    pub const fn data(&self) -> &Vector8<Real> {
+    pub const fn data(&self) -> &Vector8<F> {
         &self.data
-    }
-    
-    /// return the su(3) (Lie algebra) matrix.
-    /// # Example
-    /// ```
-    /// # use lattice_qcd_rs::{field::Su3Adjoint};
-    /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
-    /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
-    /// ```
-    pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
-        self.data.iter().enumerate()
-            .map(|(pos, el)|  *GENERATORS[pos] * na::Complex::<Real>::from(el))
-            .sum()
-    }
-    
-    /// Return the SU(3) matrix associated with this generator.
-    /// Note that the function consume self.
-    /// # Example
-    /// ```
-    /// # extern crate nalgebra;
-    /// # use lattice_qcd_rs::{field::Su3Adjoint};
-    /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
-    /// assert_eq!(su3.to_su3().determinant(), nalgebra::Complex::from(1_f64));
-    /// ```
-    pub fn to_su3(self) -> Matrix3<na::Complex<Real>> {
-        // TODO should it consume ? the user can manually clone and there is use because
-        // where the value is not necessary anymore.
-        su3::su3_exp_i(self)
-    }
-    
-    /// return exp( T^a v^a) where v is self.
-    /// Note that the function consume self.
-    pub fn exp(self) -> Matrix3<na::Complex<Real>> {
-        su3::su3_exp_r(self)
     }
     
     /// create a new random SU3 adjoint.
@@ -117,26 +88,10 @@ impl Su3Adjoint {
     /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
     /// let su3 = Su3Adjoint::random(&mut rng, &distribution);
     /// ```
-    pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<F>) -> Self {
         Self {
-            data : Vector8::<Real>::from_fn(|_,_| d.sample(rng))
+            data : Vector8::<F>::from_fn(|_,_| d.sample(rng))
         }
-    }
-    
-    /// Return the t coeff `t = 1/2 * Tr(X^2)`.
-    /// Used for [`su3::su3_exp_i`]
-    /// # Example
-    /// ```
-    /// # extern crate nalgebra;
-    /// # use lattice_qcd_rs::field::Su3Adjoint;
-    /// let su3 = Su3Adjoint::from([1_f64; 8]);
-    /// let m = su3.to_matrix();
-    /// assert_eq!(su3.t(), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
-    /// ```
-    pub fn t(&self) -> na::Complex<Real> {
-        // todo optimize
-        let m = self.to_matrix();
-        - na::Complex::from(0.5_f64) * (m * m).trace()
     }
     
     /// Return the t coeff `d = i * det(X)`.
@@ -149,8 +104,8 @@ impl Su3Adjoint {
     /// let m = su3.to_matrix();
     /// assert_eq!(su3.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant());
     /// ```
-    pub fn d(&self) -> na::Complex<Real> {
-        self.to_matrix().determinant() * I
+    pub fn d(&self) -> na::Complex<F> {
+        self.to_matrix().determinant() * na::Complex::i()
     }
     
     /// Return the number of data. This number is 8
@@ -165,22 +120,57 @@ impl Su3Adjoint {
     }
     
     /// Get an iterator over the ellements.
-    pub fn iter(&self) -> impl Iterator<Item = &Real> {
+    pub fn iter(&self) -> impl Iterator<Item = &F> {
         self.data.iter()
     }
     
     /// Get an iterator over the mutable ref of ellements.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut F> {
         self.data.iter_mut()
     }
     
     /// Get a mutlable reference over the data.
-    pub fn data_mut(&mut self) -> &mut Vector8<Real> {
+    pub fn data_mut(&mut self) -> &mut Vector8<F> {
         &mut self.data
     }
 }
 
-impl Mul<Real> for Su3Adjoint {
+impl<F> Su3Adjoint<F>
+    where F: RealField + From<f64>
+{
+    /// Return the t coeff `t = 1/2 * Tr(X^2)`.
+    /// Used for [`su3::su3_exp_i`]
+    /// # Example
+    /// ```
+    /// # extern crate nalgebra;
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// let su3 = Su3Adjoint::from([1_f64; 8]);
+    /// let m = su3.to_matrix();
+    /// assert_eq!(su3.t(), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
+    /// ```
+    pub fn t(&self) -> na::Complex<F> {
+        // todo optimize
+        let m = self.to_matrix();
+        - na::Complex::from(F::from(0.5_f64)) * (m * m).trace()
+    }
+    
+    /// return the su(3) (Lie algebra) matrix.
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::{field::Su3Adjoint};
+    /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
+    /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
+    /// ```
+    pub fn to_matrix(&self) -> Matrix3<na::Complex<F>> {
+        self.data.iter().enumerate()
+            .map(|(pos, el)| *GENERATORS[pos] * na::Complex::<F>::from(el))
+            .sum()
+    }
+}
+
+impl<F> Mul<Real> for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Self;
     fn mul(mut self, rhs: Real) -> Self::Output {
         self *= rhs;
@@ -188,14 +178,17 @@ impl Mul<Real> for Su3Adjoint {
     }
 }
 
-impl Mul<Su3Adjoint> for Real {
-    type Output = Su3Adjoint;
-    fn mul(self, rhs: Su3Adjoint) -> Self::Output {
+impl Mul<Su3Adjoint<Real>> for Real
+{
+    type Output = Su3Adjoint<Real>;
+    fn mul(self, rhs: Su3Adjoint<Real>) -> Self::Output {
         rhs * self
     }
 }
 
-impl Add<Su3Adjoint> for Su3Adjoint {
+impl<F> Add<Su3Adjoint<F>> for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Self;
     fn add(mut self, rhs: Self) -> Self::Output{
         self += rhs;
@@ -203,20 +196,26 @@ impl Add<Su3Adjoint> for Su3Adjoint {
     }
 }
 
-impl AddAssign for Su3Adjoint {
+impl<F> AddAssign for Su3Adjoint<F>
+    where F: RealField,
+{
     fn add_assign(&mut self, other: Self) {
         self.data += other.data()
     }
 }
 
-impl MulAssign<f64> for Su3Adjoint {
+impl<F> MulAssign<F> for Su3Adjoint<F>
+    where F: RealField
+{
     fn mul_assign(&mut self, rhs: f64) {
         self.data *= rhs;
     }
 }
 
 
-impl Div<Real> for Su3Adjoint {
+impl<F> Div<F> for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Self;
     fn div(mut self, rhs: Real) -> Self::Output {
         self /= rhs;
@@ -224,13 +223,17 @@ impl Div<Real> for Su3Adjoint {
     }
 }
 
-impl DivAssign<f64> for Su3Adjoint {
+impl<F> DivAssign<F> for Su3Adjoint<F>
+    where F: RealField
+{
     fn div_assign(&mut self, rhs: f64) {
         self.data /= rhs;
     }
 }
 
-impl Sub<Su3Adjoint> for Su3Adjoint {
+impl<F> Sub<Su3Adjoint<F>> for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Self;
     fn sub(mut self, rhs: Self) -> Self::Output{
         self -= rhs;
@@ -238,13 +241,17 @@ impl Sub<Su3Adjoint> for Su3Adjoint {
     }
 }
 
-impl SubAssign for Su3Adjoint {
+impl<F> SubAssign for Su3Adjoint<F>
+    where F: RealField
+{
     fn sub_assign(&mut self, other: Self) {
         self.data -= other.data()
     }
 }
 
-impl Neg for Su3Adjoint {
+impl<F> Neg for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Self;
     fn neg(self) -> Self::Output {
         Su3Adjoint::new(- self.data)
@@ -252,7 +259,9 @@ impl Neg for Su3Adjoint {
 }
 
 /// Return the representation for the zero matrix.
-impl Default for Su3Adjoint {
+impl<F> Default for Su3Adjoint<F>
+    where F: RealField + Default
+{
     /// Return the representation for the zero matrix.
     /// # Example
     /// ```
@@ -260,11 +269,13 @@ impl Default for Su3Adjoint {
     /// assert_eq!(Su3Adjoint::default(), Su3Adjoint::new_from_array([0_f64; 8]));
     /// ```
     fn default() -> Self{
-        Su3Adjoint::new(Vector8::from_element(0_f64))
+        Su3Adjoint::new(Vector8::from_element(F::default()))
     }
 }
 
-impl Index<usize> for Su3Adjoint {
+impl<F> Index<usize> for Su3Adjoint<F>
+    where F: RealField
+{
     type Output = Real;
     
     /// Get the element at position `pos`
@@ -280,7 +291,9 @@ impl Index<usize> for Su3Adjoint {
     }
 }
 
-impl IndexMut<usize> for Su3Adjoint {
+impl<F> IndexMut<usize> for Su3Adjoint<F>
+    where F: RealField
+{
     
     /// Get the element at position `pos`
     /// # Panic
@@ -295,20 +308,26 @@ impl IndexMut<usize> for Su3Adjoint {
     }
 }
 
-impl From<Vector8<Real>> for Su3Adjoint {
-    fn from(v: Vector8<Real>) -> Self {
+impl<F> From<Vector8<F>> for Su3Adjoint<F>
+    where F: RealField
+{
+    fn from(v: Vector8<F>) -> Self {
         Su3Adjoint::new(v)
     }
 }
 
-impl From<Su3Adjoint> for Vector8<Real> {
-    fn from(v: Su3Adjoint) -> Self {
+impl<F> From<Su3Adjoint<F>> for Vector8<F>
+    where F: RealField
+{
+    fn from(v: Su3Adjoint<F>) -> Self {
         v.data
     }
 }
 
-impl From<[Real; 8]> for Su3Adjoint {
-    fn from(v: [Real; 8]) -> Self {
+impl<F> From<[F; 8]> for Su3Adjoint<F>
+    where F: RealField
+{
+    fn from(v: [F; 8]) -> Self {
         Su3Adjoint::new_from_array(v)
     }
 }
@@ -445,18 +464,18 @@ impl LinkMatrix {
 #[derive(Debug, PartialEq, Clone)]
 pub struct EField
 {
-    data: Vec<Vector3<Su3Adjoint>>, // use a Vec<[Su3Adjoint; 4]> instead ?
+    data: Vec<Vector3<Su3Adjoint<Real>>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 
 impl EField {
     
     /// Create a new "Electrical" field.
-    pub const fn new (data: Vec<Vector3<Su3Adjoint>>) -> Self {
+    pub const fn new (data: Vec<Vector3<Su3Adjoint<Real>>>) -> Self {
         Self {data}
     }
     
     /// Get the raw data.
-    pub const fn data(&self) -> &Vec<Vector3<Su3Adjoint>> {
+    pub const fn data(&self) -> &Vec<Vector3<Su3Adjoint<Real>>> {
         &self.data
     }
     
@@ -516,12 +535,12 @@ impl EField {
         Self {data: vec![Vector3::new(p1, p1, p1); l.get_number_of_points()]}
     }
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
-    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector3<Su3Adjoint>> {
+    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector3<Su3Adjoint<Real>>> {
         self.data.get(point.to_index(l))
     }
     
     /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e. `E_{-dir}(point) = E_{dir}(point)`.
-    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction, l: &LatticeCyclique) -> Option<&Su3Adjoint> {
+    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction, l: &LatticeCyclique) -> Option<&Su3Adjoint<Real>> {
         let value = self.get_e_vec(point, l);
         match value {
             Some(vec) => Some(&vec[dir.to_index()]),

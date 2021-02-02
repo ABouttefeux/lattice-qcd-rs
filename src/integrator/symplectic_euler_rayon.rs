@@ -42,7 +42,7 @@ fn get_link_matrix_integrate<State> (l: &State, delta_t: Real) -> Vec<CMatrix3>
     )
 }
 
-fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector3<Su3Adjoint>>
+fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector3<Su3Adjoint<Real>>>
     where State: LatticeSimulationState
 {
     run_pool_parallel_rayon(

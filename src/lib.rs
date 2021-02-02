@@ -64,6 +64,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate crossbeam;
 extern crate rayon;
+extern crate simba;
 
 pub mod lattice;
 pub mod su3;

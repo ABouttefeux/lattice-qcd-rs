@@ -276,7 +276,7 @@ const N: usize = 26; // TODO verify accuracy
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 #[inline]
-pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
+pub fn su3_exp_i(su3_adj: Su3Adjoint<Real>) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
@@ -305,7 +305,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 #[inline]
-pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
+pub fn su3_exp_r(su3_adj: Su3Adjoint<Real>) -> CMatrix3 {
     let n = N - 1;
     let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
