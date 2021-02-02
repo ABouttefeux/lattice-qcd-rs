@@ -17,6 +17,7 @@ use super::{
     CMatrix3,
     field::Su3Adjoint,
     Real,
+    utils,
 };
 use once_cell::sync::Lazy;
 
@@ -170,18 +171,17 @@ pub fn get_factorial_size_for_exp() -> usize {
     return n;
 }
 
-/// size of the factorial storage
-const N: usize = 26; // TODO verify accuracy
+const FACTORIAL_STORAGE_STAT_SIZE: usize =  utils::MAX_NUMBER_FACTORIAL + 1;
 
 /// static store for factorial number
 struct FactorialStorageStatic {
-    data: [FactorialNumber; N]
+    data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE]
 }
 
 impl FactorialStorageStatic {
     /// compile time evaluation of all 25 factorial numbers
     pub const fn new() -> Self {
-        let mut data : [FactorialNumber; N] = [1; N];
+        let mut data : [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] = [1; FACTORIAL_STORAGE_STAT_SIZE];
         // cant do for in constant function :(
         let i = 1;
         data[i] = data[i - 1] * i as FactorialNumber;
@@ -233,6 +233,24 @@ impl FactorialStorageStatic {
         data[i] = data[i - 1] * i as FactorialNumber;
         let i = 25;
         data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 26;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 27;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 28;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 29;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 30;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 31;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 32;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 33;
+        data[i] = data[i - 1] * i as FactorialNumber;
+        let i = 34;
+        data[i] = data[i - 1] * i as FactorialNumber;
         Self {data}
     }
     
@@ -245,6 +263,9 @@ impl FactorialStorageStatic {
 /// factorial number storage in order to find the exponential in O(1) for a set storage
 /// the set if for all number `N` such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`
 const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::new();
+
+/// size of the factorial storage
+const N: usize = 26; // TODO verify accuracy
 
 /// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
 ///

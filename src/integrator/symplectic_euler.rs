@@ -94,7 +94,7 @@ impl<State> Integrator<State, State> for  SymplecticEuler
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
         
-        State::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
 
@@ -133,7 +133,7 @@ impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToLeap
         let number_of_thread = self.number_of_thread;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
-        State2::new(l.lattice().clone(), EField::new(e_field), l.link_matrix().clone(), l.t())
+        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
 }
 
@@ -173,6 +173,6 @@ impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToSynch
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
-        State2::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }

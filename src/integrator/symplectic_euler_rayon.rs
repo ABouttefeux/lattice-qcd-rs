@@ -80,7 +80,7 @@ impl<State> Integrator<State, State> for  SymplecticEulerRayon
         let link_matrix = get_link_matrix_integrate(l, delta_t);
         let e_field = get_e_field_integrate(l, delta_t);
         
-        State::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
 
@@ -114,7 +114,7 @@ impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToLeap
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
-        State2::new(l.lattice().clone(), EField::new(e_field), l.link_matrix().clone(), l.t())
+        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
 }
 
@@ -150,6 +150,6 @@ impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToSync
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
         // we advace the counter by one
-        State2::new(l.lattice().clone(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
