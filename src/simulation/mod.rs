@@ -17,6 +17,8 @@ pub enum SimulationError {
     InitialisationError,
     /// try to do a simulation with zero steps
     ZeroStep,
+    ///
+    NotValide,
 }
 
 impl From<ThreadError> for SimulationError{

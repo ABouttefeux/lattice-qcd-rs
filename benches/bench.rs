@@ -80,7 +80,7 @@ fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSync, number
     *simulation = simulation.simulate::<SymplecticEuler>(0.00001, &SymplecticEuler::new(number_of_thread)).unwrap();
 }
 
-fn simulate_euler_rayon(simulation: &mut LatticeSimulationStateSync) {
+fn simulate_euler_rayon(simulation: &mut LatticeHamiltonianSimulationStateSync) {
     *simulation = simulation.simulate::<SymplecticEulerRayon>(0.00001, &SymplecticEulerRayon::new()).unwrap();
 }
 
@@ -135,7 +135,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         );
     }
     
-    let mut sim = LatticeSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
+    let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
     groupe_sim.bench_function("simulate(20) rayon", |b| {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });

@@ -62,9 +62,8 @@ pub trait LatticeState
     }
     */
     
-    fn monte_carlo_step<M, RNG>(self, m: &mut M) -> Result<Self, SimulationError>
-        where M: MonteCarlo<Self, RNG>,
-        RNG: rand::Rng,
+    fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, SimulationError>
+        where M: MonteCarlo<Self>,
     {
         m.get_next_element(self)
     }
