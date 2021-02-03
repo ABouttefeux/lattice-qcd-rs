@@ -31,7 +31,7 @@ use  std::{
     ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
     vec::Vec,
 };
-
+use rayon::prelude::*;
 
 
 /// Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra).
@@ -438,6 +438,12 @@ impl LinkMatrix {
     
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+    
+    pub fn normalize(&mut self) {
+        self.data.par_iter_mut().for_each(|el| {
+            el.normalize_mut();
+        });
     }
 }
 

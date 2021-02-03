@@ -4,7 +4,7 @@
 use super::{
     simulation::{
         SimulationError,
-        LatticeSimulationState,
+        LatticeHamiltonianSimulationState,
     },
     Real,
     Complex,
@@ -27,8 +27,8 @@ pub use symplectic_euler_rayon::*;
 
 /// Define an numerical integrator
 pub trait Integrator<State, State2>
-    where State: LatticeSimulationState,
-    State2: LatticeSimulationState,
+    where State: LatticeHamiltonianSimulationState,
+    State2: LatticeHamiltonianSimulationState,
 {
     /// Do one simulation step
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State2, SimulationError>;
@@ -37,13 +37,13 @@ pub trait Integrator<State, State2>
 /// Define an symplectic numerical integrator
 pub trait SymplecticIntegrator<State, State2>
     where Self:Integrator<State, State2>,
-    State: LatticeSimulationState,
-    State2: LatticeSimulationState,
+    State: LatticeHamiltonianSimulationState,
+    State2: LatticeHamiltonianSimulationState,
 {}
     
 /// function for link intregration
 fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) -> CMatrix3
-    where State: LatticeSimulationState,
+    where State: LatticeHamiltonianSimulationState,
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
@@ -52,7 +52,7 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) 
 
 /// function for "Electrical" field intregration
 fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector3<Su3Adjoint>
-    where State: LatticeSimulationState,
+    where State: LatticeHamiltonianSimulationState,
 {
     let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
     let deriv = l.get_derivative_e(point).unwrap();

@@ -26,8 +26,8 @@ fn main() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let size = 0.001_f64;
     let number_of_pts = 50;
-    let simulation = LatticeSimulationStateSync::new_deterministe(size, 1_f64, number_of_pts, &mut rng, &distribution).unwrap();
-    let simulation2 = LatticeSimulationStateSync::new_deterministe_cold_e_hot_link(size, 1_f64, number_of_pts, &mut rng, &distribution).unwrap();
+    let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(size, 1_f64, number_of_pts, &mut rng, &distribution).unwrap();
+    let simulation2 = LatticeHamiltonianSimulationStateSync::new_deterministe_cold_e_hot_link(size, 1_f64, number_of_pts, &mut rng, &distribution).unwrap();
     let sum_gauss = simulation.lattice().get_points().collect::<Vec<LatticePoint>>().into_par_iter().map(|el| {
         simulation.get_gauss(&el).unwrap()
     }).sum::<CMatrix3>();

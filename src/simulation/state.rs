@@ -34,37 +34,84 @@ use na::{
     ComplexField,
 };
 use rayon::iter::ParallelBridge;
-use rayon::prelude::ParallelIterator;
+use rayon::prelude::*;
 use crossbeam::thread;
-use rand_distr::Distribution;
 
 
-pub trait LatticeSimulationState
-    where Self: Sized + Sync
+pub trait LatticeState
+    where Self: Sync + Sized
 {
     
     /// Create a new simulation state
-    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
-    
-    /// The "Electrical" field of this state.
-    fn e_field(&self) -> &EField;
+    //fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError>;
     
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
     
     fn lattice(&self) -> &LatticeCyclique;
     
-    /// return the time state, i.e. the number of time the simulation ran.
-    fn t(&self) -> usize;
-    
     fn beta(&self) -> Real;
     
     const CA: Real;
     
+    fn get_hamiltonian_links(&self) -> Real;
+    
+    /*
+    /// Get the probability of `state` to replace `self` for the next element of the Markov chain.
+    fn get_probability_of_next_element<State>(&self, state: &State) -> Real
+        where State: LatticeState
+    {
+        (- state.get_hamiltonian_links() + self.get_hamiltonian_links()).exp().min(1_f64)
+    }
+    */
+    
+    fn monte_carlo_step<M, RNG>(self, m: &mut M) -> Result<Self, SimulationError>
+        where M: MonteCarlo<Self, RNG>,
+        RNG: rand::Rng,
+    {
+        m.get_next_element(self)
+    }
+    
+}
+
+// TODO improve compatibility with other monte carlo algorithm
+pub trait LatticeHamiltonianSimulationState
+    where Self: Sized + Sync + LatticeState
+{
+    
+    /// Create a new simulation state
+    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
+    
+    fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
+    {
+        let e_field = EField::new_deterministe(&lattice, rng, &rand_distr::StandardNormal);
+        Self::new(lattice, beta, e_field, link_matrix, 0)
+    }
+    
+    fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
+        let new_e_field = EField::new_deterministe(&self.lattice(), rng, &rand_distr::StandardNormal);
+        if self.lattice().get_number_of_points() != new_e_field.len() {
+            unreachable!()
+        }
+        *self.e_field_mut() = new_e_field;
+    }
+    
+    /// The "Electrical" field of this state.
+    fn e_field(&self) -> &EField;
+    
+    fn  e_field_mut(&mut self) -> &mut EField;
+    /// return the time state, i.e. the number of time the simulation ran.
+    fn t(&self) -> usize;
+    
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
     fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>>;
-    fn get_hamiltonian(&self) -> Real;
-        
+    
+    fn get_hamiltonian_efield(&self) -> Real;
+    
+    fn get_hamiltonian_total(&self) -> Real {
+        self.get_hamiltonian_links() + self.get_hamiltonian_efield()
+    }
+    
     fn simulate<I>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
         where I: Integrator<Self, Self>
     {
@@ -84,22 +131,10 @@ pub trait LatticeSimulationState
         Ok(state)
     }
     
-    /// Get the probability of `state` to replace `self` for the next element of the Markov chain.
-    fn get_probability_of_next_element<State>(&self, state: &State) -> Real
-        where State: LatticeSimulationState
-    {
-        ((- state.get_hamiltonian()).exp() / (- self.get_hamiltonian()).exp()).min(1_f64)
-    }
     
-    fn monte_carlo_step<M, RNG>(self, m: &mut M) -> Result<Self, SimulationError>
-        where M: MonteCarlo<Self, RNG>,
-        RNG: rand::Rng,
-    {
-        m.get_next_element(self)
-    }
 }
 
-pub trait SimulationStateSynchrone where Self: LatticeSimulationState + Clone {
+pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState + Clone {
     fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateLeapFrog,
         I: Integrator<Self, State>
@@ -148,7 +183,7 @@ pub trait SimulationStateSynchrone where Self: LatticeSimulationState + Clone {
     
 }
 
-pub trait SimulationStateLeapFrog where Self: LatticeSimulationState {
+pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState {
     fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateSynchrone,
         I: Integrator<Self, State>
@@ -158,10 +193,65 @@ pub trait SimulationStateLeapFrog where Self: LatticeSimulationState {
 }
 
 
+/// Represent a simulation state at a set time.
+#[derive(Debug, PartialEq, Clone)]
+pub struct LatticeStateDefault {
+    lattice : LatticeCyclique,
+    beta: Real,
+    link_matrix: LinkMatrix,
+}
+
+impl LatticeStateDefault {
+    
+    fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError> {
+        if lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            return Err(SimulationError::InitialisationError);
+        }
+        Ok(Self {lattice, link_matrix, beta})
+    }
+    
+    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, SimulationError> {
+        let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
+        let link_matrix = LinkMatrix::new_cold(&lattice);
+        Self::new(lattice, beta, link_matrix)
+    }
+}
+
+impl LatticeState for LatticeStateDefault{
+    const CA: Real = 3_f64;
+    
+    /// The link matrices of this state.
+    fn link_matrix(&self) -> &LinkMatrix {
+        &self.link_matrix
+    }
+    
+    fn lattice(&self) -> &LatticeCyclique {
+        &self.lattice
+    }
+    
+    fn beta(&self) -> Real {
+        self.beta
+    }
+    
+    /// Get the Hamiltonian of the state.
+    fn get_hamiltonian_links(&self) -> Real {
+        // here it is ok to use par_bridge() as we do not care for the order
+        self.lattice().get_points().par_bridge().map(|el| {
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                Direction::POSITIVES_SPACE.iter()
+                    .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                    .map(|dir_j| {
+                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
+                            .unwrap().trace().real() / Self::CA
+                    }).sum::<Real>()
+            }).sum::<Real>()
+        }).sum::<Real>() * self.beta()
+    }
+}
 
 /// Represent a simulation state at a set time.
 #[derive(Debug, PartialEq, Clone)]
-pub struct LatticeSimulationStateSync {
+pub struct LatticeHamiltonianSimulationStateSync {
     lattice : LatticeCyclique,
     beta: Real,
     e_field: EField,
@@ -169,7 +259,7 @@ pub struct LatticeSimulationStateSync {
     t: usize,
 }
 
-impl LatticeSimulationStateSync {
+impl LatticeHamiltonianSimulationStateSync {
     
     /// Generate a random initial state.
     ///
@@ -177,12 +267,12 @@ impl LatticeSimulationStateSync {
     /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
     /// in each spatial dimension of the lattice. See [LatticeCyclique::new] for more info.
     ///
-    /// useful to reproduce a set of data but slower than [`LatticeSimulationStateSyn::new_random_threaded`]
+    /// useful to reproduce a set of data but slower than [`LatticeHamiltonianSimulationStateSync::new_random_threaded`]
     /// # Example
     /// ```
     /// extern crate rand;
     /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::LatticeSimulationStateSync, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::{simulation::LatticeHamiltonianSimulationStateSync, lattice::LatticeCyclique};
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
@@ -190,8 +280,8 @@ impl LatticeSimulationStateSync {
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// assert_eq!(
-    ///     LatticeSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    ///     LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -226,7 +316,8 @@ impl LatticeSimulationStateSync {
     /// Generate a random initial state.
     ///
     /// Multi threaded generation of random data. Due to the non deterministic way threads
-    /// operate a set cannot be reproduce easily, In that case use [`LatticeSimulationStateSyn::new_deterministe`].
+    /// operate a set cannot be reproduce easily, In that case use
+    /// [`LatticeHamiltonianSimulationStateSync::new_deterministe`].
     pub fn new_random_threaded<Distribution>(
         size: Real,
         beta: Real,
@@ -278,9 +369,50 @@ impl LatticeSimulationStateSync {
     }
 }
 
-impl LatticeSimulationState for LatticeSimulationStateSync {
+impl LatticeState for LatticeHamiltonianSimulationStateSync {
     
     const CA: Real = 3_f64;
+    
+    /// The link matrices of this state.
+    fn link_matrix(&self) -> &LinkMatrix {
+        &self.link_matrix
+    }
+    
+    fn lattice(&self) -> &LatticeCyclique {
+        &self.lattice
+    }
+    
+    fn beta(&self) -> Real {
+        self.beta
+    }
+    
+    /// Get the Hamiltonian of the state.
+    fn get_hamiltonian_links(&self) -> Real {
+        // here it is ok to use par_bridge() as we do not care for the order
+        self.lattice().get_points().par_bridge().map(|el| {
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                Direction::POSITIVES_SPACE.iter()
+                    .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                    .map(|dir_j| {
+                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
+                            .unwrap().trace().real() / Self::CA
+                    }).sum::<Real>()
+            }).sum::<Real>()
+        }).sum::<Real>() * self.beta()
+    }
+}
+
+impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
+    
+    
+    fn get_hamiltonian_efield(&self) -> Real {
+        self.lattice().get_points().par_bridge().map(|el| {
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
+                (e_i * e_i).trace().real()
+            }).sum::<Real>()
+        }).sum::<Real>() * self.beta()
+    }
     
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
@@ -298,22 +430,13 @@ impl LatticeSimulationState for LatticeSimulationStateSync {
         &self.e_field
     }
     
-    /// The link matrices of this state.
-    fn link_matrix(&self) -> &LinkMatrix {
-        &self.link_matrix
-    }
-    
-    fn lattice(&self) -> &LatticeCyclique {
-        &self.lattice
+    fn e_field_mut(&mut self) -> &mut EField {
+        &mut self.e_field
     }
     
     /// return the time state, i.e. the number of time the simulation ran.
     fn t(&self) -> usize {
         self.t
-    }
-    
-    fn beta(&self) -> Real {
-        self.beta
     }
     
     /// Get the derive of U_i(x).
@@ -345,24 +468,6 @@ impl LatticeSimulationState for LatticeSimulationStateSync {
         Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
     }
     
-    /// Get the Hamiltonian of the state.
-    fn get_hamiltonian(&self) -> Real {
-        // here it is ok to use par_bridge() as we do not care for the order
-        self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
-                let sum_plaquette = Direction::POSITIVES_SPACE.iter()
-                    .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
-                    .map(|dir_j| {
-                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
-                            .unwrap().trace().real() / Self::CA
-                    }).sum::<Real>();
-                // TODO optimize
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
-                let sum_trace_e = (e_i * e_i).trace().real();
-                sum_trace_e + sum_plaquette
-            }).sum::<Real>()
-        }).sum::<Real>() * self.beta()
-    }
 }
 
 /// Represent a simulation state using leap frog using a synchrone type
@@ -374,7 +479,7 @@ pub struct SimulationStateLeap<State>
 }
 
 impl<State> SimulationStateLeap<State>
-    where State: SimulationStateSynchrone + LatticeSimulationState
+    where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
     // TODO review this part ` + LatticeSimulationStateDefault`
     // It is require because it should implement
     // I: Integrator<State, Self>
@@ -396,13 +501,40 @@ impl<State> SimulationStateLeap<State>
 }
 
 impl<State> SimulationStateLeapFrog for SimulationStateLeap<State>
-    where State: SimulationStateSynchrone + LatticeSimulationState
+    where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
 {}
 
-impl<State> LatticeSimulationState for SimulationStateLeap<State>
-    where State: LatticeSimulationState + SimulationStateSynchrone
+impl<State> LatticeState for SimulationStateLeap<State>
+    where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {
     const CA: Real = State::CA;
+    
+    /// The link matrices of this state.
+    fn link_matrix(&self) -> &LinkMatrix {
+        self.state().link_matrix()
+    }
+    
+    fn lattice(&self) -> &LatticeCyclique {
+        self.state().lattice()
+    }
+    
+    fn beta(&self) -> Real {
+        self.state().beta()
+    }
+    
+    fn get_hamiltonian_links(&self) -> Real {
+        self.state().get_hamiltonian_links()
+    }
+}
+
+
+impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
+    where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
+{
+    
+    fn get_hamiltonian_efield(&self) -> Real {
+        self.state().get_hamiltonian_efield()
+    }
     
     fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
         let state = State::new(lattice, beta, e_field, link_matrix, t)?;
@@ -414,22 +546,13 @@ impl<State> LatticeSimulationState for SimulationStateLeap<State>
         self.state().e_field()
     }
     
-    /// The link matrices of this state.
-    fn link_matrix(&self) -> &LinkMatrix {
-        self.state().link_matrix()
-    }
-    
-    fn lattice(&self) -> &LatticeCyclique {
-        self.state().lattice()
+    fn e_field_mut(&mut self) -> &mut EField {
+        self.state.e_field_mut()
     }
     
     /// return the time state, i.e. the number of time the simulation ran.
     fn t(&self) -> usize {
         self.state().t()
-    }
-    
-    fn beta(&self) -> Real {
-        self.state().beta()
     }
     
     fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
@@ -438,9 +561,5 @@ impl<State> LatticeSimulationState for SimulationStateLeap<State>
     
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
         self.state().get_derivatives_u(link)
-    }
-    
-    fn get_hamiltonian(&self) -> Real {
-        self.state().get_hamiltonian()
     }
 }

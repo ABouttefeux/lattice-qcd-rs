@@ -19,7 +19,7 @@ use super::{
         Real,
         simulation::{
             SimulationError,
-            LatticeSimulationState,
+            LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
             SimulationStateLeapFrog,
         },
@@ -32,7 +32,7 @@ use super::{
 use std::vec::Vec;
 
 fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
-    where State: LatticeSimulationState
+    where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_vec(
         l.lattice().get_links_space(),
@@ -46,7 +46,7 @@ fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t
 }
 
 fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector3<Su3Adjoint>>, ThreadError>
-    where State: LatticeSimulationState
+    where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_vec(
         l.lattice().get_points(),
@@ -82,12 +82,12 @@ impl Default for SymplecticEuler {
 }
 
 impl<State> SymplecticIntegrator<State, State> for SymplecticEuler
-    where State: LatticeSimulationState
+    where State: LatticeHamiltonianSimulationState
 {}
 
 
 impl<State> Integrator<State, State> for  SymplecticEuler
-    where State: LatticeSimulationState
+    where State: LatticeHamiltonianSimulationState
 {
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
@@ -121,13 +121,13 @@ impl Default for SymplecticEulerToLeap{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToLeap
-    where State1: LatticeSimulationState + SimulationStateSynchrone,
-    State2: LatticeSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToLeap
-    where State1: LatticeSimulationState + SimulationStateSynchrone,
-    State2: LatticeSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let number_of_thread = self.number_of_thread;
@@ -160,13 +160,13 @@ impl Default for SymplecticEulerToSynch{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToSynch
-    where State1: LatticeSimulationState + SimulationStateLeapFrog,
-    State2: LatticeSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToSynch
-    where State1: LatticeSimulationState + SimulationStateLeapFrog,
-    State2: LatticeSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let number_of_thread = self.number_of_thread;

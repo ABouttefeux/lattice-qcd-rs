@@ -21,7 +21,7 @@ fn bench_simulation_creation_deterministe(
     rng: &mut rand::rngs::ThreadRng,
     d: &impl rand_distr::Distribution<Real>,
 ) {
-    let _simulation = LatticeSimulationStateSync::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
+    let _simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
 }
 
 fn bench_simulation_creation_threaded<D>(
@@ -31,7 +31,7 @@ fn bench_simulation_creation_threaded<D>(
 )
     where D: rand_distr::Distribution<Real> + Sync,
 {
-    let _simulation = LatticeSimulationStateSync::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
+    let _simulation = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
 }
 
 
@@ -76,7 +76,7 @@ fn create_hash_map(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distrib
     }
 }
 
-fn simulate_euler(simulation: &mut LatticeSimulationStateSync, number_of_thread: usize) {
+fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSync, number_of_thread: usize) {
     *simulation = simulation.simulate::<SymplecticEuler>(0.00001, &SymplecticEuler::new(number_of_thread)).unwrap();
 }
 
@@ -129,7 +129,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     groupe_sim.sample_size(10);
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
-        let mut sim = LatticeSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
+        let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
         groupe_sim.bench_with_input(BenchmarkId::new("thread", n), n,
             |b,i| b.iter(|| simulate_euler(&mut sim, *i))
         );
