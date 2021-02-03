@@ -77,11 +77,11 @@ fn create_hash_map(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distrib
 }
 
 fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSync, number_of_thread: usize) {
-    *simulation = simulation.simulate::<SymplecticEuler>(0.00001, &SymplecticEuler::new(number_of_thread)).unwrap();
+    *simulation = simulation.simulate_sync(0.00001, &SymplecticEuler::new(number_of_thread)).unwrap();
 }
 
 fn simulate_euler_rayon(simulation: &mut LatticeHamiltonianSimulationStateSync) {
-    *simulation = simulation.simulate::<SymplecticEulerRayon>(0.00001, &SymplecticEulerRayon::new()).unwrap();
+    *simulation = simulation.simulate_sync(0.00001, &SymplecticEulerRayon::new()).unwrap();
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

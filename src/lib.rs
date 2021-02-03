@@ -23,6 +23,7 @@
 //! extern crate rand_distr;
 //! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSync;
 //! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
+//! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
 //!
 //! let mut rng = rand::thread_rng();
@@ -31,8 +32,8 @@
 //! );
 //! let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
 //!     .unwrap();
-//! let state2 = state1.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! let state3 = state2.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! ```
 //! Let us then compute and compare the Hamiltonian.
 //! ```
@@ -40,6 +41,7 @@
 //! # extern crate rand_distr;
 //! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSync;
 //! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
+//! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
 //! #
 //! # let mut rng = rand::thread_rng();
@@ -48,8 +50,8 @@
 //! # );
 //! # let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
 //! #     .unwrap();
-//! # let state2 = state1.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! # let state3 = state2.simulate(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let h = state1.get_hamiltonian_total();
 //! let h2 = state3.get_hamiltonian_total();
 //! println!("The error on the Hamiltonian is {}", h - h2);

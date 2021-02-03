@@ -1,10 +1,6 @@
 
 //! Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
 
-
-/// Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
-
-
 use super::{
     super::{
         field::{
@@ -20,11 +16,11 @@ use super::{
             SimulationError,
             LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
-            SimulationStateLeapFrog,
             LatticeHamiltonianSimulationStateNew,
+            SimulationStateLeap,
+            LatticeState,
         },
     },
-    Integrator,
     SymplecticIntegrator,
     integrate_link,
     integrate_efield,
@@ -70,87 +66,33 @@ impl Default for SymplecticEulerRayon {
     }
 }
 
-impl<State> SymplecticIntegrator<State, State> for SymplecticEulerRayon
-    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
-{}
-
-impl<State> Integrator<State, State> for  SymplecticEulerRayon
-    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
+impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for SymplecticEulerRayon
+    where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew,
 {
-    fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
+    fn integrate_sync_sync(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
         let link_matrix = get_link_matrix_integrate(l, delta_t);
         let e_field = get_e_field_integrate(l, delta_t);
         
         State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
-}
-
-// Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
-pub struct SymplecticEulerRayonToLeap {}
-
-impl SymplecticEulerRayonToLeap {
-    /// Create a new SymplecticEulerRayon
-    pub const fn new() -> Self {
-        Self{}
-    }
-}
-
-impl Default for SymplecticEulerRayonToLeap {
-    /// Identical to [`SymplecticEulerRayon::new`].
-    fn default() -> Self{
-        Self::new()
-    }
-}
-
-impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
-{}
-
-impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
-{
-    fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
-        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
+    
+    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+        let link_matrix = get_link_matrix_integrate(l, delta_t);
+        let e_field = get_e_field_integrate(l, delta_t);
         
-        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
+        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
-}
-
-// Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
-pub struct SymplecticEulerRayonToSync {}
-
-impl SymplecticEulerRayonToSync {
-    /// Create a new SymplecticEulerRayon
-    pub const fn new() -> Self {
-        Self{}
+    
+    fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
+        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
-}
-
-impl Default for SymplecticEulerRayonToSync {
-    /// Identical to [`SymplecticEulerRayon::new`].
-    fn default() -> Self{
-        Self::new()
-    }
-}
-
-impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToSync
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
-{}
-
-impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToSync
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
-{
-    fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
+    
+    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
         let link_matrix = get_link_matrix_integrate(l, delta_t);
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
         // we advace the counter by one
-        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }

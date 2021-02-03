@@ -1,5 +1,4 @@
 use lattice_qcd_rs::{
-    su3,
     simulation::*,
     lattice::*,
     field::*,

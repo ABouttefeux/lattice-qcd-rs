@@ -8,7 +8,7 @@ use super::{
             EField,
             Su3Adjoint
         },
-        integrator::Integrator,
+        integrator::SymplecticIntegrator,
         lattice::{
             LatticeCyclique,
             LatticeLink,
@@ -103,25 +103,6 @@ pub trait LatticeHamiltonianSimulationState
         self.get_hamiltonian_links() + self.get_hamiltonian_efield()
     }
     
-    fn simulate<I>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
-        where I: Integrator<Self, Self>
-    {
-        integrator.integrate(&self, delta_t)
-    }
-    
-    fn simulate_n<I>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
-        where I: Integrator<Self, Self>
-    {
-        if numbers_of_times == 0 {
-            return Err(SimulationError::ZeroStep);
-        }
-        let mut state = self.simulate(delta_t, integrator)?;
-        for _ in 0..(numbers_of_times - 1) {
-            state = state.simulate(delta_t, integrator)?;
-        }
-        Ok(state)
-    }
-    
     
 }
 
@@ -139,48 +120,61 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
 pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState + Clone {
     fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateLeapFrog,
-        I: Integrator<Self, State>
+        I: SymplecticIntegrator<Self, State>
     {
-        integrator.integrate(&self, delta_t)
+        integrator.integrate_sync_leap(&self, delta_t)
     }
     
-    fn simulate_leapfrog_n<ISTL, ILTL, ILTS, State>(
+    fn simulate_using_leapfrog_n<I, State>(
         &self,
         delta_t: Real,
         number_of_steps: usize,
-        integrator_to_leap: &ISTL,
-        integrator_leap: &ILTL,
-        integrator_to_sync: &ILTS,
+        integrator: &I,
     ) -> Result<Self, SimulationError>
         where State: SimulationStateLeapFrog,
-        ISTL: Integrator<Self, State>,
-        ILTL: Integrator<State, State>,
-        ILTS: Integrator<State, Self>,
+        I: SymplecticIntegrator<Self, State>,
     {
         if number_of_steps == 0 {
             return Err(SimulationError::ZeroStep);
         }
-        let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator_to_leap)?;
+        let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator)?;
         if number_of_steps > 1 {
-            state_leap = state_leap.simulate_n(delta_t, integrator_leap, number_of_steps -1)?;
+            state_leap = state_leap.simulate_leap_n(delta_t, integrator, number_of_steps -1)?;
         }
-        let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator_to_sync)?;
+        let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator)?;
         Ok(state_sync)
     }
     
-    fn simulate_state_leapfrog_n<ISTL, ILTL, ILTS>(
+    fn simulate_using_leapfrog_n_auto<I>(
         &self,
         delta_t: Real,
         number_of_steps: usize,
-        integrator_to_leap: &ISTL,
-        integrator_leap: &ILTL,
-        integrator_to_sync: &ILTS,
+        integrator: &I,
     ) -> Result<Self, SimulationError>
-        where ISTL: Integrator<Self, SimulationStateLeap<Self>>,
-        ILTL: Integrator<SimulationStateLeap<Self>, SimulationStateLeap<Self>>,
-        ILTS: Integrator<SimulationStateLeap<Self>, Self>,
+        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self>>,
     {
-        self.simulate_leapfrog_n(delta_t, number_of_steps, integrator_to_leap, integrator_leap, integrator_to_sync)
+        self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
+    }
+    
+    fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<Self, T>,
+        T: SimulationStateLeapFrog,
+    {
+        integrator.integrate_sync_sync(&self, delta_t)
+    }
+    
+    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<Self, T>,
+        T: SimulationStateLeapFrog,
+    {
+        if numbers_of_times == 0 {
+            return Err(SimulationError::ZeroStep);
+        }
+        let mut state = self.simulate_sync(delta_t, integrator)?;
+        for _ in 0..(numbers_of_times - 1) {
+            state = state.simulate_sync(delta_t, integrator)?;
+        }
+        Ok(state)
     }
     
 }
@@ -188,9 +182,30 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
 pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState {
     fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateSynchrone,
-        I: Integrator<Self, State>
+        I: SymplecticIntegrator<State, Self>
     {
-        integrator.integrate(&self, delta_t)
+        integrator.integrate_leap_sync(&self, delta_t)
+    }
+    
+    fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<T, Self>,
+        T: SimulationStateSynchrone,
+    {
+        integrator.integrate_leap_leap(&self, delta_t)
+    }
+    
+    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<T, Self>,
+        T: SimulationStateSynchrone,
+    {
+        if numbers_of_times == 0 {
+            return Err(SimulationError::ZeroStep);
+        }
+        let mut state = self.simulate_leap(delta_t, integrator)?;
+        for _ in 0..(numbers_of_times - 1) {
+            state = state.simulate_leap(delta_t, integrator)?;
+        }
+        Ok(state)
     }
 }
 
@@ -261,6 +276,8 @@ pub struct LatticeHamiltonianSimulationStateSync {
     link_matrix: LinkMatrix,
     t: usize,
 }
+
+impl SimulationStateSynchrone for LatticeHamiltonianSimulationStateSync{}
 
 impl LatticeHamiltonianSimulationStateSync {
     
@@ -497,7 +514,7 @@ impl<State> SimulationStateLeap<State>
     }
     
     pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, SimulationError>
-        where I: Integrator<State, Self>
+        where I: SymplecticIntegrator<State, Self>
     {
         s.simulate_to_leapfrog(delta_t, integrator)
     }

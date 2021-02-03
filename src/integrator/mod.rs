@@ -5,6 +5,8 @@ use super::{
     simulation::{
         SimulationError,
         LatticeHamiltonianSimulationState,
+        SimulationStateLeapFrog,
+        SimulationStateSynchrone,
     },
     Real,
     Complex,
@@ -24,7 +26,7 @@ pub mod symplectic_euler_rayon;
 pub use symplectic_euler::*;
 pub use symplectic_euler_rayon::*;
 
-
+/*
 /// Define an numerical integrator
 pub trait Integrator<State, State2>
     where State: LatticeHamiltonianSimulationState,
@@ -33,14 +35,19 @@ pub trait Integrator<State, State2>
     /// Do one simulation step
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State2, SimulationError>;
 }
+*/
 
 /// Define an symplectic numerical integrator
-pub trait SymplecticIntegrator<State, State2>
-    where Self:Integrator<State, State2>,
-    State: LatticeHamiltonianSimulationState,
-    State2: LatticeHamiltonianSimulationState,
-{}
-    
+pub trait SymplecticIntegrator<StateSync, StateLeap>
+    where StateSync: SimulationStateSynchrone,
+    StateLeap: SimulationStateLeapFrog,
+{
+    fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) ->  Result<StateSync, SimulationError>;
+    fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) ->  Result<StateLeap, SimulationError>;
+    fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) ->  Result<StateLeap, SimulationError>;
+    fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) ->  Result<StateSync, SimulationError>;
+}
+
 /// function for link intregration
 fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) -> CMatrix3
     where State: LatticeHamiltonianSimulationState,

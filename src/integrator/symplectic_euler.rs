@@ -21,11 +21,11 @@ use super::{
             SimulationError,
             LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
-            SimulationStateLeapFrog,
+            LatticeState,
             LatticeHamiltonianSimulationStateNew,
+            SimulationStateLeap,
         },
     },
-    Integrator,
     SymplecticIntegrator,
     integrate_link,
     integrate_efield,
@@ -82,98 +82,37 @@ impl Default for SymplecticEuler {
     }
 }
 
-impl<State> SymplecticIntegrator<State, State> for SymplecticEuler
-    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
-{}
-
-
-impl<State> Integrator<State, State> for  SymplecticEuler
-    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
+impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for SymplecticEuler
+    where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew,
 {
-    fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
+    fn integrate_sync_sync(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
         
         State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
-}
-
-/// Basic symplectic Euler integrator used for switching between syn and leapfrog
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
-pub struct SymplecticEulerToLeap
-{
-    number_of_thread: usize,
-}
-
-impl SymplecticEulerToLeap {
-    /// Create a integrator using a set number of threads
-    pub const fn new(number_of_thread: usize) -> Self {
-        Self {number_of_thread}
+    
+    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+        let number_of_thread = self.number_of_thread;
+        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
+        
+        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
-}
-
-impl Default for SymplecticEulerToLeap{
-    /// Default value using the number of threads rayon would use,
-    /// see [`rayon::current_num_threads()`].
-    fn default() -> Self {
-        Self::new(rayon::current_num_threads())
-    }
-}
-
-impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
-{}
-
-impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
-{
-    fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
+    
+    fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
-        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
+        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
-}
-
-/// Basic symplectic Euler integrator used for switching between syn and leapfrog
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
-pub struct SymplecticEulerToSynch
-{
-    number_of_thread: usize,
-}
-
-impl SymplecticEulerToSynch {
-    /// Create a integrator using a set number of threads
-    pub const fn new(number_of_thread: usize) -> Self {
-        Self {number_of_thread}
-    }
-}
-
-impl Default for SymplecticEulerToSynch{
-    /// Default value using the number of threads rayon would use,
-    /// see [`rayon::current_num_threads()`].
-    fn default() -> Self {
-        Self::new(rayon::current_num_threads())
-    }
-}
-
-impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToSynch
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
-{}
-
-impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToSynch
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
-{
-    fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
+    
+    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
-        State2::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
 }
