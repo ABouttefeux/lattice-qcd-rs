@@ -21,6 +21,7 @@ use super::{
             LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
             SimulationStateLeapFrog,
+            LatticeHamiltonianSimulationStateNew,
         },
     },
     Integrator,
@@ -70,11 +71,11 @@ impl Default for SymplecticEulerRayon {
 }
 
 impl<State> SymplecticIntegrator<State, State> for SymplecticEulerRayon
-    where State: LatticeHamiltonianSimulationState
+    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
 {}
 
 impl<State> Integrator<State, State> for  SymplecticEulerRayon
-    where State: LatticeHamiltonianSimulationState
+    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
         let link_matrix = get_link_matrix_integrate(l, delta_t);
@@ -103,13 +104,13 @@ impl Default for SymplecticEulerRayonToLeap {
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
@@ -137,13 +138,13 @@ impl Default for SymplecticEulerRayonToSync {
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerRayonToSync
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerRayonToSync
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let link_matrix = get_link_matrix_integrate(l, delta_t);

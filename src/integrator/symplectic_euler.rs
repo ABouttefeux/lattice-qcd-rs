@@ -22,6 +22,7 @@ use super::{
             LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
             SimulationStateLeapFrog,
+            LatticeHamiltonianSimulationStateNew,
         },
     },
     Integrator,
@@ -82,12 +83,12 @@ impl Default for SymplecticEuler {
 }
 
 impl<State> SymplecticIntegrator<State, State> for SymplecticEuler
-    where State: LatticeHamiltonianSimulationState
+    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
 {}
 
 
 impl<State> Integrator<State, State> for  SymplecticEuler
-    where State: LatticeHamiltonianSimulationState
+    where State: LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
@@ -121,13 +122,13 @@ impl Default for SymplecticEulerToLeap{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToLeap
-    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone,
-    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog
+    where State1: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let number_of_thread = self.number_of_thread;
@@ -160,13 +161,13 @@ impl Default for SymplecticEulerToSynch{
 }
 
 impl<State1, State2> SymplecticIntegrator<State1, State2> for SymplecticEulerToSynch
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
 {}
 
 impl<State1, State2> Integrator<State1, State2> for  SymplecticEulerToSynch
-    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog,
-    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone
+    where State1: LatticeHamiltonianSimulationState + SimulationStateLeapFrog + LatticeHamiltonianSimulationStateNew,
+    State2: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
 {
     fn integrate(&self, l: &State1, delta_t: Real) ->  Result<State2, SimulationError> {
         let number_of_thread = self.number_of_thread;

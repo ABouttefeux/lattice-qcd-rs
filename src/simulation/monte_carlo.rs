@@ -7,7 +7,10 @@ use super::{
     state::{
         SimulationStateSynchrone,
         SimulationStateLeap,
-        LatticeState
+        LatticeState,
+        LatticeHamiltonianSimulationStateSyncDefault,
+        LatticeHamiltonianSimulationStateNew,
+        LatticeStateNew,
     },
     SimulationError,
 };
@@ -45,6 +48,64 @@ pub trait MonteCarlo<State, RNG>
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
+    where State: LatticeStateNew + Clone,
+    ISTL: Integrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTL: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTS: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, LatticeHamiltonianSimulationStateSyncDefault<State>> + Clone,
+    RNG: rand::Rng,
+{
+    internal: HybridMonteCarloInternal<LatticeHamiltonianSimulationStateSyncDefault<State>, RNG, ISTL, ILTL, ILTS>
+}
+
+impl<State, RNG, ISTL, ILTL, ILTS> HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
+    where State: LatticeStateNew + Clone,
+    ISTL: Integrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTL: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTS: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, LatticeHamiltonianSimulationStateSyncDefault<State>> + Clone,
+    RNG: rand::Rng,
+{
+    pub fn new(
+        delta_t: Real,
+        number_of_steps: usize,
+        integrator_to_leap: ISTL,
+        integrator_leap: ILTL,
+        integrator_to_sync: ILTS,
+        rng: RNG,
+    ) -> Self {
+        Self {
+            internal: HybridMonteCarloInternal::<LatticeHamiltonianSimulationStateSyncDefault<State>, RNG, ISTL, ILTL, ILTS>::new(delta_t, number_of_steps, integrator_to_leap, integrator_leap, integrator_to_sync, rng)
+        }
+    }
+}
+
+impl<State, RNG, ISTL, ILTL, ILTS> MonteCarlo<State, RNG> for HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
+    where State: LatticeStateNew + Clone,
+    ISTL: Integrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTL: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>> + Clone,
+    ILTS: Integrator<SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>, LatticeHamiltonianSimulationStateSyncDefault<State>> + Clone,
+    RNG: rand::Rng,
+{
+    fn get_rng(&mut self) -> &mut RNG {
+        self.internal.get_rng()
+    }
+    
+    fn get_potential_next_element(&mut self, _state: &State) -> Result<State, SimulationError> {
+        unreachable!()
+    }
+    
+    // the probablty of the next element is given by the internal Monte Carlo
+    fn get_probability_of_replacement(_old_state: &State, _new_state : &State) -> Real {
+        unreachable!()
+    }
+    
+    fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
+        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
+        self.internal.get_next_element(state_internal).map(|el|el.get_state_owned())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct HybridMonteCarloInternal<State, RNG, ISTL, ILTL, ILTS>
     where State: SimulationStateSynchrone,
     ISTL: Integrator<State, SimulationStateLeap<State>> + Clone,
     ILTL: Integrator<SimulationStateLeap<State>, SimulationStateLeap<State>> + Clone,
@@ -60,7 +121,7 @@ pub struct HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
     _phantom: PhantomData<State>,
 }
 
-impl<State, RNG, ISTL, ILTL, ILTS> HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
+impl<State, RNG, ISTL, ILTL, ILTS> HybridMonteCarloInternal<State, RNG, ISTL, ILTL, ILTS>
     where State: SimulationStateSynchrone,
     ISTL: Integrator<State, SimulationStateLeap<State>> + Clone,
     ILTL: Integrator<SimulationStateLeap<State>, SimulationStateLeap<State>> + Clone,
@@ -87,7 +148,7 @@ impl<State, RNG, ISTL, ILTL, ILTS> HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS
     }
 }
 
-impl<State, RNG, ISTL, ILTL, ILTS> MonteCarlo<State, RNG> for HybridMonteCarlo<State, RNG, ISTL, ILTL, ILTS>
+impl<State, RNG, ISTL, ILTL, ILTS> MonteCarlo<State, RNG> for HybridMonteCarloInternal<State, RNG, ISTL, ILTL, ILTS>
     where State: SimulationStateSynchrone,
     ISTL: Integrator<State, SimulationStateLeap<State>> + Clone,
     ILTL: Integrator<SimulationStateLeap<State>, SimulationStateLeap<State>> + Clone,

@@ -1,5 +1,5 @@
 
-//! Module containing the simulation PartialEq
+//! Module containing the simulation
 
 use super::{
     super::{
@@ -42,9 +42,6 @@ pub trait LatticeState
     where Self: Sync + Sized
 {
     
-    /// Create a new simulation state
-    //fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError>;
-    
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
     
@@ -71,22 +68,17 @@ pub trait LatticeState
     {
         m.get_next_element(self)
     }
-    
+}
+
+pub trait LatticeStateNew where Self: LatticeState + Sized {
+    ///Create a new simulation state
+    fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError>;
 }
 
 // TODO improve compatibility with other monte carlo algorithm
 pub trait LatticeHamiltonianSimulationState
     where Self: Sized + Sync + LatticeState
 {
-    
-    /// Create a new simulation state
-    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
-    
-    fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
-    {
-        let e_field = EField::new_deterministe(&lattice, rng, &rand_distr::StandardNormal);
-        Self::new(lattice, beta, e_field, link_matrix, 0)
-    }
     
     fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &rand_distr::StandardNormal);
@@ -132,6 +124,17 @@ pub trait LatticeHamiltonianSimulationState
     }
     
     
+}
+
+pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSimulationState {
+    /// Create a new simulation state
+    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
+    
+    fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
+    {
+        let e_field = EField::new_deterministe(&lattice, rng, &rand_distr::StandardNormal);
+        Self::new(lattice, beta, e_field, link_matrix, 0)
+    }
 }
 
 pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState + Clone {
@@ -202,18 +205,19 @@ pub struct LatticeStateDefault {
 }
 
 impl LatticeStateDefault {
-    
+    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, SimulationError> {
+        let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
+        let link_matrix = LinkMatrix::new_cold(&lattice);
+        Self::new(lattice, beta, link_matrix)
+    }
+}
+
+impl LatticeStateNew for LatticeStateDefault{
     fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError> {
         if lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return Err(SimulationError::InitialisationError);
         }
         Ok(Self {lattice, link_matrix, beta})
-    }
-    
-    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, SimulationError> {
-        let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
-        let link_matrix = LinkMatrix::new_cold(&lattice);
-        Self::new(lattice, beta, link_matrix)
     }
 }
 
@@ -402,18 +406,7 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     }
 }
 
-impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
-    
-    
-    fn get_hamiltonian_efield(&self) -> Real {
-        self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
-                (e_i * e_i).trace().real()
-            }).sum::<Real>()
-        }).sum::<Real>() * self.beta()
-    }
-    
+impl LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateSync{
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
     /// `t` is the number of time the simulation ran. i.e. the time sate.
@@ -423,6 +416,18 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
             return Err(SimulationError::InitialisationError);
         }
         Ok(Self {lattice, e_field, link_matrix, t, beta})
+    }
+}
+
+impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
+    
+    fn get_hamiltonian_efield(&self) -> Real {
+        self.lattice().get_points().par_bridge().map(|el| {
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
+                (e_i * e_i).trace().real()
+            }).sum::<Real>()
+        }).sum::<Real>() * self.beta()
     }
     
     /// The "Electrical" field of this state.
@@ -527,6 +532,14 @@ impl<State> LatticeState for SimulationStateLeap<State>
     }
 }
 
+impl<State> LatticeHamiltonianSimulationStateNew for SimulationStateLeap<State>
+    where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone + LatticeHamiltonianSimulationStateNew
+{
+    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
+        let state = State::new(lattice, beta, e_field, link_matrix, t)?;
+        Ok(Self {state})
+    }
+}
 
 impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
@@ -534,11 +547,6 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     
     fn get_hamiltonian_efield(&self) -> Real {
         self.state().get_hamiltonian_efield()
-    }
-    
-    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
-        let state = State::new(lattice, beta, e_field, link_matrix, t)?;
-        Ok(Self {state})
     }
     
     /// The "Electrical" field of this state.
@@ -562,4 +570,130 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
         self.state().get_derivatives_u(link)
     }
+}
+
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState
+{
+    lattice_state: State,
+    e_field: EField,
+    t: usize,
+}
+
+impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState,
+{
+    pub fn get_state_owned(self) -> State {
+        self.lattice_state
+    }
+    
+    pub fn lattice_state(&self) -> &State {
+        &self.lattice_state
+    }
+    
+    pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
+        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &rand_distr::StandardNormal);
+        Self{lattice_state, e_field, t: 0}
+    }
+}
+
+
+impl<State> SimulationStateSynchrone for LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState + Clone
+{}
+
+impl<State> LatticeState for LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState
+{
+    fn link_matrix(&self) -> &LinkMatrix{
+        self.lattice_state.link_matrix()
+    }
+
+    fn lattice(&self) -> &LatticeCyclique {
+        self.lattice_state.lattice()
+    }
+
+    fn beta(&self) -> Real {
+        self.lattice_state.beta()
+    }
+
+    const CA: Real = State::CA;
+
+    fn get_hamiltonian_links(&self) -> Real {
+        self.lattice_state.get_hamiltonian_links()
+    }
+}
+
+impl<State> LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState + LatticeStateNew
+{
+    /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
+    /// amount of data compared to lattice it fails to create the state.
+    /// `t` is the number of time the simulation ran. i.e. the time sate.
+    fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
+        if lattice.get_number_of_points() != e_field.len() {
+            return Err(SimulationError::InitialisationError);
+        }
+        Ok(Self {lattice_state: State::new(lattice, beta, link_matrix)?, e_field, t})
+    }
+}
+
+impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSyncDefault<State>
+    where State: LatticeState
+{
+    
+    fn get_hamiltonian_efield(&self) -> Real {
+        self.lattice().get_points().par_bridge().map(|el| {
+            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
+                (e_i * e_i).trace().real()
+            }).sum::<Real>()
+        }).sum::<Real>() * self.beta()
+    }
+    
+    /// The "Electrical" field of this state.
+    fn e_field(&self) -> &EField {
+        &self.e_field
+    }
+    
+    fn e_field_mut(&mut self) -> &mut EField {
+        &mut self.e_field
+    }
+    
+    /// return the time state, i.e. the number of time the simulation ran.
+    fn t(&self) -> usize {
+        self.t
+    }
+    
+    /// Get the derive of U_i(x).
+    fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+        let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
+        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
+        let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
+        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
+    }
+    
+    /// Get the derive of E(x) (as a vector of Su3Adjoint).
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+        let c = - (2_f64 / Self::CA).sqrt();
+        let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
+            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
+            let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter()
+                .filter(|dir_2| dir_2.to_positive() != *dir)
+                .map(|dir_2| {
+                    self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
+                        .map(|el| el.adjoint())
+                }).sum::<Option<CMatrix3>>()?;
+            Some(Su3Adjoint::new(
+                Vector8::<Real>::from_fn(|index, _| {
+                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / self.lattice().size()
+                })
+            ))
+        });
+        // TODO cleanup
+        Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
+    }
+    
 }
