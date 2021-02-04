@@ -1,5 +1,7 @@
 
 //! Basic symplectic Euler integrator
+//!
+//! See [`SymplecticEuler`]
 
 use na::{
     Vector3,
@@ -61,6 +63,9 @@ fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Re
 }
 
 /// Basic symplectic Euler integrator
+///
+/// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
+/// but use less memory
 #[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEuler
 {
@@ -96,9 +101,11 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
     fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        // I do not like the clone of e_field :(.
+        let mut state = SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
-        
-        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        state.set_e_field(EField::new(e_field));
+        Ok(state)
     }
     
     fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
@@ -111,8 +118,11 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
     fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        // we advace the counter by one
+        // I do not like the clone of e_field :(.
+        let mut state = State::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
-        // we do not advance the step counter
-        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        state.set_e_field(EField::new(e_field));
+        Ok(state)
     }
 }

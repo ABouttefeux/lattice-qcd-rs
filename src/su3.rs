@@ -265,7 +265,7 @@ impl FactorialStorageStatic {
 const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::new();
 
 /// size of the factorial storage
-const N: usize = 26; // TODO verify accuracy
+const N: usize = 26;
 
 /// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
 ///

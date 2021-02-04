@@ -151,6 +151,7 @@ fn equivalece_exp_r(){
     }
 }
 
+#[allow(deprecated)]
 #[test]
 /// test creation of sim ( single threaded)
 fn create_sim() {
@@ -159,6 +160,7 @@ fn create_sim() {
     let _simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng, &distribution).unwrap();
 }
 
+#[allow(deprecated)]
 #[test]
 /// test creation of sim multi threaded
 fn creat_sim_threaded() {
@@ -228,6 +230,7 @@ fn test_thread_vec() {
     }
 }
 
+#[allow(deprecated)]
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian() {
@@ -241,6 +244,7 @@ fn test_sim_hamiltonian() {
     assert!(h - h2 < 0.01_f64 );
 }
 
+#[allow(deprecated)]
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law() {
@@ -260,6 +264,7 @@ fn test_gauss_law() {
     }
 }
 
+#[allow(deprecated)]
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian_rayon() {
@@ -273,6 +278,7 @@ fn test_sim_hamiltonian_rayon() {
     assert!(h - h2 < 0.01_f64 );
 }
 
+#[allow(deprecated)]
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law_rayon() {

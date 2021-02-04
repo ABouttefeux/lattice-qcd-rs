@@ -1,5 +1,8 @@
 
-//! Basic symplectic Euler integrator using Rayon, slightly faster than [`SymplecticEuler`]
+//! Basic symplectic Euler integrator using Rayon.
+//!
+//! See [`SymplecticEulerRayon`]
+//!
 
 use super::{
     super::{
@@ -49,13 +52,16 @@ fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector3<Su3Adj
     )
 }
 
+/// Basic symplectic Euler integrator using Rayon.
+///
+/// It is slightly faster than [`super::SymplecticEuler`] but use slightly more memory.
 #[derive(Debug, PartialEq, Clone, Copy, Hash)]
 pub struct SymplecticEulerRayon {}
 
 impl SymplecticEulerRayon {
     /// Create a new SymplecticEulerRayon
     pub const fn new() -> Self {
-        Self{}
+        Self {}
     }
 }
 
@@ -78,21 +84,29 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
     
     fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
         let link_matrix = get_link_matrix_integrate(l, delta_t);
-        let e_field = get_e_field_integrate(l, delta_t);
-        
-        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        // TODO I do not like the clone of e_field :(.
+        // maybe try a structure which does not own e_field and link_matrix
+        let mut state = SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
+        let e_field = get_e_field_integrate(&state, delta_t);
+        state.set_e_field(EField::new(e_field));
+        Ok(state)
     }
     
     fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
+        
+        // we do not advace the time counter
         SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
     
     fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
+        // TODO correct
         let link_matrix = get_link_matrix_integrate(l, delta_t);
-        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
-        
         // we advace the counter by one
-        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        // I do not like the clone of e_field :(.
+        let mut state = State::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
+        let e_field = get_e_field_integrate(l, delta_t / 2_f64);
+        state.set_e_field(EField::new(e_field));
+        Ok(state)
     }
 }

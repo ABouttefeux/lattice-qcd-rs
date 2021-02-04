@@ -1,5 +1,16 @@
 
 //! Numerical integrators to carry out simulations.
+//!
+//! See [`SymplecticIntegrator`]. The simulations are done on [`LatticeHamiltonianSimulationState`]
+//! It also require a notion of [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
+//!
+//! Even thought it is effortless to implement both [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
+//! I adivce against it and implement only [`SimulationStateSynchrone`] and use [`super::simulation::SimulationStateLeap`]
+//! for leap frog states as it gives a compile time check that you did not forget doing a demi steps.
+//!
+//! This library gives two implementations of [`SymplecticIntegrator`]: [`SymplecticEuler`] and [`SymplecticEulerRayon`].
+//! I would advice using [`SymplecticEulerRayon`] if you do not mind the little more momory it uses.
+
 
 use super::{
     simulation::{
@@ -23,8 +34,8 @@ use na::Vector3;
 pub mod symplectic_euler;
 pub mod symplectic_euler_rayon;
 
-pub use symplectic_euler::*;
-pub use symplectic_euler_rayon::*;
+pub use symplectic_euler::SymplecticEuler;
+pub use symplectic_euler_rayon::SymplecticEulerRayon;
 
 /*
 /// Define an numerical integrator
@@ -38,10 +49,17 @@ pub trait Integrator<State, State2>
 */
 
 /// Define an symplectic numerical integrator
+///
+/// The integrator evlove the state in time.
+///
+/// The integrator should be capable of switching between Sync state
+/// (q (ok link matrices) at time T , p(or e_field) at time T )
+/// and leap frog (a at time T, p at time T + 1/2)
 pub trait SymplecticIntegrator<StateSync, StateLeap>
     where StateSync: SimulationStateSynchrone,
     StateLeap: SimulationStateLeapFrog,
 {
+    
     fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) ->  Result<StateSync, SimulationError>;
     fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) ->  Result<StateLeap, SimulationError>;
     fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) ->  Result<StateLeap, SimulationError>;

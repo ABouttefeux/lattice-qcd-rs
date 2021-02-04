@@ -1,4 +1,8 @@
 
+//! Simulation module. Containe Monte Carlo algorithms and simulation states.
+//!
+// TODO more doc
+
 use super::thread::ThreadError;
 
 pub mod state;
@@ -15,12 +19,14 @@ pub enum SimulationError {
     ThreadingError(ThreadError),
     /// Error while initialising.
     InitialisationError,
-    /// try to do a simulation with zero steps
+    /// try to do a simulation with zero steps.
     ZeroStep,
-    ///
+    /// What ever you did it wasn't valide.
     NotValide,
 }
 
+/// Conversion from [`ThreadError`] to [`SimulationError::ThreadingError`].
+/// used for simplification in the usage of `?` operator.
 impl From<ThreadError> for SimulationError{
     fn from(err: ThreadError) -> Self{
         SimulationError::ThreadingError(err)

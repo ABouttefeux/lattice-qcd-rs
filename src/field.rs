@@ -506,7 +506,7 @@ impl EField {
         Self {data}
     }
     
-    /// Single thread generation by seeding a new rng number. Used in [`LatticeSimulationState::new_random_threaded`].
+    /// Single thread generation by seeding a new rng number.
     /// To create a seedable and reproducible set use [`EField::new_deterministe`]..
     pub fn new_random(
         l: &LatticeCyclique,

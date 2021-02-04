@@ -1,5 +1,5 @@
 
-//! Module containing the simulation
+//! Module containing the simulation State
 
 use super::{
     super::{
@@ -38,6 +38,9 @@ use rayon::prelude::*;
 use crossbeam::thread;
 
 
+/// trait to represent a pure gauge lattice state.
+///
+/// It defines only one field link_matrix.
 pub trait LatticeState
     where Self: Sync + Sized
 {
@@ -45,23 +48,24 @@ pub trait LatticeState
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
     
+    /// Replace the links matrices with the given input. It should panic if link matrix is not of the correct size.
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
+    fn set_link_matrix(&mut self, link_matrix: LinkMatrix);
+    
+    /// get the lattice into which the state exists
     fn lattice(&self) -> &LatticeCyclique;
     
+    /// return the beta parameter of the states
     fn beta(&self) -> Real;
     
+    /// C_A constant of the model
     const CA: Real;
     
+    /// return the Hamiltonian of the links configuration
     fn get_hamiltonian_links(&self) -> Real;
     
-    /*
-    /// Get the probability of `state` to replace `self` for the next element of the Markov chain.
-    fn get_probability_of_next_element<State>(&self, state: &State) -> Real
-        where State: LatticeState
-    {
-        (- state.get_hamiltonian_links() + self.get_hamiltonian_links()).exp().min(1_f64)
-    }
-    */
-    
+    /// Do one monte carlo step with the given
     fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, SimulationError>
         where M: MonteCarlo<Self>,
     {
@@ -69,36 +73,57 @@ pub trait LatticeState
     }
 }
 
+/// trait for a way to create a [`LatticeState`] from some parameters.
+///
+/// It is separated from the [`LatticeState`] because not all [`LatticeState`] can be create in this way.
+/// By instance when there is also a field of conjugate momenta of the link matrices.
 pub trait LatticeStateNew where Self: LatticeState + Sized {
     ///Create a new simulation state
     fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError>;
 }
 
-// TODO improve compatibility with other monte carlo algorithm
+/// Represent a lattice state where the conjugate momenta of the link matrices are included.
+///
+/// If you have a LatticeState and want the default way of adding the conjugate momenta look at
+/// [`LatticeHamiltonianSimulationStateSyncDefault`].
+///
+/// If you want to solve the equation of motion using an [`SymplecticIntegrator`] also implement
+/// [`SimulationStateSynchrone`] and [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
+///
+/// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
 pub trait LatticeHamiltonianSimulationState
     where Self: Sized + Sync + LatticeState
 {
-    
+    /// reset the e_field with radom value distributed as N(0, 1) [`rand_distr::StandardNormal`].
     fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &rand_distr::StandardNormal);
         if self.lattice().get_number_of_points() != new_e_field.len() {
             unreachable!()
         }
-        *self.e_field_mut() = new_e_field;
+        self.set_e_field(new_e_field);
     }
     
     /// The "Electrical" field of this state.
     fn e_field(&self) -> &EField;
     
-    fn  e_field_mut(&mut self) -> &mut EField;
+    /// Replace the electrical field with the given input. It should panic if the input is not of the correct size.
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
+    fn  set_e_field(&mut self, e_field: EField);
+    
     /// return the time state, i.e. the number of time the simulation ran.
     fn t(&self) -> usize;
     
+    /// get the derivative \partial_t U(link)
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
+    /// get the derivative \partial_t E(point)
     fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>>;
     
+    /// Get the energy of the conjugate momenta configuration
     fn get_hamiltonian_efield(&self) -> Real;
     
+    /// Get the total energy, by default [`LatticeHamiltonianSimulationState::get_hamiltonian_efield`]
+    /// + [`LatticeState::get_hamiltonian_links`]
     fn get_hamiltonian_total(&self) -> Real {
         self.get_hamiltonian_links() + self.get_hamiltonian_efield()
     }
@@ -106,10 +131,12 @@ pub trait LatticeHamiltonianSimulationState
     
 }
 
+/// Trait to create a simulation state
 pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSimulationState {
     /// Create a new simulation state
     fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
     
+    /// Ceate a new state with e_field randomly distributed as [`rand_distr::StandardNormal`]
     fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
     {
         let e_field = EField::new_deterministe(&lattice, rng, &rand_distr::StandardNormal);
@@ -117,7 +144,18 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
     }
 }
 
+/// [`LatticeHamiltonianSimulationState`] who represent link matrices at the same time position as its conjugate momenta
+/// `e_field`.
+///
+///  If you have a LatticeState and want the default way of adding the conjugate momenta and doing simulation look at
+/// [`LatticeHamiltonianSimulationStateSyncDefault`].
+///
+/// I would adivce of implementing this trait and not [`SimulationStateLeapFrog`], as there is
+/// a wrapper ([`SimulationStateLeap`]) for [`SimulationStateLeapFrog`].
+/// Also not implementing both trait gives you a compile time verification that you did not
+/// considered a leap frog state as a sync one.
 pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState + Clone {
+    /// does half a step for the conjugate momenta.
     fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateLeapFrog,
         I: SymplecticIntegrator<Self, State>
@@ -125,6 +163,8 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
         integrator.integrate_sync_leap(&self, delta_t)
     }
     
+    /// does `number_of_steps` with `delta_t` at each step using a leap_frog algorithm by fist
+    /// doing half a setp and then finishing by doing half setp
     fn simulate_using_leapfrog_n<I, State>(
         &self,
         delta_t: Real,
@@ -145,6 +185,8 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
         Ok(state_sync)
     }
     
+    /// Does the same thing as [`SimulationStateSynchrone::simulate_using_leapfrog_n`]
+    /// but use the default wrapper [`SimulationStateLeap`] for the leap frog state
     fn simulate_using_leapfrog_n_auto<I>(
         &self,
         delta_t: Real,
@@ -156,6 +198,7 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
         self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
     }
     
+    /// Does a simulation step using the sync algorithm
     fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<Self, T>,
         T: SimulationStateLeapFrog,
@@ -163,6 +206,7 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
         integrator.integrate_sync_sync(&self, delta_t)
     }
     
+    /// Does `numbers_of_times` of step of size `delta_t` using the sync algorithm
     fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<Self, T>,
         T: SimulationStateLeapFrog,
@@ -179,7 +223,11 @@ pub trait SimulationStateSynchrone where Self: LatticeHamiltonianSimulationState
     
 }
 
+/// [`LatticeHamiltonianSimulationState`] who represent link matrices at time T and its conjugate momenta at time T + 1/2
+///
+/// If you have a [`SimulationStateSynchrone`] look at the wrapper [`SimulationStateLeap`].
 pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState {
+    /// Simulate the state to synchrone by finishing the half setp
     fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateSynchrone,
         I: SymplecticIntegrator<State, Self>
@@ -187,6 +235,7 @@ pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState 
         integrator.integrate_leap_sync(&self, delta_t)
     }
     
+    /// Does one simulation step using the leap frog algorithm
     fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<T, Self>,
         T: SimulationStateSynchrone,
@@ -194,6 +243,7 @@ pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState 
         integrator.integrate_leap_leap(&self, delta_t)
     }
     
+    /// does `numbers_of_times` simulation set of size `delta_t` using the leap frog algorithm.
     fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<T, Self>,
         T: SimulationStateSynchrone,
@@ -211,6 +261,8 @@ pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState 
 
 
 /// Represent a simulation state at a set time.
+///
+/// It has the default pure gauge hamiltonian
 #[derive(Debug, PartialEq, Clone)]
 pub struct LatticeStateDefault {
     lattice : LatticeCyclique,
@@ -219,14 +271,54 @@ pub struct LatticeStateDefault {
 }
 
 impl LatticeStateDefault {
+    /// Create a cold configuration. i.e. all the links are set to the unit matrix.
+    ///
+    /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
+    /// and beta parameter `beta`.
     pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, SimulationError> {
         let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
         let link_matrix = LinkMatrix::new_cold(&lattice);
         Self::new(lattice, beta, link_matrix)
     }
+    
+    /// Create a "hot" configuration, i.e. the link matrices are chosen randomly
+    ///
+    /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
+    /// and beta parameter `beta`.
+    ///
+    /// The creation is determiste in the sence that it is reproducible:
+    /// # Example
+    /// This example demonstrate how to reproduce the same configuration
+    /// ```
+    /// extern crate rand;
+    /// extern crate rand_distr;
+    /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclique};
+    /// use rand::{SeedableRng, rngs::StdRng};
+    ///
+    /// let mut rng_1 = StdRng::seed_from_u64(0);
+    /// let mut rng_2 = StdRng::seed_from_u64(0);
+    /// // They have the same seed and should generate the same numbers
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+    /// assert_eq!(
+    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    /// );
+    /// ```
+    pub fn new_deterministe(
+        size: Real,
+        beta: Real,
+        number_of_points: usize,
+        rng: &mut impl rand::Rng,
+        d: &impl rand_distr::Distribution<Real>,
+    ) -> Result<Self, SimulationError> {
+        let lattice = LatticeCyclique::new(size, number_of_points)
+            .ok_or(SimulationError::InitialisationError)?;
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
+        Self::new(lattice, beta, link_matrix)
+    }
 }
 
-impl LatticeStateNew for LatticeStateDefault{
+impl LatticeStateNew for LatticeStateDefault {
     fn new(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError> {
         if lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return Err(SimulationError::InitialisationError);
@@ -243,6 +335,15 @@ impl LatticeState for LatticeStateDefault{
         &self.link_matrix
     }
     
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
+    fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
+        if self.lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            panic!("Link matrices are not of the correct size");
+        }
+        self.link_matrix = link_matrix
+    }
+    
     fn lattice(&self) -> &LatticeCyclique {
         &self.lattice
     }
@@ -251,7 +352,7 @@ impl LatticeState for LatticeStateDefault{
         self.beta
     }
     
-    /// Get the Hamiltonian of the state.
+    /// Get the default pure gauge Hamiltonian.
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
@@ -267,7 +368,11 @@ impl LatticeState for LatticeStateDefault{
     }
 }
 
-/// Represent a simulation state at a set time.
+/// Depreciated use [`LatticeHamiltonianSimulationStateSyncDefault`] using [`LatticeStateDefault`] instead.
+#[deprecated(
+    since = "0.1.0",
+    note = "Please use `LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault>` instead"
+)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct LatticeHamiltonianSimulationStateSync {
     lattice : LatticeCyclique,
@@ -277,11 +382,13 @@ pub struct LatticeHamiltonianSimulationStateSync {
     t: usize,
 }
 
-impl SimulationStateSynchrone for LatticeHamiltonianSimulationStateSync{}
+#[allow(deprecated)]
+impl SimulationStateSynchrone for LatticeHamiltonianSimulationStateSync {}
 
+#[allow(deprecated)]
 impl LatticeHamiltonianSimulationStateSync {
     
-    /// Generate a random initial state.
+    /// Generate a hot (i.e. random) initial state.
     ///
     /// Single threaded generation with a given random number generator.
     /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
@@ -318,6 +425,7 @@ impl LatticeHamiltonianSimulationStateSync {
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
+    /// Generate a configuration with cold e_field and hot link matrices
     pub fn new_deterministe_cold_e_hot_link (
         size: Real,
         beta: Real,
@@ -333,7 +441,7 @@ impl LatticeHamiltonianSimulationStateSync {
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
-    /// Generate a random initial state.
+    /// Generate a hot (i.e. random) initial state.
     ///
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reproduce easily, In that case use
@@ -370,6 +478,9 @@ impl LatticeHamiltonianSimulationStateSync {
         return result;
     }
     
+    /// Generate a new cold state.
+    ///
+    /// It meas that the link matrices are set to the identity and electrical field are set to 0
     pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, SimulationError> {
         let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
         let link_matrix = LinkMatrix::new_cold(&lattice);
@@ -389,6 +500,7 @@ impl LatticeHamiltonianSimulationStateSync {
     }
 }
 
+#[allow(deprecated)]
 impl LatticeState for LatticeHamiltonianSimulationStateSync {
     
     const CA: Real = 3_f64;
@@ -396,6 +508,15 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix {
         &self.link_matrix
+    }
+    
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
+    fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
+        if self.lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            panic!("Link matrices are not of the correct size");
+        }
+        self.link_matrix = link_matrix
     }
     
     fn lattice(&self) -> &LatticeCyclique {
@@ -422,6 +543,7 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     }
 }
 
+#[allow(deprecated)]
 impl LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateSync{
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
@@ -435,6 +557,7 @@ impl LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateS
     }
 }
 
+#[allow(deprecated)]
 impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
     
     fn get_hamiltonian_efield(&self) -> Real {
@@ -451,8 +574,13 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
         &self.e_field
     }
     
-    fn e_field_mut(&mut self) -> &mut EField {
-        &mut self.e_field
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
+    fn set_e_field(&mut self, e_field: EField) {
+        if self.lattice.get_number_of_points() != e_field.len() {
+            panic!("e_field is not of the correct size")
+        }
+        self.e_field = e_field;
     }
     
     /// return the time state, i.e. the number of time the simulation ran.
@@ -491,7 +619,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     
 }
 
-/// Represent a simulation state using leap frog using a synchrone type
+/// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type ([`SimulationStateSynchrone`]).
 #[derive(Debug, PartialEq, Clone)]
 pub struct SimulationStateLeap<State>
     where State: SimulationStateSynchrone
@@ -501,18 +629,12 @@ pub struct SimulationStateLeap<State>
 
 impl<State> SimulationStateLeap<State>
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
-    // TODO review this part ` + LatticeSimulationStateDefault`
-    // It is require because it should implement
-    // I: Integrator<State, Self>
-    // so self need to be a SimulationState
-    // but this imple is remove because it conflict with the impl of
-    // impl<State> LatticeSimulationStateDefault for SimulationStateLeap<State>
-    //    where State: LatticeSimulationStateDefault + SimulationStateSynchrone
 {
     fn state(&self) -> &State {
         &self.state
     }
     
+    /// Create a leap state from a sync one by integrating by half a setp the e_field
     pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<State, Self>
     {
@@ -521,10 +643,12 @@ impl<State> SimulationStateLeap<State>
     
 }
 
+/// This state is a leap frog state
 impl<State> SimulationStateLeapFrog for SimulationStateLeap<State>
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
 {}
 
+    /// We just transmit the function of `State`, there is nothing new.
 impl<State> LatticeState for SimulationStateLeap<State>
     where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {
@@ -533,6 +657,11 @@ impl<State> LatticeState for SimulationStateLeap<State>
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix {
         self.state().link_matrix()
+    }
+    /// # Panic
+    /// panic under the same condition as `State::set_link_matrix`
+    fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
+        self.state.set_link_matrix(link_matrix)
     }
     
     fn lattice(&self) -> &LatticeCyclique {
@@ -557,6 +686,7 @@ impl<State> LatticeHamiltonianSimulationStateNew for SimulationStateLeap<State>
     }
 }
 
+/// We just transmit the function of `State`, there is nothing new.
 impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {
@@ -570,8 +700,10 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
         self.state().e_field()
     }
     
-    fn e_field_mut(&mut self) -> &mut EField {
-        self.state.e_field_mut()
+    /// # Panic
+    /// panic under the same condition as `State::set_e_field`
+    fn set_e_field(&mut self, e_field: EField){
+        self.state.set_e_field(e_field)
     }
     
     /// return the time state, i.e. the number of time the simulation ran.
@@ -588,7 +720,10 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     }
 }
 
-
+/// wrapper to implement [`LatticeHamiltonianSimulationState`] from a [`LatticeState`] using
+/// the default implementation of conjugate momenta.
+///
+/// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
 pub struct LatticeHamiltonianSimulationStateSyncDefault<State>
     where State: LatticeState
@@ -615,7 +750,7 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
     }
 }
 
-
+/// This is an sync State
 impl<State> SimulationStateSynchrone for LatticeHamiltonianSimulationStateSyncDefault<State>
     where State: LatticeState + Clone
 {}
@@ -623,10 +758,17 @@ impl<State> SimulationStateSynchrone for LatticeHamiltonianSimulationStateSyncDe
 impl<State> LatticeState for LatticeHamiltonianSimulationStateSyncDefault<State>
     where State: LatticeState
 {
+    
     fn link_matrix(&self) -> &LinkMatrix{
         self.lattice_state.link_matrix()
     }
-
+    
+    /// # Panic
+    /// panic under the same condition as `State::set_link_matrix`
+    fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
+        self.lattice_state.set_link_matrix(link_matrix)
+    }
+    
     fn lattice(&self) -> &LatticeCyclique {
         self.lattice_state.lattice()
     }
@@ -659,7 +801,7 @@ impl<State> LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulatio
 impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSyncDefault<State>
     where State: LatticeState
 {
-    
+    /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::POSITIVES_SPACE.iter().map(|dir_i| {
@@ -674,8 +816,13 @@ impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationSt
         &self.e_field
     }
     
-    fn e_field_mut(&mut self) -> &mut EField {
-        &mut self.e_field
+    /// # Panic
+    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
+    fn set_e_field(&mut self, e_field: EField) {
+        if self.lattice().get_number_of_points() != e_field.len() {
+            panic!("e_field is not of the correct size")
+        }
+        self.e_field = e_field;
     }
     
     /// return the time state, i.e. the number of time the simulation ran.

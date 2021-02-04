@@ -16,6 +16,7 @@ use std::{
 };
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
 
+#[allow(deprecated)]
 fn bench_simulation_creation_deterministe(
     size: usize,
     rng: &mut rand::rngs::ThreadRng,
@@ -24,6 +25,7 @@ fn bench_simulation_creation_deterministe(
     let _simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
 }
 
+#[allow(deprecated)]
 fn bench_simulation_creation_threaded<D>(
     size: usize,
     d: &D,
@@ -76,14 +78,17 @@ fn create_hash_map(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distrib
     }
 }
 
+#[allow(deprecated)]
 fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSync, number_of_thread: usize) {
     *simulation = simulation.simulate_sync(0.00001, &SymplecticEuler::new(number_of_thread)).unwrap();
 }
 
+#[allow(deprecated)]
 fn simulate_euler_rayon(simulation: &mut LatticeHamiltonianSimulationStateSync) {
     *simulation = simulation.simulate_sync(0.00001, &SymplecticEulerRayon::new()).unwrap();
 }
 
+#[allow(deprecated)]
 fn criterion_benchmark(c: &mut Criterion) {
     
     let mut rng = rand::thread_rng();
