@@ -431,6 +431,25 @@ impl LinkMatrix {
         Some(u_i * s_ij.adjoint())
     }
     
+    /// Take the average of the trace of all plaquettes
+    pub fn average_trace_plaquette(&self, lattice: &LatticeCyclique) -> Option<na::Complex<Real>>{
+        if lattice.get_number_of_canonical_links_space() != self.len() {
+            return None;
+        }
+        // the order does not matter as we sum
+        let sum = lattice.get_points().par_bridge().map(|point| {
+            Direction::POSITIVES_SPACE.iter().map( |dir_i|{
+                Direction::POSITIVES_SPACE.iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                    .map(|dir_j|{
+                        self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
+                    }).sum::<Option<na::Complex<Real>>>()
+            }).sum::<Option<na::Complex<Real>>>()
+        }).sum::<Option<na::Complex<Real>>>()?;
+        let number_of_directions = (Direction::POSITIVES_SPACE.len() * (Direction::POSITIVES_SPACE.len() - 1)) / 2;
+        let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
+        Some(sum / number_of_plaquette)
+    }
+    
     /// Return the number of elements.
     pub fn len(&self) -> usize {
         self.data.len()
@@ -441,8 +460,9 @@ impl LinkMatrix {
     }
     
     pub fn normalize(&mut self) {
+        // TODO
         self.data.par_iter_mut().for_each(|el| {
-            el.normalize_mut();
+            su3::orthonormalize_matrix_mut(el);
         });
     }
 }

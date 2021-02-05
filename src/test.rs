@@ -19,6 +19,7 @@ use std::{
     f64,
     vec::Vec,
 };
+use rand_distr::Distribution;
 use approx::*;
 use na::ComplexField;
 
@@ -295,5 +296,88 @@ fn test_gauss_law_rayon() {
     for g1 in iter_g_1 {
         let g2 = iter_g_2.next().unwrap();
         assert!((g1 - g2).norm() < 0.001);
+    }
+}
+
+#[allow(deprecated)]
+#[test]
+/// test that the simulatation of a cold state does not change over time
+fn test_sim_cold(){
+    let size = 10_f64;
+    let number_of_pts = 10;
+    let beta = 0.1_f64;
+    let sim1 = LatticeHamiltonianSimulationStateSync::new_cold(size, beta, number_of_pts).unwrap();
+    let sim2 = sim1.simulate_to_leapfrog(0.1, &SymplecticEulerRayon::new()).unwrap();
+    assert_eq!(sim1.e_field(), sim2.e_field());
+    assert_eq!(sim1.link_matrix(), sim2.link_matrix());
+    let sim3 = sim2.simulate_leap(0.1, &SymplecticEulerRayon::new()).unwrap();
+    assert_eq!(sim2.e_field(), sim3.e_field());
+    assert_eq!(sim2.link_matrix(), sim3.link_matrix());
+    let sim4 = sim3.simulate_to_synchrone(0.1, &SymplecticEulerRayon::new()).unwrap();
+    assert_eq!(sim3.e_field(), sim4.e_field());
+    assert_eq!(sim3.link_matrix(), sim4.link_matrix());
+}
+
+#[test]
+fn othonomralization(){
+    assert_eq!(orthonormalize_matrix(&CMatrix3::zeros()), CMatrix3::zeros());
+    assert_eq!(orthonormalize_matrix(&CMatrix3::identity()), CMatrix3::identity());
+    
+    let m = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    assert_eq!(orthonormalize_matrix(&m), m);
+    let m = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(2_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(2_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    assert_eq!(orthonormalize_matrix(&m), CMatrix3::identity());
+    let m = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(0_f64,2_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,2_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    assert_eq!(orthonormalize_matrix(&m), CMatrix3::from_diagonal(
+        &na::Vector3::new(Complex::i(), Complex::i(), Complex::new(-1_f64, 0_f64))
+    ));
+    
+    let m = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(0_f64,0_f64), Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    let mc = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(0_f64,0_f64), Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(-1_f64,0_f64),
+    );
+    assert_eq!(orthonormalize_matrix(&m), mc);
+    
+    let m = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(0_f64,0_f64), Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    let mc = nalgebra::Matrix3::<Complex>::new(
+        Complex::new(0_f64,0_f64), Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64),
+        Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(1_f64,0_f64),
+        Complex::new(1_f64,0_f64), Complex::new(0_f64,0_f64), Complex::new(0_f64,0_f64),
+    );
+    assert_eq!(orthonormalize_matrix(&m), mc);
+    
+    let mut rng = rand::thread_rng();
+    let d = rand::distributions::Uniform::from(-10_f64..10_f64);
+    for _ in 0..100 {
+        let m = CMatrix3::from_fn(|_,_| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
+        println!("{} , {}", m, orthonormalize_matrix(&m));
+        if m.determinant() != Complex::from(0_f64) {
+            assert!((orthonormalize_matrix(&m).determinant() - Complex::from(1_f64)).modulus() < EPSILON);
+        }
+        else{
+            assert_eq!(orthonormalize_matrix(&m).determinant(), Complex::from(0_f64));
+        }
     }
 }

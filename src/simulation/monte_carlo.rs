@@ -150,6 +150,7 @@ impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarlo<State, Rng, I>
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
+        //let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_e_cold(state);
         self.internal.get_next_element_default(state_internal, &mut self.rng).map(|el| el.get_state_owned())
     }
 }

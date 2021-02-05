@@ -36,13 +36,13 @@ use na::{
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 use crossbeam::thread;
-
+use rand_distr::Distribution;
 
 /// trait to represent a pure gauge lattice state.
 ///
 /// It defines only one field link_matrix.
 pub trait LatticeState
-    where Self: Sync + Sized
+    where Self: Sync + Sized + core::fmt::Debug
 {
     
     /// The link matrices of this state.
@@ -71,6 +71,11 @@ pub trait LatticeState
     {
         m.get_next_element(self)
     }
+    
+    /// Take the average of the trace of all plaquettes
+    fn average_trace_plaquette(&self) -> Option<Complex> {
+        self.link_matrix().average_trace_plaquette(self.lattice())
+    }
 }
 
 /// trait for a way to create a [`LatticeState`] from some parameters.
@@ -92,11 +97,14 @@ pub trait LatticeStateNew where Self: LatticeState + Sized {
 ///
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
 pub trait LatticeHamiltonianSimulationState
-    where Self: Sized + Sync + LatticeState
+    where Self: Sized + Sync + LatticeState + core::fmt::Debug
 {
     /// reset the e_field with radom value distributed as N(0, 1) [`rand_distr::StandardNormal`].
     fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
-        let new_e_field = EField::new_deterministe(&self.lattice(), rng, &rand_distr::StandardNormal);
+        // &rand_distr::StandardNormal
+        // TODO verify
+        let d = rand_distr::Normal::new(0.0, 1_f64 / self.beta()).unwrap();
+        let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
         if self.lattice().get_number_of_points() != new_e_field.len() {
             unreachable!()
         }
@@ -139,7 +147,10 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::StandardNormal`]
     fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
     {
-        let e_field = EField::new_deterministe(&lattice, rng, &rand_distr::StandardNormal);
+        // TODO verify
+        // rand_distr::StandardNormal
+        let d = rand_distr::Normal::new(0.0, 1_f64 / beta).unwrap();
+        let e_field = EField::new_deterministe(&lattice, rng, &d);
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
 }
@@ -315,6 +326,11 @@ impl LatticeStateDefault {
             .ok_or(SimulationError::InitialisationError)?;
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
         Self::new(lattice, beta, link_matrix)
+    }
+    
+    /// normalize all link matrices
+    pub fn normalize_link_matrices(&mut self) {
+        self.link_matrix.normalize()
     }
 }
 
@@ -630,7 +646,7 @@ pub struct SimulationStateLeap<State>
 impl<State> SimulationStateLeap<State>
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
 {
-    fn state(&self) -> &State {
+    pub fn state(&self) -> &State {
         &self.state
     }
     
@@ -745,7 +761,15 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
     }
     
     pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
-        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &rand_distr::StandardNormal);
+        // TODO verify
+        // rand_distr::StandardNormal
+        let d = rand_distr::Normal::new(0.0, 1_f64 / lattice_state.beta()).unwrap();
+        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d);
+        Self{lattice_state, e_field, t: 0}
+    }
+    
+    pub fn new_e_cold(lattice_state: State) -> Self {
+        let e_field = EField::new_cold(&lattice_state.lattice());
         Self{lattice_state, e_field, t: 0}
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "simulation-bin"
+version = "0.1.0"
+authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
+edition = "2018"
+publish = false
+
+
+[dependencies]
+indicatif = "0.15.0"
+nalgebra = "0.24.0"
+rand = "0.8.2"
+rand_distr = "0.4.0"
+lattice-qcd-rs = { path = ".." }
+
+[profile.release]
+codegen-units = 1
+lto = true
