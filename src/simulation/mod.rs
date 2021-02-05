@@ -27,7 +27,7 @@ pub enum SimulationError {
 
 /// Conversion from [`ThreadError`] to [`SimulationError::ThreadingError`].
 /// used for simplification in the usage of `?` operator.
-impl From<ThreadError> for SimulationError{
+impl From<ThreadError> for SimulationError {
     fn from(err: ThreadError) -> Self{
         SimulationError::ThreadingError(err)
     }

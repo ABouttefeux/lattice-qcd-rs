@@ -33,7 +33,7 @@ use rand::{
 };
 // use rayon::iter::IntoParallelIterator;
 // use rayon::prelude::ParallelIterator;
-
+use rand::RngCore;
 use indicatif::{ProgressBar, ProgressStyle};
 
 
@@ -44,11 +44,14 @@ fn main() {
 
 fn sim_1() {
     let t = Instant::now();
-    let mut rng = StdRng::seed_from_u64(0);
-    let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    let mut rng_seeder = rand::thread_rng();
+    let seed = rng_seeder.next_u64();
+    println!("Begining simulation with seed {}", seed);
+    let mut rng = StdRng::seed_from_u64(seed);
+    //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let size = 1000_f64;
-    let number_of_pts = 10;
-    let beta = 1_f64;
+    let number_of_pts = 5;
+    let beta = 0.1_f64;
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(ProgressStyle::default_spinner().tick_chars("|/-\\").template(
         "{prefix:10} [{elapsed_precise}] [{spinner}]"
@@ -56,16 +59,16 @@ fn sim_1() {
     spinner.set_prefix("Generating");
     spinner.tick();
     spinner.enable_steady_tick(200);
-    //let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng, &distribution).unwrap();
-    let mut simulation = LatticeStateDefault::new_cold(size, beta, number_of_pts).unwrap();
+    let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    //let mut simulation = LatticeStateDefault::new_cold(size, beta, number_of_pts).unwrap();
     spinner.finish();
     
-    println!("initial plaquette avarage {}", simulation.average_trace_plaquette().unwrap());
+    println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let delta_t = 0.1_f64;
-    let number_of_step = 10;
+    let delta_t = 0.075_f64;
+    let number_of_step = 500;
     let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
-    let number_of_sims = 2000;
+    let number_of_sims = 4000;
     
     let pb = ProgressBar::new(number_of_sims);
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -73,20 +76,16 @@ fn sim_1() {
     ));
     pb.set_prefix("Thermalisation");
     pb.tick();
-    
-    let lattice_link = simulation.lattice().get_link(LatticePoint::from([0,1,2]), Direction::XPos);
+    pb.enable_steady_tick(499);
+    //let lattice_link = simulation.lattice().get_link(LatticePoint::from([0,1,2]), Direction::XPos);
     for _ in 0..number_of_sims {
         simulation = simulation.monte_carlo_step(&mut hmc).unwrap();
-        let link = simulation.link_matrix().get_matrix(&lattice_link, simulation.lattice()).unwrap();
-        println!("P det {}, hermitian error {}", (link.determinant() - Complex::from(1_f64)).modulus(), (link - link.adjoint()).norm());
         simulation.normalize_link_matrices();
-        let link = simulation.link_matrix().get_matrix(&lattice_link, simulation.lattice()).unwrap();
-        println!("N det {}, hermitian error {}", (link.determinant() - Complex::from(1_f64)).modulus(), (link - link.adjoint()).norm());
-        let average = simulation.average_trace_plaquette().unwrap().modulus();
-        //pb.set_message(&format!("{}", average));
-        //pb.inc(1);
+        let average = simulation.average_trace_plaquette().unwrap().real();
+        pb.set_message(&format!("{}", average));
+        pb.inc(1);
     }
     pb.finish();
-    println!("final plaquette avarage {}", simulation.average_trace_plaquette().unwrap());
+    println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());
 }

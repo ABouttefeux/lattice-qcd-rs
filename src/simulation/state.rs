@@ -36,7 +36,6 @@ use na::{
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 use crossbeam::thread;
-use rand_distr::Distribution;
 
 /// trait to represent a pure gauge lattice state.
 ///
@@ -292,7 +291,7 @@ impl LatticeStateDefault {
         Self::new(lattice, beta, link_matrix)
     }
     
-    /// Create a "hot" configuration, i.e. the link matrices are chosen randomly
+    /// Create a "hot" configuration, i.e. the link matrices are chosen randomly.
     ///
     /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
     /// and beta parameter `beta`.
@@ -309,10 +308,9 @@ impl LatticeStateDefault {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// assert_eq!(
-    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
+    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_2).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -320,11 +318,10 @@ impl LatticeStateDefault {
         beta: Real,
         number_of_points: usize,
         rng: &mut impl rand::Rng,
-        d: &impl rand_distr::Distribution<Real>,
     ) -> Result<Self, SimulationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)
             .ok_or(SimulationError::InitialisationError)?;
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
         Self::new(lattice, beta, link_matrix)
     }
     
@@ -437,7 +434,7 @@ impl LatticeHamiltonianSimulationStateSync {
         let lattice = LatticeCyclique::new(size, number_of_points)
             .ok_or(SimulationError::InitialisationError)?;
         let e_field = EField::new_deterministe(&lattice, rng, d);
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
@@ -447,12 +444,11 @@ impl LatticeHamiltonianSimulationStateSync {
         beta: Real,
         number_of_points: usize,
         rng: &mut impl rand::Rng,
-        d: &impl rand_distr::Distribution<Real>,
     ) -> Result<Self, SimulationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)
             .ok_or(SimulationError::InitialisationError)?;
         let e_field = EField::new_cold(&lattice);
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng, d);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
         
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
@@ -484,7 +480,7 @@ impl LatticeHamiltonianSimulationStateSync {
             let handel = s.spawn(move |_| {
                 EField::new_random(&lattice_clone, d)
             });
-            let link_matrix = LinkMatrix::new_random_threaded(&lattice, d, number_of_points - 1)
+            let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_points - 1)
                 .map_err(SimulationError::ThreadingError)?;
             
             let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;

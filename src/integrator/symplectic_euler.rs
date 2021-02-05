@@ -90,7 +90,7 @@ impl Default for SymplecticEuler {
 impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for SymplecticEuler
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew,
 {
-    fn integrate_sync_sync(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
+    fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
@@ -108,14 +108,14 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
         Ok(state)
     }
     
-    fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+    fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
         SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
     
-    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
+    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) -> Result<State, SimulationError>{
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
         // we advace the counter by one

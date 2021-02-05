@@ -198,14 +198,18 @@ fn test_generators() {
 
 #[test]
 /// test the SU(3) properties of [`Su3Adjoint::to_su3`]
-fn test_su3_property(){
+fn su3_property(){
     let mut rng = rand::thread_rng();
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for _ in 0..100 {
         let m = Su3Adjoint::random(&mut rng, &distribution).to_su3();
-        assert!((m.determinant().modulus_squared() - 1_f64).abs() < EPSILON);
-        assert!((m * m.adjoint() - CMatrix3::identity()).norm() < EPSILON);
+        test_matrix_is_su3(&m);
     }
+}
+
+fn test_matrix_is_su3(m: &CMatrix3) {
+    assert!((m.determinant().modulus_squared() - 1_f64).abs() < EPSILON);
+    assert!((m * m.adjoint() - CMatrix3::identity()).norm() < EPSILON);
 }
 
 #[test]
@@ -374,10 +378,18 @@ fn othonomralization(){
         let m = CMatrix3::from_fn(|_,_| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
         println!("{} , {}", m, orthonormalize_matrix(&m));
         if m.determinant() != Complex::from(0_f64) {
-            assert!((orthonormalize_matrix(&m).determinant() - Complex::from(1_f64)).modulus() < EPSILON);
+            test_matrix_is_su3(&orthonormalize_matrix(&m));
         }
         else{
             assert_eq!(orthonormalize_matrix(&m).determinant(), Complex::from(0_f64));
         }
+    }
+}
+
+#[test]
+fn random_su3(){
+    let mut rng = rand::thread_rng();
+    for _ in 0..100 {
+        test_matrix_is_su3(&get_random_su3(&mut rng));
     }
 }

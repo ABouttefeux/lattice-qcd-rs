@@ -343,24 +343,22 @@ impl LinkMatrix {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
     /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
     /// assert_eq!(
-    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1, &distribution),
-    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2, &distribution)
+    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
+    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
     /// );
     /// ```
     pub fn new_deterministe(
         l: &LatticeCyclique,
         rng: &mut impl rand::Rng,
-        d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         // l.get_links_space().map(|_|  Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
         let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
         for _ in l.get_links_space() {
             // the iterator *should* be in order
-            let matrix = Su3Adjoint::random(rng, d).to_su3();
+            let matrix = su3::get_random_su3(rng);
             data.push(matrix);
         }
         Self {data}
@@ -369,24 +367,21 @@ impl LinkMatrix {
     
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
-    pub fn new_random_threaded<Distribution>(
+    pub fn new_random_threaded(
         l: &LatticeCyclique,
-        d: &Distribution,
         number_of_thread: usize,
-    ) -> Result<Self, ThreadError>
-        where Distribution: rand_distr::Distribution<Real> + Sync,
-    {
+    ) -> Result<Self, ThreadError> {
         if number_of_thread == 0 {
             return Err(ThreadError::ThreadNumberIncorect);
         }
         else if number_of_thread == 1 {
             let mut rng = rand::thread_rng();
-            return Ok(LinkMatrix::new_deterministe(l, &mut rng, d));
+            return Ok(LinkMatrix::new_deterministe(l, &mut rng));
         }
         let data = run_pool_parallel_vec_with_initialisation_mutable(
             l.get_links_space(),
-            d,
-            &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
+            &(),
+            &|rng, _, _| su3::get_random_su3(rng),
             rand::thread_rng,
             number_of_thread,
             l.get_number_of_canonical_links_space(),

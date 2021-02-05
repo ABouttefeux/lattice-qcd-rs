@@ -92,14 +92,14 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
         Ok(state)
     }
     
-    fn integrate_sync_leap(&self, l: &State, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+    fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let e_field = get_e_field_integrate(l, delta_t / 2_f64);
         
         // we do not advace the time counter
         SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
     
-    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<State, SimulationError>{
+    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) -> Result<State, SimulationError>{
         // TODO correct
         let link_matrix = get_link_matrix_integrate(l, delta_t);
         // we advace the counter by one

@@ -156,18 +156,18 @@ impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
 }
 
 /// Create a matrix (v1, v2 , v1* x v2*)
-pub fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2:  na::Vector3<Complex>) -> na::Matrix3<Complex> {
+fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2:  na::Vector3<Complex>) -> na::Matrix3<Complex> {
+    // TODO find a better way
     let cross_vec: na::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
     let iter = v1.iter().chain(v2.iter()).chain(cross_vec.iter()).copied();
     na::Matrix3::<Complex>::from_iterator(iter)
 }
 
-/// Try orthonormalize the given matrix.
-pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
-    let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
-    let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
+/// get an orthonormalize matrix from two vector.
+fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
+    // TODO clean up
     let v1_new;
-    if v1.norm() != 0_f64{
+    if v1.norm() != 0_f64 {
         v1_new = v1.normalize();
     }
     else {
@@ -175,25 +175,49 @@ pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
     }
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new;
-    if v2_temp.norm() != 0_f64{
+    if v2_temp.norm() != 0_f64 {
         v2_new = v2_temp.normalize();
     }
     else {
         v2_new = v2_temp;
     }
     create_matrix_from_2_vector(v1_new, v2_new)
-    /*
-    let mut array = [v1, v2];
-    na::Vector3::orthonormalize(&mut array);
-    
-    create_matrix_from_2_vector(array[0], array[1])
-    */
 }
 
+/// Try orthonormalize the given matrix.
+pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
+    // TODO clean up
+    let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
+    let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
+    get_ortho_matrix_from_2_vector(v1, v2)
+}
+
+/// Orthonormalize the given matrix by mutating its content.
 pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
     *matrix = orthonormalize_matrix(matrix);
 }
 
+/// Generate Uniformly distributed SU(3)
+pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
+    get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
+}
+
+fn get_rand_su3_with_dis(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3 {
+    let mut v1 = get_random_vec_3(rng, d);
+    while v1.norm() == 0_f64 {
+        v1 = get_random_vec_3(rng, d);
+    }
+    let mut v2 = get_random_vec_3(rng, d);
+    while v1.dot(&v2) == Complex::from(0_f64) {
+        v2 = get_random_vec_3(rng, d);
+    }
+    get_ortho_matrix_from_2_vector(v1, v2)
+}
+
+/// get a random Vec 3.
+fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex> {
+    na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+}
 
 // u64 is just not enough.
 type FactorialNumber = u128;
