@@ -24,7 +24,7 @@ impl LatticeCyclique {
     
     /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
     /// That means that a link form `[x, y, z]` with direction `-x`
-    /// the link return is `[x - 1, y, z]` (modulo the lattice.dim()) with direction `+x`
+    /// the link return is `[x - 1, y, z]` (modulo the `lattice::dim()``) with direction `+x`
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint, LatticeLinkCanonical};

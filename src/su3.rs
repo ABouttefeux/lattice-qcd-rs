@@ -18,7 +18,10 @@ use super::{
     field::Su3Adjoint,
     Real,
     utils,
+    CMatrix2,
+    su2,
 };
+use rand_distr::Distribution;
 use once_cell::sync::Lazy;
 
 /// SU(3) generator
@@ -166,21 +169,9 @@ fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2:  na::Vector3<Comple
 /// get an orthonormalize matrix from two vector.
 fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
     // TODO clean up
-    let v1_new;
-    if v1.norm() != 0_f64 {
-        v1_new = v1.normalize();
-    }
-    else {
-        v1_new = v1;
-    }
+    let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
-    let v2_new;
-    if v2_temp.norm() != 0_f64 {
-        v2_new = v2_temp.normalize();
-    }
-    else {
-        v2_new = v2_temp;
-    }
+    let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
     create_matrix_from_2_vector(v1_new, v2_new)
 }
 
@@ -219,10 +210,54 @@ fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
+/// Get a radom SU(3) matrix close the origine.
+///
+/// Note that it diverge from SU(3) sligthly.
+pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix3 {
+    let mut r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let mut s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let mut t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let d = rand::distributions::Bernoulli::new(0.5).unwrap();
+    if d.sample(rng) {
+        r = r.adjoint();
+    }
+    if d.sample(rng) {
+        s = s.adjoint();
+    }
+    if d.sample(rng) {
+        t = t.adjoint();
+    }
+    r * s * t
+}
+
+fn get_r (m: CMatrix2) -> CMatrix3 {
+    CMatrix3::new(
+        m[(0,0)], m[(0,1)], ZERO,
+        m[(1,0)], m[(1,1)], ZERO,
+        ZERO, ZERO, ONE,
+    )
+}
+
+fn get_s (m: CMatrix2) -> CMatrix3 {
+    CMatrix3::new(
+        m[(0,0)], ZERO, m[(0,1)],
+        ZERO, ONE, ZERO,
+        m[(1,0)], ZERO, m[(1,1)],
+    )
+}
+
+fn get_t (m: CMatrix2) -> CMatrix3 {
+    CMatrix3::new(
+        ONE, ZERO, ZERO,
+        ZERO, m[(0,0)], m[(0,1)],
+        ZERO, m[(1,0)], m[(1,1)],
+    )
+}
+
 // u64 is just not enough.
 type FactorialNumber = u128;
 
-/// Return N such that `1/(N-7)! < [`f64::EPSILON`].
+/// Return N such that `1/(N-7)!` < [`f64::EPSILON`].
 ///
 /// This number is needed for the computation of exponential matrix
 pub fn get_factorial_size_for_exp() -> usize {

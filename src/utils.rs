@@ -8,7 +8,7 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 
 /// return n!.
 ///
-/// #Example
+/// # Example
 /// ```
 /// # use lattice_qcd_rs::utils::factorial;
 /// assert_eq!(factorial(4), 24);

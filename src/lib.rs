@@ -67,8 +67,13 @@ extern crate rand_distr;
 extern crate crossbeam;
 extern crate rayon;
 
+pub use na::ComplexField;
+pub use rand_distr::Distribution;
+pub use rand::{Rng, SeedableRng};
+
 pub mod lattice;
 pub mod su3;
+pub mod su2;
 pub mod field;
 pub mod number;
 pub mod integrator;
@@ -87,6 +92,8 @@ pub type Complex = na::Complex<Real>;
 pub type Vector8<N> = na::VectorN<N, na::U8>;
 /// alias for [`nalgebra::Matrix3<nalgebra::Complex>`]
 pub type CMatrix3 = na::Matrix3<Complex>;
+/// alias for [`nalgebra::Matrix2<nalgebra::Complex>`]
+pub type CMatrix2 = na::Matrix2<Complex>;
 
 /// Complex 1
 const ONE: Complex = Complex::new(1_f64, 0_f64);

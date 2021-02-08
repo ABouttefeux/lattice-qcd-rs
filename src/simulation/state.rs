@@ -405,7 +405,7 @@ impl LatticeHamiltonianSimulationStateSync {
     ///
     /// Single threaded generation with a given random number generator.
     /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
-    /// in each spatial dimension of the lattice. See [LatticeCyclique::new] for more info.
+    /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
     ///
     /// useful to reproduce a set of data but slower than [`LatticeHamiltonianSimulationStateSync::new_random_threaded`]
     /// # Example

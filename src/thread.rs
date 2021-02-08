@@ -21,6 +21,7 @@ use rayon::prelude::ParallelIterator;
 
 // TODO gives option to use rayon
 
+/// Multithreading error.
 #[derive(Debug)]
 pub enum ThreadError {
     /// Tried to run some jobs with 0 threads

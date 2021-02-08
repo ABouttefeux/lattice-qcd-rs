@@ -5,12 +5,17 @@ use super::{
     super::{
         Real,
         integrator::SymplecticIntegrator,
+        field::{
+            LinkMatrix,
+        },
+        su3,
     },
     state::{
         SimulationStateSynchrone,
         SimulationStateLeap,
         LatticeState,
         LatticeHamiltonianSimulationStateSyncDefault,
+        LatticeStateNew,
     },
     SimulationError,
 };
@@ -86,6 +91,11 @@ impl<MCD, State, Rng> MCWrapper<MCD, State, Rng>
     /// deconstruct the structure to get back the rng if necessary
     pub fn deconstruct(self) -> (MCD, Rng) {
         (self.mcd, self.rng)
+    }
+    
+    /// Get a reference to the [`MonteCarloDefault`] inside the wrapper.
+    pub fn mcd(&self) -> &MCD {
+        &self.mcd
     }
 }
 
@@ -204,17 +214,26 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
 /// Metropolis Hastings algorithm.
 ///
 /// Not implmented yet. It will panic if you try calling [`MetropolisHastings::get_potential_next_element`]
-struct MetropolisHastings<State>
+pub struct MetropolisHastings<State>
     where State: LatticeState,
 {
+    number_of_update: usize,
+    spread: Real,
     _phantom: PhantomData<State>,
 }
 
 impl<State> MetropolisHastings<State>
     where State: LatticeState,
 {
-    pub fn new() -> Self {
-        Self {_phantom: PhantomData}
+    pub fn new(number_of_update: usize, spread: Real) -> Option<Self> {
+        if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
+            return None;
+        }
+        Some(Self {
+            number_of_update,
+            spread,
+            _phantom: PhantomData,
+        })
     }
 }
 
@@ -222,17 +241,20 @@ impl<State> Default for MetropolisHastings<State>
     where State: LatticeState,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new(200, 0.1).unwrap()
     }
 }
 
-
 impl<State> MonteCarloDefault<State> for MetropolisHastings<State>
-    where State: LatticeState,
+    where State: LatticeState + LatticeStateNew,
 {
-    /// # Panic
-    /// always panic becaus it is unimplemented yet
-    fn get_potential_next_element(&mut self, _state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
-        todo!()
+    fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
+        let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
+        let mut link_matrix = state.link_matrix().data().clone();
+        (0..self.number_of_update).for_each(|_| {
+            let pos = d.sample(rng);
+            link_matrix[pos] *= su3::get_random_su3_close_to_unity(self.spread, rng);
+        });
+        State::new(state.lattice().clone(), state.beta(), LinkMatrix::new(link_matrix))
     }
 }
