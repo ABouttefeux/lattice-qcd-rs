@@ -20,7 +20,7 @@ use lattice_qcd_rs::{
 };
 use std::{
     time::Instant,
-    f64,
+    //f64,
     // vec::Vec
 };
 
@@ -61,7 +61,7 @@ fn main() {
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     let size = 1000_f64;
     let number_of_pts = 5;
-    let beta = 1E+0_f64;
+    let beta = 1E+2_f64;
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(ProgressStyle::default_spinner().tick_chars("|/-\\").template(
         "{prefix:10} [{elapsed_precise}] [{spinner}]"
@@ -69,29 +69,9 @@ fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     spinner.set_prefix("Generating");
     spinner.tick();
     spinner.enable_steady_tick(200);
-    //let simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, rng).unwrap();
-    let simulation = LatticeStateDefault::new_cold(size, beta, number_of_pts).unwrap();
+    let simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, rng).unwrap();
+    //let simulation = LatticeStateDefault::new_cold(size, beta, number_of_pts).unwrap();
     spinner.finish();
-    simulation
-}
-
-fn simulate_with_log_block(mut simulation: LatticeStateDefault, mc: &mut impl MonteCarlo<LatticeStateDefault> , number_of_sims: u64) -> LatticeStateDefault {
-    let pb = ProgressBar::new(number_of_sims);
-    pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
-        "{prefix:10} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>4}/{len:4} [ETA {eta_precise}] {msg}"
-    ));
-    pb.set_prefix("Thermalisation");
-    pb.tick();
-    pb.enable_steady_tick(499);
-    for _ in 0..number_of_sims {
-        simulation = simulation.monte_carlo_step(mc).unwrap();
-        simulation.normalize_link_matrices();
-        let average = simulation.average_trace_plaquette().unwrap().real();
-        pb.set_message(&format!("{}", average));
-        pb.inc(1);
-    }
-    pb.finish();
-    
     simulation
 }
 
@@ -118,13 +98,22 @@ fn simulate_with_log_subblock(mut simulation: LatticeStateDefault, mc: &mut impl
     simulation
 }
 
-fn simulate_loop_with_input(mut simulation: LatticeStateDefault, mc: &mut impl MonteCarlo<LatticeStateDefault>, number_of_sims: u64, sub_block: u64) -> LatticeStateDefault {
+
+fn simulate_loop_with_input<MC>(
+    mut simulation: LatticeStateDefault,
+    mc: &mut MC,
+    number_of_sims: u64,
+    sub_block: u64,
+    closure_message : &dyn Fn(&LatticeStateDefault, &MC) -> String
+) -> LatticeStateDefault
+    where MC: MonteCarlo<LatticeStateDefault>
+{
     
-    println!("");
+    println!();
     println!("   |--------------------------------------|");
     println!("   | Press enter to finish the simulation |");
     println!("   |--------------------------------------|");
-    println!("");
+    println!();
     
     let pb = ProgressBar::new(number_of_sims);
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -150,8 +139,7 @@ fn simulate_loop_with_input(mut simulation: LatticeStateDefault, mc: &mut impl M
                 simulation = simulation.monte_carlo_step(mc).unwrap();
                 simulation.normalize_link_matrices();
             }
-            let average = simulation.average_trace_plaquette().unwrap().real();
-            pb.set_message(&format!("{}", average));
+            pb.set_message(&closure_message(&simulation, mc));
             pb.inc(sub_block);
         }
     }
@@ -174,14 +162,18 @@ fn sim_1() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let delta_t = 0.075_f64;
+    let delta_t = 0.0075_f64;
     let number_of_step = 100;
-    let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
+    //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
+    let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
     let number_of_sims = 100;
     
-    //let simulation = simulate_with_log_block(simulation, &mut hmc, number_of_sims);
-    
-    let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1);
+    let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
+        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, StdRng, SymplecticEulerRayon>| {
+            let average = sim.average_trace_plaquette().unwrap().real();
+            format!("A {:.6},P {:.2},R {}", average, mc.prob_replace_last(), mc.has_replace_last())
+        }
+    );
     
     println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());
@@ -202,12 +194,20 @@ fn sim_2() {
     
     let spread_parameter = 0.001;
     let number_of_rand = 20;
-    let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
+    //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
+    let mut mh = MCWrapper::new(MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
     let number_of_sims = 40000;
     
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
-    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 1000);
+    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 1000,
+        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, StdRng>| {
+            let average = sim.average_trace_plaquette().unwrap().real();
+            format!("A {:.6},P {:.2},R {}", average, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
+        }
+    );
+    //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
+
         
     println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());
