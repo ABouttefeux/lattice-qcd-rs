@@ -32,12 +32,15 @@ use  std::{
     vec::Vec,
 };
 use rayon::prelude::*;
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
 
 
 /// Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 /// See [`su3::GENERATORS`] to view the order of generators.
 /// Note that the generators are normalize such that `Tr[T^a T^b] = \delta^{ab} / 2`
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct Su3Adjoint {
     data: Vector8<Real>
 }
@@ -315,6 +318,7 @@ impl From<[Real; 8]> for Su3Adjoint {
 
 /// Represents the link matrices
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LinkMatrix {
     data: Vec<Matrix3<na::Complex<Real>>>,
 }
@@ -464,6 +468,7 @@ impl LinkMatrix {
 
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField
 {
     data: Vec<Vector3<Su3Adjoint>>, // use a Vec<[Su3Adjoint; 4]> instead ?

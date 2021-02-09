@@ -66,6 +66,8 @@ extern crate rand;
 extern crate rand_distr;
 extern crate crossbeam;
 extern crate rayon;
+#[cfg(feature = "serde-serialize")]
+extern crate serde;
 
 pub use na::ComplexField;
 pub use rand_distr::Distribution;

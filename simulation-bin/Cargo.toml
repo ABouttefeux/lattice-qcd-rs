@@ -11,5 +11,7 @@ indicatif = "0.15.0"
 nalgebra = "0.24.0"
 rand = "0.8.2"
 rand_distr = "0.4.0"
-lattice-qcd-rs = { path = ".." }
+lattice-qcd-rs = { path = "..", features = ["serde-serialize"] }
 dialoguer = "0.7.1"
+csv = "1.1"
+serde = { version = "1.0", features = ["derive"] }

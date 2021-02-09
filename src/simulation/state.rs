@@ -37,6 +37,10 @@ use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 use crossbeam::thread;
 
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
+
+
 /// trait to represent a pure gauge lattice state.
 ///
 /// It defines only one field link_matrix.
@@ -274,6 +278,7 @@ pub trait SimulationStateLeapFrog where Self: LatticeHamiltonianSimulationState 
 ///
 /// It has the default pure gauge hamiltonian
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeStateDefault {
     lattice : LatticeCyclique,
     beta: Real,
@@ -383,11 +388,11 @@ impl LatticeState for LatticeStateDefault{
 }
 
 /// Depreciated use [`LatticeHamiltonianSimulationStateSyncDefault`] using [`LatticeStateDefault`] instead.
+#[derive(Debug, PartialEq, Clone)]
 #[deprecated(
     since = "0.1.0",
     note = "Please use `LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault>` instead"
 )]
-#[derive(Debug, PartialEq, Clone)]
 pub struct LatticeHamiltonianSimulationStateSync {
     lattice : LatticeCyclique,
     beta: Real,
@@ -574,6 +579,7 @@ impl LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateS
 impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
     
     fn get_hamiltonian_efield(&self) -> Real {
+        // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::POSITIVES_SPACE.iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
@@ -634,6 +640,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
 
 /// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type ([`SimulationStateSynchrone`]).
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SimulationStateLeap<State>
     where State: SimulationStateSynchrone
 {
@@ -738,6 +745,7 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
 ///
 /// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeHamiltonianSimulationStateSyncDefault<State>
     where State: LatticeState
 {
@@ -824,6 +832,7 @@ impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationSt
 {
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
+        // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::POSITIVES_SPACE.iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();

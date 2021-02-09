@@ -7,9 +7,13 @@ use na::{
 use approx::*;
 use super::Real;
 use std::ops::{Index, IndexMut, Neg};
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
+
 
 /// a cyclique lattice in space. Does not store point and links but is used to generate them.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeCyclique {
     size: Real,
     dim: usize,
@@ -267,6 +271,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
 ///
 /// We use the representation `[x, y, z]`.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint {
     data: [usize; 3]
 }
@@ -377,6 +382,7 @@ impl LatticeElementToIndex for usize {
 ///
 /// This object can be used to safly index in a [`std::collections::HashMap`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLinkCanonical {
     from: LatticePoint,
     dir: Direction,
@@ -463,6 +469,7 @@ impl From<LatticeLinkCanonical> for LatticeLink {
 /// It also means that there is no guarantee that the object is inside a lattice.
 /// You can use modulus over the elements to use inside a lattice.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLink {
     from: LatticePoint,
     dir: Direction,
@@ -521,6 +528,7 @@ impl PartialEq<LatticeLinkCanonical> for LatticeLink{
 
 /// Represent a sing
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Sign {
     Negative, Positive, Zero
 }
@@ -566,6 +574,7 @@ impl From<f64> for Sign {
 
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Direction {
     XPos, XNeg, YPos, YNeg, ZPos, ZNeg, TPos, TNeg,
 }

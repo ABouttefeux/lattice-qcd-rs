@@ -21,8 +21,17 @@ jobs:
       with:
         toolchain: beta
     
-    - name: Build beta
-      run: cargo build --verbose
+    - name: Build beta with serd
+      run: cargo build --verbose --features serde-serialize
+    
+    - name: Run tests beta with serd
+      run: cargo test --verbose --features serde-serialize
+    
+    - name: Build beta no features
+      run: cargo build --verbose --no-default-features
       
-    - name: Run tests beta
-      run: cargo test --verbose
+    - name: Run tests beta no features
+      run: cargo test --verbose --no-default-features
+    
+    - name: Build beta simulation bin
+      run: cargo build -p simulation-bin
