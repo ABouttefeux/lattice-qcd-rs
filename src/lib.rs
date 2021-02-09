@@ -101,5 +101,3 @@ const ONE: Complex = Complex::new(1_f64, 0_f64);
 const I: Complex = Complex::new(0_f64, 1_f64);
 /// Complex 0
 const ZERO: Complex = Complex::new(0_f64, 0_f64);
-
-// TODO refactor pos on lattice without time

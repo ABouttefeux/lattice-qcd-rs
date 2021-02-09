@@ -454,8 +454,8 @@ impl LinkMatrix {
         self.data.is_empty()
     }
     
+    /// Correct the numerical drift, reprojecting all the matrices to SU(3).
     pub fn normalize(&mut self) {
-        // TODO
         self.data.par_iter_mut().for_each(|el| {
             su3::orthonormalize_matrix_mut(el);
         });

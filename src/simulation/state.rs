@@ -325,7 +325,8 @@ impl LatticeStateDefault {
         Self::new(lattice, beta, link_matrix)
     }
     
-    /// normalize all link matrices
+    /// Correct the numerical drift, reprojecting all the link matrices to SU(3).
+    /// see [`LinkMatrix::normalize`].
     pub fn normalize_link_matrices(&mut self) {
         self.link_matrix.normalize()
     }
@@ -484,7 +485,7 @@ impl LatticeHamiltonianSimulationStateSync {
                 .map_err(SimulationError::ThreadingError)?;
             
             let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
-            // not very clean: TODO imporve
+            // TODO not very clean: imporve
             Ok(Self::new(lattice, beta, e_field, link_matrix, 0)?)
         }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
         return result;

@@ -21,12 +21,6 @@ use super::{
 };
 use std::marker::PhantomData;
 use rand_distr::Distribution;
-use once_cell::sync::Lazy;
-
-/// a Uniform distribution between [0, 1) (1 excluded)
-static DISTRIBUTION_0_1: Lazy<rand::distributions::Uniform<Real>> = Lazy::new(
-    || rand::distributions::Uniform::new(0_f64, 1_f64)
-);
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
 /// It is also a Markov chain
@@ -50,14 +44,20 @@ pub trait MonteCarloDefault<State>
     ///
     /// by default it is Exp(-H_old) / Exp(-H_new).
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {
-        (- old_state.get_hamiltonian_links() + new_state.get_hamiltonian_links()).exp().min(1_f64)
+        (- old_state.get_hamiltonian_links() + new_state.get_hamiltonian_links()).exp()
+            .min(1_f64)
+            .max(0_f64)
     }
     
     /// Get the next element in the chain either the old state or a new one replacing it.
     fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
         let potential_next = self.get_potential_next_element(&state, rng)?;
-        let r = DISTRIBUTION_0_1.sample(rng);
-        if r < Self::get_probability_of_replacement(&state, &potential_next) {
+        let d = rand::distributions::Bernoulli::new(
+            Self::get_probability_of_replacement(&state, &potential_next)
+                .min(1_f64)
+                .max(0_f64)
+        ).unwrap();
+        if d.sample(rng)  {
             return Ok(potential_next);
         }
         else{
@@ -206,7 +206,9 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
     }
     
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {
-        (- old_state.get_hamiltonian_total() + new_state.get_hamiltonian_total()).exp().min(1_f64)
+        (- old_state.get_hamiltonian_total() + new_state.get_hamiltonian_total()).exp()
+            .min(1_f64)
+            .max(0_f64)
     }
     
 }
@@ -225,6 +227,12 @@ pub struct MetropolisHastings<State>
 impl<State> MetropolisHastings<State>
     where State: LatticeState,
 {
+    /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
+    /// than 0.
+    ///
+    /// `number_of_update` is the number of times a link matrix is randomly changed.
+    /// `spread` is the spead factor for the random matrix change
+    /// ( used in [`su3::get_random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real) -> Option<Self> {
         if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
             return None;
@@ -234,14 +242,6 @@ impl<State> MetropolisHastings<State>
             spread,
             _phantom: PhantomData,
         })
-    }
-}
-
-impl<State> Default for MetropolisHastings<State>
-    where State: LatticeState,
-{
-    fn default() -> Self {
-        Self::new(200, 0.1).unwrap()
     }
 }
 

@@ -209,7 +209,8 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 
 /// run jobs in parallel. Similar to [`run_pool_parallel`] but return a vector.
 ///
-/// Now a reference to the lattice must be given and `key` must implement the trait [`super::lattice::LatticeElementToIndex`].
+/// Now a reference to the lattice must be given and `key` must implement the trait
+/// [`super::lattice::LatticeElementToIndex`].
 /// [`super::lattice::LatticeElementToIndex::to_index`] will be use to insert the data inside the vector.
 /// While computing because the thread can operate out of order, fill the data not yet computed by `default_data`
 /// `capacity` is used to determine the capacity of the [`std::vec::Vec`] upon initiation

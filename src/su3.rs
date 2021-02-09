@@ -25,7 +25,7 @@ use rand_distr::Distribution;
 use once_cell::sync::Lazy;
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0    0.5  0
 /// 0.5  0    0
 /// 0    0    0
@@ -37,7 +37,7 @@ pub static GENERATOR_1: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0   -i/2   0
 /// i/2  0     0
 /// 0    0     0
@@ -49,7 +49,7 @@ pub static GENERATOR_2: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0.5  0    0
 /// 0   -0.5  0
 /// 0    0    0
@@ -61,7 +61,7 @@ pub static GENERATOR_3: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0    0    0.5
 /// 0    0    0
 /// 0.5  0    0
@@ -73,7 +73,7 @@ pub static GENERATOR_4: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64) );
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0    0   -i/2
 /// 0    0    0
 /// i/2  0    0
@@ -85,7 +85,7 @@ pub static GENERATOR_5: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0    0    0
 /// 0    0    0.5
 /// 0    0.5  0
@@ -97,7 +97,7 @@ pub static GENERATOR_6: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0    0    0
 /// 0    0   -i/2
 /// 0    i/2  0
@@ -109,7 +109,7 @@ pub static GENERATOR_7: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 ) * Complex::from(0.5_f64));
 
 /// SU(3) generator
-/// ```math
+/// ```textrust
 /// 0.5/sqrt(3)  0            0
 /// 0            0.5/sqrt(3)  0
 /// 0            0           -1/sqrt(3)
@@ -193,6 +193,11 @@ pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
     get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
 }
 
+/// get a random su3 with the given distribution.
+///
+/// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
+/// For a matrix Uniformly distributed amoung SU(3) use [`get_random_su3`].
+/// For a matrix close to unity use [`get_random_su3_close_to_unity`]
 fn get_rand_su3_with_dis(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3 {
     let mut v1 = get_random_vec_3(rng, d);
     while v1.norm() == 0_f64 {
@@ -205,14 +210,17 @@ fn get_rand_su3_with_dis(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribu
     get_ortho_matrix_from_2_vector(v1, v2)
 }
 
-/// get a random Vec 3.
+/// get a random [`na::Vector3<Complex>`].
 fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex> {
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
+// TODO better doc
 /// Get a radom SU(3) matrix close the origine.
 ///
-/// Note that it diverge from SU(3) sligthly.
+/// Note that it diverges from SU(3) sligthly.
+/// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
+/// outside this boud it will not panic but can have unexpected results.
 pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix3 {
     let mut r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
     let mut s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
@@ -230,6 +238,7 @@ pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand
     r * s * t
 }
 
+/// Embed a Matrix2 inside Matrix3 leaving the last row and column be the sane as identity.
 fn get_r (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0,0)], m[(0,1)], ZERO,
@@ -237,6 +246,8 @@ fn get_r (m: CMatrix2) -> CMatrix3 {
         ZERO, ZERO, ONE,
     )
 }
+
+/// Embed a Matrix2 inside Matrix3 leaving the second row and column be the sane as identity.
 
 fn get_s (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
@@ -246,6 +257,7 @@ fn get_s (m: CMatrix2) -> CMatrix3 {
     )
 }
 
+/// Embed a Matrix2 inside Matrix3 leaving the first row and column be the sane as identity.
 fn get_t (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         ONE, ZERO, ZERO,
