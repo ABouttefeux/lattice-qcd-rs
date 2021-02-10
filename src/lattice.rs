@@ -2,7 +2,8 @@
 //! Defines lattices and lattice component.
 
 use na::{
-    Vector4
+    Vector4,
+    VectorN,
 };
 use approx::*;
 use super::Real;
@@ -27,24 +28,24 @@ impl LatticeCyclique {
     pub const DIM_ST: usize = 4;
     
     /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
-    /// That means that a link form `[x, y, z]` with direction `-x`
-    /// the link return is `[x - 1, y, z]` (modulo the `lattice::dim()``) with direction `+x`
+    /// That means that a link form `[x, y, z, t]` with direction `-x`
+    /// the link return is `[x - 1, y, z, t]` (modulo the `lattice::dim()``) with direction `+x`
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint, LatticeLinkCanonical};
     /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::from([1, 0, 2]);
+    /// let point = LatticePoint::from([1, 0, 2, 0]);
     /// assert_eq!(
     ///     lattice.get_link_canonical(point, Direction::XNeg),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([0, 0, 2]), Direction::XPos).unwrap()
+    ///     LatticeLinkCanonical::new(LatticePoint::from([0, 0, 2, 0]), Direction::XPos).unwrap()
     /// );
     /// assert_eq!(
     ///     lattice.get_link_canonical(point, Direction::XPos),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2]), Direction::XPos).unwrap()
+    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2, 0]), Direction::XPos).unwrap()
     /// );
     /// assert_eq!(
     ///     lattice.get_link_canonical(point, Direction::YNeg),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 3, 2]), Direction::YPos).unwrap()
+    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 3, 2, 0]), Direction::YPos).unwrap()
     /// );
     /// ```
     pub fn get_link_canonical(&self, pos: LatticePoint, dir: Direction) -> LatticeLinkCanonical {
@@ -63,7 +64,7 @@ impl LatticeCyclique {
     /// It is similar to [`LatticeLink::new`]. It however enforce that the point is inside the bounds.
     /// If it is not, it will use the modulus of the bound.
     pub fn get_link (&self, pos: LatticePoint, dir: Direction) -> LatticeLink {
-        let mut pos_link = LatticePoint::new([0_usize; LatticeCyclique::DIM_ST - 1]);
+        let mut pos_link = LatticePoint::new([0_usize; LatticeCyclique::DIM_ST]);
         for i in 0..pos.len() {
             pos_link[i] = pos[i] % self.dim();
         }
@@ -88,12 +89,12 @@ impl LatticeCyclique {
     /// Get an Iterator over all canonical link oriented in space (i.e. no `t` direction)
     /// for a given time.
     pub fn get_links_space(&self) -> IteratorLatticeLinkCanonical {
-        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::from([0, 0, 0]), *Direction::POSITIVES_SPACE.first().unwrap()));
+        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::from([0; 4]), *Direction::POSITIVES_SPACE.first().unwrap()));
     }
     
     /// Get an Iterator over all point for a given time.
     pub fn get_points(&self) -> IteratorLatticePoint {
-        IteratorLatticePoint::new(&self, LatticePoint::from([0, 0, 0]))
+        IteratorLatticePoint::new(&self, LatticePoint::from([0; 4]))
     }
     
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
@@ -114,12 +115,12 @@ impl LatticeCyclique {
     ///
     /// basically the number of element return by [`LatticeCyclique::get_links_space`]
     pub fn get_number_of_canonical_links_space(&self) -> usize {
-        self.get_number_of_points() * 3
+        self.get_number_of_points() * 4
     }
     
     /// Total number of point in the lattice for a set time.
     pub fn get_number_of_points(&self) -> usize {
-        self.dim().pow(3)
+        self.dim().pow(4)
     }
     
     /// Return the lattice size factor.
@@ -132,10 +133,10 @@ impl LatticeCyclique {
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint};
     /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::from([1, 0, 2]);
-    /// assert_eq!(lattice.add_point_direction(point, &Direction::XPos), LatticePoint::from([2, 0, 2]));
-    /// // In the following case we get [_, 3, _] because `dim = 4`, and this lattice is cyclique.
-    /// assert_eq!(lattice.add_point_direction(point, &Direction::YNeg), LatticePoint::from([1, 3, 2]) );
+    /// let point = LatticePoint::from([1, 0, 2, 0]);
+    /// assert_eq!(lattice.add_point_direction(point, &Direction::XPos), LatticePoint::from([2, 0, 2, 0]));
+    /// // In the following case we get [_, 3, _, _] because `dim = 4`, and this lattice is cyclique.
+    /// assert_eq!(lattice.add_point_direction(point, &Direction::YNeg), LatticePoint::from([1, 3, 2, 0]) );
     /// ```
     pub fn add_point_direction(&self, mut point: LatticePoint, dir: &Direction) -> LatticePoint {
         if dir.is_positive() {
@@ -168,7 +169,7 @@ impl<'a> IteratorLatticeLinkCanonical<'a> {
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorLatticeLinkCanonical, LatticeCyclique, LatticeLinkCanonical, LatticePoint, Direction};
     /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let first_el = LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2]), Direction::YPos).unwrap();
+    /// let first_el = LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2, 0]), Direction::YPos).unwrap();
     /// let mut iter = IteratorLatticeLinkCanonical::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
@@ -185,7 +186,7 @@ impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
     
     // TODO improve
     fn next(&mut self) -> Option<Self::Item> {
-        const LINK_ARRAY: [Direction; 3] = Direction::POSITIVES_SPACE;
+        const LINK_ARRAY: [Direction; 4] = Direction::POSITIVES;
         let previous_el = self.element;
         match &mut self.element {
             Some(element) => {
@@ -226,7 +227,7 @@ impl<'a> IteratorLatticePoint<'a> {
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorLatticePoint, LatticeCyclique, LatticePoint, Direction};
     /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let first_el = LatticePoint::from([1, 0, 2]);
+    /// let first_el = LatticePoint::from([1, 0, 2, 0]);
     /// let mut iter = IteratorLatticePoint::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
@@ -250,7 +251,7 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
                 el[0] += 1;
                 for i in 0..el.len() {
                     while el[i] >= self.lattice.dim() {
-                        if i <= 1 { // the first two elements
+                        if i < el.len() - 1 { // every element exept the last one
                             el[i + 1] += 1;
                         }
                         else{
@@ -270,27 +271,27 @@ impl<'a> Iterator for IteratorLatticePoint<'a> {
 /// Represents point on a (any) lattice.
 ///
 /// We use the representation `[x, y, z]`.
-#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint {
-    data: [usize; 3]
+    data: na::VectorN<usize, na::U4>
 }
 
 #[allow(clippy::len_without_is_empty)]
 impl LatticePoint {
     
     /// Create a new point from the given coordinate.
-    pub const fn new(data: [usize; 3]) -> Self {
-        Self {data}
+    pub fn new(data: [usize; 4]) -> Self {
+        Self {data : VectorN::from(data)}
     }
     
-    /// Number of elements in [`LatticePoint`]. It is always 3
+    /// Number of elements in [`LatticePoint`]. It is always 4
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::LatticePoint;
-    /// assert_eq!(LatticePoint::new([0; 3]).len(), 3);
+    /// assert_eq!(LatticePoint::new([0; 4]).len(), 4);
     /// ```
-    pub const fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.data.len()
     }
 }
@@ -300,11 +301,11 @@ impl Index<usize> for LatticePoint {
     
     /// Get the element at position `pos`
     /// # Panic
-    /// Panics if the position is out of bound (greater or equal to 3)
+    /// Panics if the position is out of bound (greater or equal to 4)
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::LatticePoint;
-    /// let point = LatticePoint::new([0; 3]);
-    /// let _ = point[3];
+    /// let point = LatticePoint::new([0; 4]);
+    /// let _ = point[4];
     /// ```
     fn index(&self, pos: usize) -> &Self::Output{
         &self.data[pos]
@@ -315,26 +316,26 @@ impl IndexMut<usize> for LatticePoint {
     
     /// Get the element at position `pos`
     /// # Panic
-    /// Panics if the position is out of bound (greater or equal to 3)
+    /// Panics if the position is out of bound (greater or equal to 4)
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::LatticePoint;
-    /// let mut point = LatticePoint::new([0; 3]);
-    /// point[3] += 1;
+    /// let mut point = LatticePoint::new([0; 4]);
+    /// point[4] += 1;
     /// ```
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
         &mut self.data[pos]
     }
 }
 
-impl From<[usize; 3]> for LatticePoint {
-    fn from(data: [usize; 3]) -> Self {
+impl From<[usize; 4]> for LatticePoint {
+    fn from(data: [usize; 4]) -> Self {
         LatticePoint::new(data)
     }
 }
 
-impl From<LatticePoint> for [usize; 3] {
+impl From<LatticePoint> for [usize; 4] {
     fn from(lattice_point: LatticePoint) -> Self {
-        lattice_point.data
+        lattice_point.data.into()
     }
 }
 
@@ -349,7 +350,10 @@ pub trait LatticeElementToIndex {
 
 impl LatticeElementToIndex for LatticePoint {
     fn to_index(&self, l: &LatticeCyclique) -> usize {
-        (self[0] % l.dim()) + (self[1] % l.dim()) * l.dim() + (self[2] % l.dim()) * l.dim().pow(2)
+        (self[0] % l.dim())
+            + (self[1] % l.dim()) * l.dim()
+            + (self[2] % l.dim()) * l.dim().pow(2)
+            + (self[3] % l.dim()) * l.dim().pow(3)
     }
 }
 
@@ -362,7 +366,7 @@ impl LatticeElementToIndex for Direction {
 
 impl LatticeElementToIndex for LatticeLinkCanonical {
     fn to_index(&self, l: &LatticeCyclique) -> usize {
-        self.pos().to_index(l) * 3 + self.dir().to_index()
+        self.pos().to_index(l) * 4 + self.dir().to_index()
     }
 }
 
@@ -396,10 +400,10 @@ impl LatticeLinkCanonical {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 3]), Direction::XNeg);
+    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XNeg);
     /// assert_eq!(l, None);
     ///
-    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 3]), Direction::XPos);
+    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XPos);
     /// assert!(l.is_some());
     /// ```
     pub const fn new (from: LatticePoint, dir: Direction) -> Option<Self> {
@@ -427,7 +431,7 @@ impl LatticeLinkCanonical {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 3]), Direction::YPos).unwrap();
+    /// let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::YPos).unwrap();
     /// lattice_link_canonical.set_dir(Direction::XPos);
     /// assert_eq!(*lattice_link_canonical.dir(), Direction::XPos);
     /// ```
@@ -435,7 +439,7 @@ impl LatticeLinkCanonical {
     /// panic if a negative direction is given.
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// # let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 3]), Direction::XPos).unwrap();
+    /// # let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XPos).unwrap();
     /// lattice_link_canonical.set_dir(Direction::XNeg);
     /// ```
     pub fn set_dir(&mut self, dir: Direction) {
@@ -751,6 +755,23 @@ impl Neg for Direction {
             Direction::ZNeg => Direction::ZPos,
             Direction::TPos => Direction::TNeg,
             Direction::TNeg => Direction::TPos,
+        }
+    }
+}
+
+impl Neg for &Direction {
+    type Output = Self;
+    
+    fn neg(self) -> Self::Output {
+        match self {
+            Direction::XPos => &Direction::XNeg,
+            Direction::XNeg => &Direction::XPos,
+            Direction::YPos => &Direction::YNeg,
+            Direction::YNeg => &Direction::YPos,
+            Direction::ZPos => &Direction::ZNeg,
+            Direction::ZNeg => &Direction::ZPos,
+            Direction::TPos => &Direction::TNeg,
+            Direction::TNeg => &Direction::TPos,
         }
     }
 }

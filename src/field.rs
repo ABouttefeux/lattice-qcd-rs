@@ -24,8 +24,8 @@ use super::{
     },
 };
 use na::{
-    Vector3,
     Matrix3,
+    Vector4,
 };
 use  std::{
     ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
@@ -437,14 +437,14 @@ impl LinkMatrix {
         }
         // the order does not matter as we sum
         let sum = lattice.get_points().par_bridge().map(|point| {
-            Direction::POSITIVES_SPACE.iter().map( |dir_i|{
-                Direction::POSITIVES_SPACE.iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+            Direction::POSITIVES.iter().map( |dir_i|{
+                Direction::POSITIVES.iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j|{
                         self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                     }).sum::<Option<na::Complex<Real>>>()
             }).sum::<Option<na::Complex<Real>>>()
         }).sum::<Option<na::Complex<Real>>>()?;
-        let number_of_directions = (Direction::POSITIVES_SPACE.len() * (Direction::POSITIVES_SPACE.len() - 1)) / 2;
+        let number_of_directions = (Direction::POSITIVES.len() * (Direction::POSITIVES.len() - 1)) / 2;
         let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
     }
@@ -466,23 +466,37 @@ impl LinkMatrix {
     }
 }
 
+
+impl Index<usize> for LinkMatrix {
+    type Output = CMatrix3;
+    fn index(&self, pos: usize) -> &Self::Output{
+        &self.data[pos]
+    }
+}
+
+impl IndexMut<usize> for LinkMatrix {
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+        &mut self.data[pos]
+    }
+}
+
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField
 {
-    data: Vec<Vector3<Su3Adjoint>>, // use a Vec<[Su3Adjoint; 4]> instead ?
+    data: Vec<Vector4<Su3Adjoint>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 
 impl EField {
     
     /// Create a new "Electrical" field.
-    pub const fn new (data: Vec<Vector3<Su3Adjoint>>) -> Self {
+    pub const fn new (data: Vec<Vector4<Su3Adjoint>>) -> Self {
         Self {data}
     }
     
     /// Get the raw data.
-    pub const fn data(&self) -> &Vec<Vector3<Su3Adjoint>> {
+    pub const fn data(&self) -> &Vec<Vector4<Su3Adjoint>> {
         &self.data
     }
     
@@ -521,7 +535,8 @@ impl EField {
             let p1 = Su3Adjoint::random(rng, d);
             let p2 = Su3Adjoint::random(rng, d);
             let p3 = Su3Adjoint::random(rng, d);
-            data.push(Vector3::new(p1, p2, p3));
+            let p4 = Su3Adjoint::random(rng, d);
+            data.push(Vector4::new(p1, p2, p3, p4));
         }
         Self {data}
     }
@@ -539,10 +554,10 @@ impl EField {
     
     pub fn new_cold(l: &LatticeCyclique) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
-        Self {data: vec![Vector3::new(p1, p1, p1); l.get_number_of_points()]}
+        Self {data: vec![Vector4::new(p1, p1, p1, p1); l.get_number_of_points()]}
     }
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
-    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector3<Su3Adjoint>> {
+    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector4<Su3Adjoint>> {
         self.data.get(point.to_index(l))
     }
     
@@ -550,7 +565,7 @@ impl EField {
     pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction, l: &LatticeCyclique) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
-            Some(vec) => Some(&vec[dir.to_index()]),
+            Some(vec) => vec.get(dir.to_index()),
             None => None,
         }
     }
@@ -564,9 +579,9 @@ impl EField {
 #[test]
 fn test_get_e_field_pos_neg() {
     let l = LatticeCyclique::new(1_f64, 4).unwrap();
-    let e = EField::new(vec![Vector3::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]) ]) ]);
+    let e = EField::new(vec![Vector4::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
     assert_eq!(
-        e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XPos, &l),
-        e.get_e_field(&LatticePoint::new([0, 0, 0]), &Direction::XNeg, &l)
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XPos, &l),
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XNeg, &l)
     );
 }

@@ -30,7 +30,7 @@
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
+//! let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 4, &mut rng, &distribution)
 //!     .unwrap();
 //! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
@@ -48,7 +48,7 @@
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 8, &mut rng, &distribution)
+//! # let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 4, &mut rng, &distribution)
 //! #     .unwrap();
 //! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();

@@ -232,7 +232,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 ///     &l,
 ///     0,
 /// ).unwrap();
-/// let point = LatticePoint::new([3, 0, 5]);
+/// let point = LatticePoint::new([3, 0, 5, 0]);
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
@@ -271,7 +271,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// ```
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
-/// let l = LatticeCyclique::new(1_f64, 50).unwrap();
+/// let l = LatticeCyclique::new(1_f64, 25).unwrap();
 /// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data

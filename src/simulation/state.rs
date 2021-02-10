@@ -30,8 +30,8 @@ use super::{
 };
 
 use na::{
-    Vector3,
     ComplexField,
+    Vector4,
 };
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
@@ -79,6 +79,7 @@ pub trait LatticeState
     fn average_trace_plaquette(&self) -> Option<Complex> {
         self.link_matrix().average_trace_plaquette(self.lattice())
     }
+    
 }
 
 /// trait for a way to create a [`LatticeState`] from some parameters.
@@ -128,7 +129,7 @@ pub trait LatticeHamiltonianSimulationState
     /// get the derivative \partial_t U(link)
     fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
     /// get the derivative \partial_t E(point)
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>>;
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>>;
     
     /// Get the energy of the conjugate momenta configuration
     fn get_hamiltonian_efield(&self) -> Real;
@@ -375,8 +376,8 @@ impl LatticeState for LatticeStateDefault{
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
-                Direction::POSITIVES_SPACE.iter()
+            Direction::POSITIVES.iter().map(|dir_i| {
+                Direction::POSITIVES.iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -508,7 +509,7 @@ impl LatticeHamiltonianSimulationStateSync {
     
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
-        Direction::DIRECTIONS_SPACE.iter().map(|dir| {
+        Direction::DIRECTIONS.iter().map(|dir| {
             let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
             let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(*point, - *dir), self.lattice())?;
             let p_mi = self.lattice().add_point_direction(*point, & - *dir);
@@ -549,8 +550,8 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
-                Direction::POSITIVES_SPACE.iter()
+            Direction::POSITIVES.iter().map(|dir_i| {
+                Direction::POSITIVES.iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -581,7 +582,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+            Direction::POSITIVES.iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
                 (e_i * e_i).trace().real()
             }).sum::<Real>()
@@ -616,11 +617,11 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
-        let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
+        let mut iterator = Direction::POSITIVES.iter().map(|dir| {
             let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
-            let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter()
+            let sum_s: CMatrix3 = Direction::DIRECTIONS.iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
@@ -633,7 +634,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
             ))
         });
         // TODO cleanup
-        Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
+        Some(Vector4::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
     }
     
 }
@@ -731,7 +732,7 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
         self.state().t()
     }
     
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
         self.state().get_derivative_e(point)
     }
     
@@ -834,7 +835,7 @@ impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationSt
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::POSITIVES_SPACE.iter().map(|dir_i| {
+            Direction::POSITIVES.iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
                 (e_i * e_i).trace().real()
             }).sum::<Real>()
@@ -869,11 +870,11 @@ impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationSt
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector3<Su3Adjoint>> {
+    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
-        let mut iterator = Direction::POSITIVES_SPACE.iter().map(|dir| {
+        let mut iterator = Direction::POSITIVES.iter().map(|dir| {
             let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
-            let sum_s: CMatrix3 = Direction::DIRECTIONS_SPACE.iter()
+            let sum_s: CMatrix3 = Direction::DIRECTIONS.iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
@@ -886,7 +887,7 @@ impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationSt
             ))
         });
         // TODO cleanup
-        Some(Vector3::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
+        Some(Vector4::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
     }
     
 }

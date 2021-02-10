@@ -29,7 +29,7 @@ use super::{
     CMatrix3,
     field::Su3Adjoint,
 };
-use na::Vector3;
+use na::Vector4;
 
 pub mod symplectic_euler;
 pub mod symplectic_euler_rayon;
@@ -76,7 +76,7 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) 
 }
 
 /// function for "Electrical" field intregration
-fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector3<Su3Adjoint>
+fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector4<Su3Adjoint>
     where State: LatticeHamiltonianSimulationState,
 {
     let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();

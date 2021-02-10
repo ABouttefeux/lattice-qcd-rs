@@ -4,7 +4,7 @@
 //! See [`SymplecticEuler`]
 
 use na::{
-    Vector3,
+    Vector4,
 };
 use super::{
     super::{
@@ -48,7 +48,7 @@ fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t
     )
 }
 
-fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector3<Su3Adjoint>>, ThreadError>
+fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector4<Su3Adjoint>>, ThreadError>
     where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_vec(
@@ -58,7 +58,7 @@ fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Re
         number_of_thread,
         l.lattice().get_number_of_points(),
         l.lattice(),
-        Vector3::from_element(Su3Adjoint::default()),
+        Vector4::from_element(Su3Adjoint::default()),
     )
 }
 

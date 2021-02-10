@@ -30,7 +30,7 @@ use super::{
     CMatrix3,
 };
 use std::vec::Vec;
-use na::Vector3;
+use na::Vector4;
 
 fn get_link_matrix_integrate<State> (l: &State, delta_t: Real) -> Vec<CMatrix3>
     where State: LatticeHamiltonianSimulationState
@@ -42,7 +42,7 @@ fn get_link_matrix_integrate<State> (l: &State, delta_t: Real) -> Vec<CMatrix3>
     )
 }
 
-fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector3<Su3Adjoint>>
+fn get_e_field_integrate<State> (l: &State, delta_t: Real) -> Vec<Vector4<Su3Adjoint>>
     where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_rayon(
