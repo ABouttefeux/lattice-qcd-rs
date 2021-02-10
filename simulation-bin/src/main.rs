@@ -46,7 +46,7 @@ use dialoguer::{
 };
 
 fn main() {
-    let items = vec!["Hybrid Monte Carlo", "Metropolis Hastings"];
+    let items = vec!["Hybrid Monte Carlo", "Metropolis Hastings absolute", "Metropolis Hastings Delta"];
     let selection = Select::with_theme(&ColorfulTheme::default())
         .items(&items)
         .with_prompt("Choose an algorithm.")
@@ -54,9 +54,11 @@ fn main() {
         .interact_opt().unwrap();
 
     match selection {
-        Some(0) => sim_1(),
-        Some(1) => sim_2(),
-        _ => println!("no selection")
+        Some(0) => sim_hmc(),
+        Some(1) => sim_mh(),
+        Some(2) => sim_dmh(),
+        None => println!("no selection"),
+        _ => unreachable!(),
     }
 }
 
@@ -74,6 +76,7 @@ fn test_write_read() -> std::io::Result<()> {
     println!("read");
     let decoded: LatticeStateDefault = bincode::deserialize(&encoded_2).unwrap();
     println!("decoded");
+    assert_eq!(decoded, state);
     Ok(())
 }
 
@@ -92,7 +95,7 @@ fn test_leap_frog() {
 
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     let size = 1000_f64;
-    let number_of_pts = 5;
+    let number_of_pts = 12;
     let beta = 2_f64;
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(ProgressStyle::default_spinner().tick_chars("|/-\\").template(
@@ -169,8 +172,8 @@ fn simulate_loop_with_input<MC>(
         for _ in 0..number_of_sims/sub_block {
             for _ in 0..sub_block {
                 simulation = simulation.monte_carlo_step(mc).unwrap();
-                simulation.normalize_link_matrices();
             }
+            simulation.normalize_link_matrices();
             pb.set_message(&closure_message(&simulation, mc));
             pb.inc(sub_block);
         }
@@ -181,12 +184,11 @@ fn simulate_loop_with_input<MC>(
     simulation
 }
 
-#[allow(dead_code)]
-fn sim_1() {
+fn sim_hmc() {
     let t = Instant::now();
     let mut rng_seeder = rand::thread_rng();
     let seed = rng_seeder.next_u64();
-    println!("Begining simulation HMC with seed {}", seed);
+    println!("Begining simulation HMC with seed {:#08x}", seed);
     let mut rng = StdRng::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
@@ -198,7 +200,7 @@ fn sim_1() {
     let number_of_step = 100;
     //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
     let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
-    let number_of_sims = 100;
+    let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
         &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, StdRng, SymplecticEulerRayon>| {
@@ -211,12 +213,11 @@ fn sim_1() {
     println!("{:?}", t.elapsed());
 }
 
-#[allow(dead_code)]
-fn sim_2() {
+fn sim_mh() {
     let t = Instant::now();
     let mut rng_seeder = rand::thread_rng();
     let seed = rng_seeder.next_u64();
-    println!("Begining simulation MH with seed {}", seed);
+    println!("Begining simulation MH with seed {:#08x}", seed);
     let mut rng = StdRng::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
@@ -224,18 +225,51 @@ fn sim_2() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let spread_parameter = 0.001;
+    let spread_parameter = 0.00001;
     let number_of_rand = 20;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
     let mut mh = MCWrapper::new(MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
-    let number_of_sims = 40000;
+    let number_of_sims = 1000;
     
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
-    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 1000,
+    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
         &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, StdRng>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
+        }
+    );
+    //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
+        
+    println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
+    println!("{:?}", t.elapsed());
+}
+
+fn sim_dmh() {
+    let t = Instant::now();
+    let mut rng_seeder = rand::thread_rng();
+    let seed = rng_seeder.next_u64();
+    println!("Begining simulation MH Delta with seed {:#08x}", seed);
+    let mut rng = StdRng::seed_from_u64(seed);
+    //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+    
+    let simulation = generate_state_with_logs(&mut rng);
+    
+    println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
+    
+    let spread_parameter = 0.00001;
+    let number_of_rand = 20;
+    //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
+    let mut mh = MCWrapper::new(MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
+    let number_of_sims = 1000;
+    let sub_block = 100;
+    
+    //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
+    
+    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
+        &|sim, mc : &MCWrapper<MetropolisHastingsDeltaDiagnostic, LatticeStateDefault, StdRng>| {
+            let average = sim.average_trace_plaquette().unwrap().real();
+            format!("A {:.6},P {:.2}", average, mc.mcd().prob_replace_last())
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);

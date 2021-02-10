@@ -7,7 +7,6 @@ use super::{
     I,
     CMatrix2,
     Real,
-    lattice::Sign,
     Complex
 };
 use once_cell::sync::Lazy;
@@ -60,10 +59,17 @@ pub static PAULI_MATRICES: Lazy<[&CMatrix2; 3]> = Lazy::new(||
 /// outside this bound it will not panic but can have unexpected results.
 pub fn get_random_su2_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix2 {
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
-    let r0 = d.sample(rng);
+    let d_sign = rand::distributions::Bernoulli::new(0.5).unwrap();
+    let x0_unsigned = (1_f64 - spread_parameter.powi(2)).sqrt();
+    let x0;
+    if d_sign.sample(rng) {
+        x0 = x0_unsigned;
+    }
+    else{
+        x0 = - x0_unsigned;
+    }
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
-    let x0 = Sign::sign(r0).to_f64() * (1_f64 - spread_parameter.powi(2)).sqrt();
     CMatrix2::identity() * Complex::from(x0) +
         x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::from(el)).sum::<CMatrix2>()
 }
