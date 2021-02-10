@@ -15,3 +15,4 @@ lattice-qcd-rs = { path = "..", features = ["serde-serialize"] }
 dialoguer = "0.7.1"
 csv = "1.1"
 serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"

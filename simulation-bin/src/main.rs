@@ -5,7 +5,7 @@ extern crate nalgebra as na;
 extern crate rand;
 extern crate rand_distr;
 extern crate indicatif;
-
+extern crate bincode;
 
 #[allow(unused_imports)]
 use lattice_qcd_rs::{
@@ -37,6 +37,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{self, Read};
 use std::sync::*;
 use std::thread;
+use std::fs::File;
+use std::io::prelude::*;
 
 use dialoguer::{
     Select,
@@ -58,10 +60,40 @@ fn main() {
     }
 }
 
+fn test_write_read() -> std::io::Result<()> {
+    let mut rng = rand::thread_rng();
+    let state = generate_state_with_logs(&mut rng);
+    let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
+    let mut file = File::create("test.txt")?;
+    file.write_all(&encoded)?;
+    drop(file);
+    let mut f = File::open("test.txt")?;
+    let mut encoded_2: Vec<u8> = vec![];
+    f.read_to_end(&mut encoded_2)?;
+    println!("{}", encoded_2.len());
+    println!("read");
+    let decoded: LatticeStateDefault = bincode::deserialize(&encoded_2).unwrap();
+    println!("decoded");
+    Ok(())
+}
+
+fn test_leap_frog() {
+    let mut rng = rand::thread_rng();
+    let state = generate_state_with_logs(&mut rng);
+    println!("h_l {}", state.get_hamiltonian_links());
+    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault>::new_random_e_state(state, &mut rng);
+    let h1 = state_hmc.get_hamiltonian_total();
+    println!("h_t {}", h1);
+    let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(0.01, 1, &SymplecticEulerRayon::new()).unwrap();
+    let h2 = state_hmc_2.get_hamiltonian_total();
+    println!("h_t {}", h2);
+    println!("{}", (h1-h2).exp());
+}
+
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     let size = 1000_f64;
     let number_of_pts = 5;
-    let beta = 1E+2_f64;
+    let beta = 2_f64;
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(ProgressStyle::default_spinner().tick_chars("|/-\\").template(
         "{prefix:10} [{elapsed_precise}] [{spinner}]"
@@ -162,7 +194,7 @@ fn sim_1() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let delta_t = 0.0075_f64;
+    let delta_t = 0.075_f64;
     let number_of_step = 100;
     //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
     let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
@@ -207,7 +239,6 @@ fn sim_2() {
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
-
         
     println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());

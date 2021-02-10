@@ -158,7 +158,6 @@ impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarlo<State, Rng, I>
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
-        //let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_e_cold(state);
         self.internal.get_next_element_default(state_internal, &mut self.rng).map(|el| el.get_state_owned())
     }
 }
@@ -204,7 +203,7 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
     }
     
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {
-        ( old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total()).exp()
+        (old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total()).exp()
             .min(1_f64)
             .max(0_f64)
     }
@@ -271,7 +270,6 @@ impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarloDiagnostic<State, Rng,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
-        //let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_e_cold(state);
         self.internal.get_next_element_default(state_internal, &mut self.rng).map(|el| el.get_state_owned())
     }
 }
@@ -329,7 +327,7 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternalDiagnostics<
     }
     
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {
-        ( old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total()).exp()
+        (old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total()).exp()
             .min(1_f64)
             .max(0_f64)
     }

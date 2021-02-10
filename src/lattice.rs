@@ -626,6 +626,7 @@ impl Direction{
     pub const fn is_negative(&self) -> bool {
         ! self.is_positive()
     }
+    
     /// Find the direction the vector point the most.
     /// For a zero vector return [`Direction::XPos`].
     /// # Example
