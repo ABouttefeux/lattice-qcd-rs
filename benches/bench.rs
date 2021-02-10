@@ -96,19 +96,19 @@ fn criterion_benchmark(c: &mut Criterion) {
     
     let mut groupe_creation_deterministe = c.benchmark_group("Sim creation deterministe");
     groupe_creation_deterministe.sample_size(10);
-    let array_size: [usize; 8] = [2, 4, 8, 10, 20, 30, 50, 75];
+    let array_size: [usize; 6] = [2, 4, 8, 10, 20, 30];
     for el in array_size.iter(){
-        groupe_creation_deterministe.throughput(Throughput::Elements((el * el * el) as u64));
-        groupe_creation_deterministe.bench_with_input(BenchmarkId::new("size", el * el* el), el,
+        groupe_creation_deterministe.throughput(Throughput::Elements((el.pow(4)) as u64));
+        groupe_creation_deterministe.bench_with_input(BenchmarkId::new("size", el.pow(4)), el,
             |b,i| b.iter(|| bench_simulation_creation_deterministe(*i, &mut rng, &d))
         );
     }
     groupe_creation_deterministe.finish();
     
     let mut groupe_creation_threaded = c.benchmark_group("Sim creation (20) threaded");
-    let gp_size = 20;
+    let gp_size: usize = 20;
     groupe_creation_threaded.sample_size(50);
-    groupe_creation_threaded.throughput(Throughput::Elements((gp_size * gp_size * gp_size) as u64));
+    groupe_creation_threaded.throughput(Throughput::Elements(gp_size.pow(4) as u64));
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
         groupe_creation_threaded.bench_with_input(BenchmarkId::new("thread", n), n,
