@@ -16,45 +16,87 @@
 //! ## Goal
 //! The goal is to provide an easy to use, fast and safe library to do classical lattice simulation.
 //!
-//! # Example
-//! let us create a basic random state and let us simulate.
+//! # Examples
 //! ```
-//! extern crate rand;
-//! extern crate rand_distr;
-//! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSync;
-//! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
-//! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
-//! use lattice_qcd_rs::integrator::SymplecticEuler;
+//! use lattice_qcd_rs::{
+//!    simulation::state::{LatticeStateDefault, LatticeState},
+//!    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDeltaDiagnostic},
+//!    ComplexField,
+//! };
 //!
 //! let mut rng = rand::thread_rng();
-//! let distribution = rand::distributions::Uniform::from(
-//!     -std::f64::consts::PI..std::f64::consts::PI
+//!
+//! let size = 1_000_f64;
+//! let number_of_pts = 4;
+//! let beta = 2_f64;
+//! let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//!
+//! let number_of_rand = 20;
+//! let spread_parameter = 1E-5_f64;
+//! let mut mc = MCWrapper::new(MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
+//!
+//! let number_of_sims = 100;
+//! for _ in 0..number_of_sims / 10 {
+//!     for _ in 0..10 {
+//!         simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+//!     }
+//!     simulation.normalize_link_matrices(); // we renormalize all matrices back to SU(3);
+//! };
+//! let average = simulation.average_trace_plaquette().unwrap().real();
+//! ```
+//! Alternatively other Monte Carlo algorithm can be used like,
+//! ```
+//! use lattice_qcd_rs::{
+//!    simulation::state::{LatticeStateDefault, LatticeState},
+//!    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDiagnostic},
+//! };
+//!
+//! let mut rng = rand::thread_rng();
+//!
+//! let size = 1_000_f64;
+//! let number_of_pts = 4;
+//! let beta = 2_f64;
+//! let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//!
+//! let number_of_rand = 20;
+//! let spread_parameter = 1E-5_f64;
+//! let mut mc = MCWrapper::new(
+//!     MetropolisHastingsDiagnostic::new(
+//!         number_of_rand,
+//!         spread_parameter
+//!     ).unwrap(),
+//!     rng
 //! );
-//! let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 4, &mut rng, &distribution)
-//!     .unwrap();
-//! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//!
+//! simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+//! simulation.normalize_link_matrices();
 //! ```
-//! Let us then compute and compare the Hamiltonian.
+//! or
 //! ```
-//! # extern crate rand;
-//! # extern crate rand_distr;
-//! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSync;
-//! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
-//! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
-//! # use lattice_qcd_rs::integrator::SymplecticEuler;
-//! #
-//! # let mut rng = rand::thread_rng();
-//! # let distribution = rand::distributions::Uniform::from(
-//! #    -std::f64::consts::PI..std::f64::consts::PI
-//! # );
-//! # let state1 = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 4, &mut rng, &distribution)
-//! #     .unwrap();
-//! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! let h = state1.get_hamiltonian_total();
-//! let h2 = state3.get_hamiltonian_total();
-//! println!("The error on the Hamiltonian is {}", h - h2);
+//! use lattice_qcd_rs::{
+//!    simulation::state::{LatticeStateDefault, LatticeState},
+//!    simulation::monte_carlo::HybridMonteCarloDiagnostic,
+//!    integrator::SymplecticEulerRayon,
+//! };
+//!
+//! let mut rng = rand::thread_rng();
+//!
+//! let size = 1_000_f64;
+//! let number_of_pts = 4;
+//! let beta = 2_f64;
+//! let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//!
+//! let delta_t = 1E-3_f64;
+//! let number_of_step = 10;
+//! let mut mc = HybridMonteCarloDiagnostic::new(
+//!     delta_t,
+//!     number_of_step,
+//!     SymplecticEulerRayon::new(),
+//!     rng
+//! );
+//!
+//! simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+//! simulation.normalize_link_matrices();
 //! ```
 
 #![allow(clippy::needless_return)]
