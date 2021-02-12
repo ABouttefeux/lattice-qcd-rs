@@ -13,7 +13,7 @@ use rayon::prelude::*;
 
 fn main() {
     let mut vec = vec![];
-    for i in 80..81 {
+    for i in 1..81 {
         vec.push(i as f64 / 10_f64);
     }
     
