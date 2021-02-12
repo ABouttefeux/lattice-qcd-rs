@@ -1,4 +1,5 @@
 
+//! Some code to test the library
 
 extern crate lattice_qcd_rs;
 extern crate nalgebra as na;

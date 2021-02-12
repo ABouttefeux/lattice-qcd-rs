@@ -15,7 +15,7 @@ serde-serialize = ["serde"]
 default = ["serde-serialize"]
 
 [workspace]
-members = ["simulation-bin"]
+members = ["simulation-bin", "average_of_plaquette"]
 
 [dependencies]
 nalgebra = { version = "0.24.0", features = ["serde-serialize"] }

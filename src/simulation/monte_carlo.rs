@@ -519,19 +519,19 @@ impl MetropolisHastingsDeltaDiagnostic {
     
     fn get_delta_s(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique, link: &LatticeLinkCanonical, old_matrix: &na::Matrix3<Complex>, beta : Real) -> Real {
         let new_link = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
-        let a: na::Matrix3<na::Complex<Real>> = Direction::POSITIVES.iter().par_bridge().map(|dir_i| {
-            Direction::POSITIVES.iter().filter(|dir_j| dir_i != *dir_j).map(|dir_j| {
-                let el_1 = link_matrix.get_sij(link.pos(), dir_j, dir_i, lattice).unwrap().adjoint();
-                let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - *dir_i);
-                let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
-                let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_j);
-                let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
-                let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_i);
-                let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
-                el_1 + u1 * u2 * u3
-            }).sum::<na::Matrix3<na::Complex<Real>>>()
+        let dir_j = link.dir();
+        let a: na::Matrix3<na::Complex<Real>> = Direction::POSITIVES.iter().par_bridge()
+        .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
+            let el_1 = link_matrix.get_sij(link.pos(), dir_j, dir_i, lattice).unwrap().adjoint();
+            let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - *dir_i);
+            let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
+            let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_j);
+            let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
+            let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_i);
+            let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
+            el_1 + u1 * u2 * u3
         }).sum();
-        - ((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+        -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
     }
 }
 
