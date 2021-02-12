@@ -24,16 +24,13 @@ jobs:
        toolchain: stable
     
     - name: Build with serd
-      run: cargo build --verbose --features serde-serialize
+      run: cargo build --all --verbose --features serde-serialize
       
     - name: Run tests with serd
-      run: cargo test --verbose --features serde-serialize
+      run: cargo test --all --verbose --features serde-serialize
     
     - name: Build no features
-      run: cargo build --verbose --no-default-features
+      run: cargo build --all --verbose --no-default-features
       
     - name: Run tests no features
-      run: cargo test --verbose --no-default-features
-    
-    - name: Build simulation bin
-      run: cargo build -p simulation-bin
+      run: cargo test --all --verbose --no-default-features
