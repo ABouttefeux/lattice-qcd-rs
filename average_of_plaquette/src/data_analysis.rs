@@ -75,18 +75,22 @@ pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Res
 }
 
 pub fn plot_data(data: &Vec<(Config, AverageData)>) -> Result<(), Box<dyn std::error::Error>> {
-    let root = SVGBackend::new("plot_beta.svg", (640, 480)).into_drawing_area();
-    root.fill(&WHITE)?;
     
     let betas = data.iter().map(|(cfg, _)| cfg.lattice_config().lattice_beta()).collect::<Vec<f64>>();
     let avg = data.iter().map(|(_, avg)| avg.clone().final_average()).collect::<Vec<f64>>();
+    
+    plot_data_beta(&betas, &avg)
+}
 
+
+fn plot_data_beta(betas: &Vec<f64>, avg: &Vec<f64>) -> Result<(), Box<dyn std::error::Error>> {
+    let root = SVGBackend::new("plot_beta.svg", (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
     
     let mut chart = ChartBuilder::on(&root)
-        .caption("", ("sans-serif", 50).into_font())
         .margin(5)
         .x_label_area_size(30)
-        .y_label_area_size(30)
+        .y_label_area_size(60)
         .build_cartesian_2d(
             0_f64..betas.last().unwrap() * 1.1_f64,
             0.9_f64 * avg.first().unwrap()..avg.last().unwrap() * 1.1_f64
@@ -100,12 +104,5 @@ pub fn plot_data(data: &Vec<(Config, AverageData)>) -> Result<(), Box<dyn std::e
     chart.draw_series(betas.iter().zip(avg.iter()).map(|(beta, avg)| {
         Circle::new((*beta, *avg), 2, BLACK.filled())
     }))?;
-    
-    chart
-        .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
-    
     Ok(())
 }

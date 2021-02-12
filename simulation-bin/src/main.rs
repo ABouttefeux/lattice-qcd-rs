@@ -36,9 +36,11 @@ use rand::{
 use rand::RngCore;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::io::{self, Read};
+#[cfg(test)]
+use std::fs::File;
 use std::sync::*;
 use std::thread;
-use std::fs::File;
+#[cfg(test)]
 use std::io::prelude::*;
 
 use dialoguer::{
@@ -63,6 +65,9 @@ fn main() {
     }
 }
 
+#[cfg(test)]
+#[test]
+#[ignore]
 fn test_write_read() -> std::io::Result<()> {
     let mut rng = rand::thread_rng();
     let state = generate_state_with_logs(&mut rng);
@@ -81,6 +86,8 @@ fn test_write_read() -> std::io::Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
+#[test]
 fn test_leap_frog() {
     let mut rng = rand::thread_rng();
     let state = generate_state_with_logs(&mut rng);
@@ -91,7 +98,9 @@ fn test_leap_frog() {
     let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(0.01, 1, &SymplecticEulerRayon::new()).unwrap();
     let h2 = state_hmc_2.get_hamiltonian_total();
     println!("h_t {}", h2);
-    println!("{}", (h1-h2).exp());
+    println!("{}", (h1-h2).exp() );
+
+    assert!((h1-h2).abs() < 0.1);
 }
 
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {

@@ -35,16 +35,14 @@ pub fn run_simulation_with_progress_bar(
         get_pb_template()
     ));
     pb_th.set_prefix("Thermalisation");
-    pb_th.tick();
-    pb_th.enable_steady_tick(499);
     
     for _ in 0..config.number_of_thermalisation() / config.number_between_renorm() {
         let average = simulation.average_trace_plaquette().unwrap().real();
         for _ in 0..config.number_between_renorm() {
             simulation = simulation.monte_carlo_step(&mut mc).unwrap();
             pb_th.inc(1);
-            pb_th.set_message(&format!("A {:.6}, P {:.2}", average, mc.mcd().prob_replace_last()));
         }
+        pb_th.set_message(&format!("A {:.6}, P {:.2}", average, mc.mcd().prob_replace_last()));
         simulation.normalize_link_matrices();
     }
     
@@ -61,10 +59,10 @@ pub fn run_simulation_with_progress_bar(
     
     for i in 0..config.number_of_averages() {
         for _ in 0..config.number_of_steps_between_average() / config.number_between_renorm() {
+            pb_th.set_message(&format!("A {:.6}, P {:.2}", average, mc.mcd().prob_replace_last()));
             for _ in 0..config.number_between_renorm() {
                 simulation = simulation.monte_carlo_step(&mut mc).unwrap();
                 pb_th.inc(1);
-                pb_th.set_message(&format!("A {:.6}, P {:.2}", average, mc.mcd().prob_replace_last()));
             }
             simulation.normalize_link_matrices();
             average = simulation.average_trace_plaquette().unwrap().real();

@@ -13,7 +13,7 @@ use rayon::prelude::*;
 
 fn main() {
     let mut vec = vec![];
-    for i in 1..81 {
+    for i in 80..81 {
         vec.push(i as f64 / 10_f64);
     }
     
@@ -23,15 +23,15 @@ fn main() {
         ScanPossibility::Vector(vec)
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
-        ScanPossibility::Default(20),
-        ScanPossibility::Default(0.00001)
+        ScanPossibility::Default(2),
+        ScanPossibility::Default(0.0001)
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Default(1_000), //th setps
-        ScanPossibility::Default(100),
-        ScanPossibility::Default(10), // number_of_averages
-        ScanPossibility::Default(100) //between av
+        ScanPossibility::Default(10_000_000), //th setps
+        ScanPossibility::Default(500), // renormn
+        ScanPossibility::Default(1_000), // number_of_averages
+        ScanPossibility::Default(10_000) //between av
     ).unwrap();
     let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
     //println!("{:}", serde_json::to_string_pretty( &config).unwrap());
@@ -43,6 +43,7 @@ fn main() {
         get_pb_template()
     ));
     pb.set_prefix("Sim Total");
+    pb.enable_steady_tick(499);
     
     let multi_pb_2 = multi_pb.clone();
     let h = std::thread::spawn(move || {
