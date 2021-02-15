@@ -4,34 +4,52 @@ use average_of_plaquette::{
     data_analysis::*,
  };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use rand::{
+/*use rand::{
     SeedableRng,
     rngs::StdRng
-};
+};*/
 use rayon::prelude::*;
 
 
 fn main() {
     let mut vec = vec![];
-    for i in 1..81 {
-        vec.push(i as f64 / 10_f64);
+    let mut therm_setp = vec![];
+    for i in 0..81 {
+        let beta = i as f64 / 10_f64;
+        vec.push(beta);
+        let r = beta.floor() + 1_f64;
+        if r < 2_f64 {
+            therm_setp.push(1_000_000)
+        }
+        else if r < 4_f64 {
+            therm_setp.push(4_000_000)
+        }
+        else if r < 5_f64 {
+            therm_setp.push(10_000_000)
+        }
+        else if r < 6_f64 {
+            therm_setp.push(25_000_000)
+        }
+        else {
+            therm_setp.push(50_000_000)
+        }
     }
     
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1000_f64),
-        ScanPossibility::Default(12),
-        ScanPossibility::Vector(vec)
+        ScanPossibility::Default(5),
+        ScanPossibility::Vector(vec),
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
-        ScanPossibility::Default(2),
-        ScanPossibility::Default(0.0001)
+        ScanPossibility::Default(1),
+        ScanPossibility::Default(0.5),
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Default(500_000), //th setps
+        ScanPossibility::Vector(therm_setp), //th setps
         ScanPossibility::Default(500), // renormn
-        ScanPossibility::Default(500), // number_of_averages
-        ScanPossibility::Default(1_000) //between av
+        ScanPossibility::Default(250), // number_of_averages
+        ScanPossibility::Default(5_000) //between av
     ).unwrap();
     let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
     //println!("{:}", serde_json::to_string_pretty( &config).unwrap());
@@ -49,14 +67,15 @@ fn main() {
     let h = std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(1000));
         multi_pb_2.set_move_cursor(true);
-        multi_pb_2.join()
+        multi_pb_2.join_and_clear()
     });
     pb.tick();
     
     let result = array_config.par_iter().map(|cfg| {
-        let mut rng = StdRng::seed_from_u64(0);
+        let mut rng = rand::thread_rng();
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
-        let av = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, &mut rng);
+        let (av, sim_final) = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, &mut rng);
+        let _ = save_data(cfg, &sim_final);
         pb.inc(1);
         (*cfg, av)
     }).collect();

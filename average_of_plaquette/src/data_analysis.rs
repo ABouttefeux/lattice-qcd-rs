@@ -9,6 +9,8 @@ use rayon::prelude::*;
 use std::fs::File;
 use super::config::Config;
 use plotters::prelude::*;
+use lattice_qcd_rs::simulation::LatticeStateDefault;
+use std::io::prelude::*;
 
 
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
@@ -104,5 +106,12 @@ fn plot_data_beta(betas: &[f64], avg: &[f64]) -> Result<(), Box<dyn std::error::
     chart.draw_series(betas.iter().zip(avg.iter()).map(|(beta, avg)| {
         Circle::new((*beta, *avg), 2, BLACK.filled())
     }))?;
+    Ok(())
+}
+
+pub fn save_data(cfg: &Config, state: &LatticeStateDefault) -> std::io::Result<()> {
+    let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
+    let mut file = File::create(format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta()))?;
+    file.write_all(&encoded)?;
     Ok(())
 }

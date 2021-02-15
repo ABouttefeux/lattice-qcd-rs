@@ -29,7 +29,8 @@ use na::ComplexField;
 
 use rand::{
     SeedableRng,
-    rngs::StdRng
+    rngs::StdRng,
+    rngs::ThreadRng,
 };
 // use rayon::iter::IntoParallelIterator;
 // use rayon::prelude::ParallelIterator;
@@ -105,8 +106,8 @@ fn test_leap_frog() {
 
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     let size = 1000_f64;
-    let number_of_pts = 12;
-    let beta = 2_f64;
+    let number_of_pts = 4;
+    let beta = 1_f64;
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(ProgressStyle::default_spinner().tick_chars("|/-\\").template(
         "{prefix:10} [{elapsed_precise}] [{spinner}]"
@@ -182,10 +183,10 @@ fn simulate_loop_with_input<MC>(
         for _ in 0..number_of_sims/sub_block {
             for _ in 0..sub_block {
                 simulation = simulation.monte_carlo_step(mc).unwrap();
+                pb.inc(1);
             }
             simulation.normalize_link_matrices();
             pb.set_message(&closure_message(&simulation, mc));
-            pb.inc(sub_block);
         }
     }
     
@@ -236,7 +237,7 @@ fn sim_mh() {
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.00001;
-    let number_of_rand = 20;
+    let number_of_rand = 1;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
     let mut mh = MCWrapper::new(MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
     let number_of_sims = 1000;
@@ -257,18 +258,18 @@ fn sim_mh() {
 
 fn sim_dmh() {
     let t = Instant::now();
-    let mut rng_seeder = rand::thread_rng();
-    let seed = rng_seeder.next_u64();
-    println!("Begining simulation MH Delta with seed {:#08x}", seed);
-    let mut rng = StdRng::seed_from_u64(seed);
+    //let mut rng_seeder = rand::thread_rng();
+    //let seed = rng_seeder.next_u64();
+    //println!("Begining simulation MH Delta with seed {:#08x}", seed);
+    //let mut rng = StdRng::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    
+    let mut rng = rand::thread_rng();
     let simulation = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let spread_parameter = 0.00001;
-    let number_of_rand = 20;
+    let spread_parameter = 0.5;
+    let number_of_rand = 10;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
     let mut mh = MCWrapper::new(MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
     let number_of_sims = 1000;
@@ -277,7 +278,7 @@ fn sim_dmh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim, mc : &MCWrapper<MetropolisHastingsDeltaDiagnostic, LatticeStateDefault, StdRng>| {
+        &|sim, mc : &MCWrapper<MetropolisHastingsDeltaDiagnostic, LatticeStateDefault, ThreadRng>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2}", average, mc.mcd().prob_replace_last())
         }

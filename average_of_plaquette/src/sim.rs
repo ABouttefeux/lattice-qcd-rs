@@ -10,7 +10,7 @@ use super::{
 };
 
 pub fn get_pb_template() -> &'static str {
-    &"{prefix:14} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>4}/{len:4} [ETA {eta_precise}] {msg}"
+    &"{prefix:14} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>6}/{len:6} [ETA {eta_precise}] {msg}"
 }
 
 pub fn generate_state_default(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault {
@@ -26,7 +26,7 @@ pub fn run_simulation_with_progress_bar(
     inital_state : LatticeStateDefault,
     mp : &MultiProgress,
     rng: &mut impl rand::Rng
-) -> AverageData {
+) -> (AverageData, LatticeStateDefault) {
     let mut mc = MCWrapper::new(get_mc_from_config(config.mc_config()), rng);
     
     let mut simulation = inital_state;
@@ -37,7 +37,7 @@ pub fn run_simulation_with_progress_bar(
     pb_th.set_prefix("Thermalisation");
     
     for _ in 0..config.number_of_thermalisation() / config.number_between_renorm() {
-        let average = simulation.average_trace_plaquette().unwrap().real();
+        let average = simulation.average_trace_plaquette().unwrap().real() / 3.0;
         for _ in 0..config.number_between_renorm() {
             simulation = simulation.monte_carlo_step(&mut mc).unwrap();
             pb_th.inc(1);
@@ -55,7 +55,7 @@ pub fn run_simulation_with_progress_bar(
     
     let mut return_data = vec![];
     
-    let mut average = simulation.average_trace_plaquette().unwrap().real();
+    let mut average = simulation.average_trace_plaquette().unwrap().real() / 3.0;
     
     for i in 0..config.number_of_averages() {
         for _ in 0..config.number_of_steps_between_average() / config.number_between_renorm() {
@@ -65,7 +65,7 @@ pub fn run_simulation_with_progress_bar(
                 pb_th.inc(1);
             }
             simulation.normalize_link_matrices();
-            average = simulation.average_trace_plaquette().unwrap().real();
+            average = simulation.average_trace_plaquette().unwrap().real() / 3.0;
         }
         return_data.push(AverageDataPoint::new(
             average,
@@ -73,5 +73,5 @@ pub fn run_simulation_with_progress_bar(
         ));
     }
     pb_th.finish_and_clear();
-    AverageData::new(return_data)
+    (AverageData::new(return_data), simulation)
 }
