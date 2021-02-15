@@ -28,10 +28,10 @@ fn main() {
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Default(10_000_000), //th setps
+        ScanPossibility::Default(500_000), //th setps
         ScanPossibility::Default(500), // renormn
-        ScanPossibility::Default(1_000), // number_of_averages
-        ScanPossibility::Default(10_000) //between av
+        ScanPossibility::Default(500), // number_of_averages
+        ScanPossibility::Default(1_000) //between av
     ).unwrap();
     let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
     //println!("{:}", serde_json::to_string_pretty( &config).unwrap());
@@ -58,7 +58,7 @@ fn main() {
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
         let av = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, &mut rng);
         pb.inc(1);
-        (cfg.clone(), av)
+        (*cfg, av)
     }).collect();
     
     pb.finish();

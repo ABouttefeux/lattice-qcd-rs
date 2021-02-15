@@ -74,7 +74,7 @@ pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Res
     Ok(())
 }
 
-pub fn plot_data(data: &Vec<(Config, AverageData)>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn plot_data(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
     
     let betas = data.iter().map(|(cfg, _)| cfg.lattice_config().lattice_beta()).collect::<Vec<f64>>();
     let avg = data.iter().map(|(_, avg)| avg.clone().final_average()).collect::<Vec<f64>>();
@@ -83,7 +83,7 @@ pub fn plot_data(data: &Vec<(Config, AverageData)>) -> Result<(), Box<dyn std::e
 }
 
 
-fn plot_data_beta(betas: &Vec<f64>, avg: &Vec<f64>) -> Result<(), Box<dyn std::error::Error>> {
+fn plot_data_beta(betas: &[f64], avg: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let root = SVGBackend::new("plot_beta.svg", (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     
