@@ -70,6 +70,7 @@ pub fn get_random_su2_close_to_unity(spread_parameter: Real, rng: &mut impl rand
     }
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
+    // x0 1 + i el * \sigma
     CMatrix2::identity() * Complex::from(x0) +
-        x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::from(el)).sum::<CMatrix2>()
+        x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::new(0_f64, *el)).sum::<CMatrix2>()
 }

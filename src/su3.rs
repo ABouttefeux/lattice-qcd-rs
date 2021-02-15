@@ -222,20 +222,15 @@ fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this boud it will not panic but can have unexpected results.
 pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix3 {
-    let mut r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let mut s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let mut t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let d = rand::distributions::Bernoulli::new(0.5).unwrap();
-    if d.sample(rng) {
-        r = r.adjoint();
+    let r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let distribution = rand::distributions::Bernoulli::new(0.5).unwrap();
+    let mut x = r * s * t;
+    if distribution.sample(rng) {
+        x = x.adjoint();
     }
-    if d.sample(rng) {
-        s = s.adjoint();
-    }
-    if d.sample(rng) {
-        t = t.adjoint();
-    }
-    r * s * t
+    x
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the last row and column be the sane as identity.
