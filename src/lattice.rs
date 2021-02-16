@@ -173,7 +173,7 @@ impl<'a> IteratorLatticeLinkCanonical<'a> {
     /// let mut iter = IteratorLatticeLinkCanonical::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
-    pub fn new(lattice: &'a LatticeCyclique, first_el: LatticeLinkCanonical) -> Self {
+    pub const fn new(lattice: &'a LatticeCyclique, first_el: LatticeLinkCanonical) -> Self {
         Self {
             lattice,
             element: Some(first_el),
@@ -231,7 +231,7 @@ impl<'a> IteratorLatticePoint<'a> {
     /// let mut iter = IteratorLatticePoint::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
-    pub fn new(lattice: &'a LatticeCyclique, first_el: LatticePoint) -> Self {
+    pub const fn new(lattice: &'a LatticeCyclique, first_el: LatticePoint) -> Self {
         Self {
             lattice,
             element: Some(first_el),
@@ -339,6 +339,11 @@ impl From<LatticePoint> for [usize; 4] {
     }
 }
 
+impl From<&LatticePoint> for [usize; 4] {
+    fn from(lattice_point: &LatticePoint) -> Self {
+        lattice_point.data.into()
+    }
+}
 
 /// Trait to convert an element on a lattice to an [`usize`].
 ///
@@ -460,6 +465,12 @@ impl LatticeLinkCanonical {
 
 impl From<LatticeLinkCanonical> for LatticeLink {
     fn from(l : LatticeLinkCanonical) -> Self {
+        LatticeLink::new(l.from, l.dir)
+    }
+}
+
+impl From<&LatticeLinkCanonical> for LatticeLink {
+    fn from(l : &LatticeLinkCanonical) -> Self {
         LatticeLink::new(l.from, l.dir)
     }
 }
@@ -599,15 +610,20 @@ impl Direction{
     
     /// Convert the direction into a vector of norm `a`;
     pub fn to_vector(&self, a: f64) -> Vector4<Real> {
+        self.to_unit_vector() * a
+    }
+    
+    /// Convert the direction into a vector of norm `1`;
+    pub fn to_unit_vector(&self) -> Vector4<Real> {
         match self {
-            Direction::XPos => Vector4::<Real>::new(1_f64 * a, 0_f64, 0_f64, 0_f64),
-            Direction::XNeg => Vector4::<Real>::new(-1_f64 * a, 0_f64, 0_f64, 0_f64),
-            Direction::YPos => Vector4::<Real>::new(0_f64, 1_f64 * a, 0_f64, 0_f64),
-            Direction::YNeg => Vector4::<Real>::new(0_f64, -1_f64 * a, 0_f64, 0_f64),
-            Direction::ZPos => Vector4::<Real>::new(0_f64, 0_f64, 1_f64 * a, 0_f64),
-            Direction::ZNeg => Vector4::<Real>::new(0_f64, 0_f64, -1_f64 * a, 0_f64),
-            Direction::TPos => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, 1_f64 * a),
-            Direction::TNeg => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, -1_f64 * a),
+            Direction::XPos => Vector4::<Real>::new(1_f64, 0_f64, 0_f64, 0_f64),
+            Direction::XNeg => Vector4::<Real>::new(-1_f64, 0_f64, 0_f64, 0_f64),
+            Direction::YPos => Vector4::<Real>::new(0_f64, 1_f64, 0_f64, 0_f64),
+            Direction::YNeg => Vector4::<Real>::new(0_f64, -1_f64, 0_f64, 0_f64),
+            Direction::ZPos => Vector4::<Real>::new(0_f64, 0_f64, 1_f64, 0_f64),
+            Direction::ZNeg => Vector4::<Real>::new(0_f64, 0_f64, -1_f64, 0_f64),
+            Direction::TPos => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, 1_f64),
+            Direction::TNeg => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, -1_f64),
         }
     }
     
@@ -783,6 +799,13 @@ impl From<Direction> for usize {
     }
 }
 
+/// Return [`Direction::to_index`].
+impl From<&Direction> for usize {
+    fn from(d: &Direction) -> Self {
+        d.to_index()
+    }
+}
+
 /// Return [`Direction::from_vector`].
 impl From<Vector4<Real>> for Direction {
     fn from(v: Vector4<Real>) -> Self {
@@ -790,9 +813,23 @@ impl From<Vector4<Real>> for Direction {
     }
 }
 
-/// Return [`Direction::to_vector`].
+/// Return [`Direction::from_vector`].
+impl From<&Vector4<Real>> for Direction {
+    fn from(v: &Vector4<Real>) -> Self {
+        Direction::from_vector(v)
+    }
+}
+
+/// Return [`Direction::to_unit_vector`].
 impl From<Direction> for Vector4<Real> {
     fn from(d: Direction) -> Self {
-        d.to_vector(1_f64)
+        d.to_unit_vector()
+    }
+}
+
+/// Return [`Direction::to_unit_vector`].
+impl From<&Direction> for Vector4<Real> {
+    fn from(d: &Direction) -> Self {
+        d.to_unit_vector()
     }
 }

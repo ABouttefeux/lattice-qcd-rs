@@ -9,18 +9,22 @@ use super::{
     data_analysis::*,
 };
 
-pub fn get_pb_template() -> &'static str {
+/// Return the [`indicatif::ProgressBar`] template
+pub const fn get_pb_template() -> &'static str {
     &"{prefix:14} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>6}/{len:6} [ETA {eta_precise}] {msg}"
 }
 
+/// Generate a hot configuration with the given config
 pub fn generate_state_default(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault {
-    LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).unwrap()
+    LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).expect("Invalide Configuration")
 }
 
+/// Generate a [`MetropolisHastingsDeltaDiagnostic`] from a config
 pub fn get_mc_from_config(cfg: &MonteCarloConfig) -> MetropolisHastingsDeltaDiagnostic {
-    MetropolisHastingsDeltaDiagnostic::new(cfg.number_of_rand(), cfg.spread()).unwrap()
+    MetropolisHastingsDeltaDiagnostic::new(cfg.number_of_rand(), cfg.spread()).expect("Invalide Configuration")
 }
 
+/// Run a simulation with a progress bar
 pub fn run_simulation_with_progress_bar(
     config: &SimConfig,
     inital_state : LatticeStateDefault,
@@ -48,9 +52,6 @@ pub fn run_simulation_with_progress_bar(
     
     
     pb_th.set_prefix("simulation");
-    pb_th.reset_eta();
-    //pb_th.reset();
-    //pb_th.set_length((config.number_of_averages() * config.number_of_steps_between_average()) as u64);
     pb_th.tick();
     
     let mut return_data = vec![];

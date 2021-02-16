@@ -103,14 +103,16 @@ pub trait LatticeStateNew where Self: LatticeState + Sized {
 pub trait LatticeHamiltonianSimulationState
     where Self: Sized + Sync + LatticeState + core::fmt::Debug
 {
-    /// reset the e_field with radom value distributed as N(0, 1) [`rand_distr::StandardNormal`].
+    /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
+    /// # Panic
+    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
     fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
         // &rand_distr::StandardNormal
         // TODO verify
-        let d = rand_distr::Normal::new(0.0, 1_f64 / self.beta()).unwrap();
+        let d = rand_distr::Normal::new(0.0, 1_f64 / self.beta()).expect("Distribution not valide, check beta");
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
         if self.lattice().get_number_of_points() != new_e_field.len() {
-            unreachable!()
+            panic!("Length of EField not compatible")
         }
         self.set_e_field(new_e_field);
     }
@@ -148,12 +150,14 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
     /// Create a new simulation state
     fn new(lattice: LatticeCyclique, beta: Real, e_field: EField, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
     
-    /// Ceate a new state with e_field randomly distributed as [`rand_distr::StandardNormal`]
+    /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
+    /// # Panic
+    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
     fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
     {
         // TODO verify
         // rand_distr::StandardNormal
-        let d = rand_distr::Normal::new(0.0, 1_f64 / beta).unwrap();
+        let d = rand_distr::Normal::new(0.0, 1_f64 / beta).expect("Distribution not valide, check Beta.");
         let e_field = EField::new_deterministe(&lattice, rng, &d);
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
@@ -373,6 +377,8 @@ impl LatticeState for LatticeStateDefault{
     }
     
     /// Get the default pure gauge Hamiltonian.
+    /// # Panic
+    /// Panic if plaquettes cannot be found
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
@@ -381,7 +387,7 @@ impl LatticeState for LatticeStateDefault{
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
-                            .unwrap().trace().real() / Self::CA
+                            .expect("Plaquette not found").trace().real() / Self::CA
                     }).sum::<Real>()
             }).sum::<Real>()
         }).sum::<Real>() * self.beta()
@@ -547,6 +553,8 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     }
     
     /// Get the Hamiltonian of the state.
+    /// # Panic
+    /// Panic if plaquettes cannot be found
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
@@ -555,7 +563,7 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
-                            .unwrap().trace().real() / Self::CA
+                            .expect("Plaquette not found").trace().real() / Self::CA
                     }).sum::<Real>()
             }).sum::<Real>()
         }).sum::<Real>() * self.beta()
@@ -579,11 +587,13 @@ impl LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateS
 #[allow(deprecated)]
 impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync {
     
+    /// # Panic
+    /// Panic if EField cannot be found
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::POSITIVES.iter().map(|dir_i| {
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found").to_matrix();
                 (e_i * e_i).trace().real()
             }).sum::<Real>()
         }).sum::<Real>() * self.beta()
@@ -766,10 +776,10 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
         &self.lattice_state
     }
     
+    /// # Panic
+    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
     pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
-        // TODO verify
-        // rand_distr::StandardNormal
-        let d = rand_distr::Normal::new(0.0, 1_f64 / lattice_state.beta()).unwrap();
+        let d = rand_distr::Normal::new(0.0, 1_f64 / lattice_state.beta()).expect("Distribution not valide, check Beta.");
         let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d);
         Self{lattice_state, e_field, t: 0}
     }
@@ -782,11 +792,12 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
 
 /// This is an sync State
 impl<State> SimulationStateSynchrone for LatticeHamiltonianSimulationStateSyncDefault<State>
-    where State: LatticeState + Clone
+    where State: LatticeState + Clone,
+    Self: LatticeHamiltonianSimulationState,
 {}
 
 impl<State> LatticeState for LatticeHamiltonianSimulationStateSyncDefault<State>
-    where State: LatticeState
+    where State: LatticeState,
 {
     
     fn link_matrix(&self) -> &LinkMatrix{
@@ -815,7 +826,8 @@ impl<State> LatticeState for LatticeHamiltonianSimulationStateSyncDefault<State>
 }
 
 impl<State> LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulationStateSyncDefault<State>
-    where State: LatticeState + LatticeStateNew
+    where State: LatticeState + LatticeStateNew,
+    Self: LatticeHamiltonianSimulationState,
 {
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
@@ -828,8 +840,7 @@ impl<State> LatticeHamiltonianSimulationStateNew for LatticeHamiltonianSimulatio
     }
 }
 
-impl<State> LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSyncDefault<State>
-    where State: LatticeState
+impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault>
 {
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {

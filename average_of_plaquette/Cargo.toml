@@ -18,3 +18,4 @@ indicatif = { version = "0.15.0", features = ["rayon"] }
 plotters = "0.3"
 rayon = "1.5.0"
 serde_json = "*"
+rand_xoshiro = "0.6"

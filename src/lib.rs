@@ -16,6 +16,50 @@
 //! ## Goal
 //! The goal is to provide an easy to use, fast and safe library to do classical lattice simulation.
 //!
+//! ## Discussion about Random Number Generators (RNGs)
+//!
+//! This library use the trait [`rand::RngCore`] any time a random number generator.
+//! The choice of RNG is up to the user of the library. However there is a few trade offs to consider.
+//!
+//! Let us break the different generator into cathegories.
+//! For more details see (https://rust-random.github.io/book/guide-gen.html)
+//!
+//! Some of thge choice possible.
+//! - [`rand::rngs::ThreadRng`] a CSPRNG. The data is not repoducible but it is resseded often so more entropy can be extracted.
+//! - [`rand::rngs::StdRng`] Non-cryptographic, can be seeded but it is a cylclique RNG. So a limited ammount entropy can be extracted. It is deterministique but not repoducible between platform. It is Fast.
+//! - [`rand_jitter`](https://docs.rs/rand_jitter/0.3.0/rand_jitter/) True RNG but very slow.
+//!
+//! Another example
+//! ```ignore
+//! use rand::rngs::adapter::ReseedingRng;
+//! use rand::rngs::StdRng;
+//! use rand_jitter::JitterRng;
+//!
+//! fn get_nstime() -> u64 {
+//!     use std::time::{SystemTime, UNIX_EPOCH};
+//!
+//!     let dur = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+//!     // The correct way to calculate the current time is
+//!     // `dur.as_secs() * 1_000_000_000 + dur.subsec_nanos() as u64`
+//!     // But this is faster, and the difference in terms of entropy is
+//!     // negligible (log2(10^9) == 29.9).
+//!     dur.as_secs() << 30 | dur.subsec_nanos() as u64
+//! }
+//!
+//!
+//! # fn main() -> Result<(), rand_jitter::TimerError> {
+//! let mut rng_jitter = JitterRng::new_with_timer(get_nstime);
+//! let rounds = rng_jitter.test_timer()?;
+//! rng_jitter.set_rounds(rounds);
+//! let mut rng = ReseedingRng::new(StdRng::from_entropy(), 2.pow(12), rng_jitter);
+//! # Ok(())
+//! # }
+//! ```
+//! Which provide a true RNG with PNRG bias correction which is decently fast.
+//! (Note that this is not a cryptographic secure RNG but this is not a concern for this library)
+//!
+//! However the best case is to use [Xoshiro256PlusPlus](https://docs.rs/rand_xoshiro/0.6.0/rand_xoshiro/struct.Xoshiro256PlusPlus.html) which have good performance and stastistical quality.
+//!
 //! # Examples
 //! ```
 //! use lattice_qcd_rs::{

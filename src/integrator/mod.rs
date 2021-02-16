@@ -110,15 +110,15 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) 
     where State: LatticeHamiltonianSimulationState,
 {
     let canonical_link = LatticeLink::from(*link);
-    let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).unwrap();
-    initial_value + l.get_derivatives_u(link).unwrap() * Complex::from(delta_t)
+    let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).expect("Link matrix not found");
+    initial_value + l.get_derivatives_u(link).expect("Derivative not found") * Complex::from(delta_t)
 }
 
 /// function for "Electrical" field intregration
 fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector4<Su3Adjoint>
     where State: LatticeHamiltonianSimulationState,
 {
-    let initial_value = *l.e_field().get_e_vec(point, l.lattice()).unwrap();
-    let deriv = l.get_derivative_e(point).unwrap();
+    let initial_value = *l.e_field().get_e_vec(point, l.lattice()).expect("E Field not found");
+    let deriv = l.get_derivative_e(point).expect("Derivative not found");
     initial_value + deriv.map(|el| el * delta_t)
 }

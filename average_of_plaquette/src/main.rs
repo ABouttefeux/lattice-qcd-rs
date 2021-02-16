@@ -2,6 +2,7 @@ use average_of_plaquette::{
     sim::*,
     config_scan::*,
     data_analysis::*,
+    rng::*,
  };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 /*use rand::{
@@ -72,7 +73,7 @@ fn main() {
     pb.tick();
     
     let result = array_config.par_iter().map(|cfg| {
-        let mut rng = rand::thread_rng();
+        let mut rng = get_rand_from_seed(0xd64beffd9fc8b2a4);
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
         let (av, sim_final) = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, &mut rng);
         let _ = save_data(cfg, &sim_final);

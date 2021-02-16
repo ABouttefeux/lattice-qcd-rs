@@ -1,10 +1,13 @@
 
+//! Configuration for simulation
+
 use serde::{Serialize, Deserialize};
 
 use lattice_qcd_rs::{
     Real,
 };
 
+/// Configuration for the lattice
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct LatticeConfig {
     lattice_beta: Real,
@@ -36,6 +39,7 @@ impl LatticeConfig {
     
 }
 
+/// Configuration for the simulation
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct SimConfig {
     number_of_thermalisation: usize,
@@ -111,6 +115,7 @@ impl SimConfig {
     }
 }
 
+/// Configuration for the Monte Carlo algorithm
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct MonteCarloConfig {
     number_of_rand: usize,
@@ -136,6 +141,7 @@ impl MonteCarloConfig {
     }
 }
 
+/// Configuration for the lattice and simulation
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct Config {
     lattice_config: LatticeConfig,

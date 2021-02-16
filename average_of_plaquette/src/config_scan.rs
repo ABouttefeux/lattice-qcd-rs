@@ -1,4 +1,8 @@
 
+//! module containing the configuration scan.
+//!
+//! COnfiguration scan is a set of configurations to run the simulation with grouped together.
+
 use serde::{Serialize, Deserialize};
 
 use lattice_qcd_rs::{
@@ -6,14 +10,15 @@ use lattice_qcd_rs::{
 };
 use super::config::*;
 
-
+/// Type that either contain a default value of a vector of values
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ScanPossibility<Type> {
     Default(Type),
     Vector(Vec<Type>),
 }
 
-impl<T> ScanPossibility<T>{
+impl<T> ScanPossibility<T> {
+    /// Return the number of ellement
     pub fn len(&self) -> usize {
         match self {
             ScanPossibility::Default(_) => 1,
@@ -21,6 +26,10 @@ impl<T> ScanPossibility<T>{
         }
     }
     
+    /// Return Some(length) if this is a ScanPossibility::Vector otherwise None.
+    ///
+    /// The reason to use this is that a ScanPossibility::Vector defines the number of ellement
+    /// and a defaut values can be use in conjonction with any number of ellement
     pub fn len_option(&self) -> Option<usize> {
         match self {
             ScanPossibility::Default(_) => None,
@@ -28,6 +37,7 @@ impl<T> ScanPossibility<T>{
         }
     }
     
+    /// Return wether there is no ellement
     pub fn is_empty(&self) -> bool {
         match self {
             ScanPossibility::Default(_) => false,
@@ -35,6 +45,8 @@ impl<T> ScanPossibility<T>{
         }
     }
     
+    /// Get the value at position `pos`.
+    /// If the value is ScanPossibility::Default, it always return the `Some(&value)`
     pub fn get(&self, pos: usize) -> Option<&T> {
         match self {
             ScanPossibility::Default(t) => Some(&t),
@@ -42,6 +54,7 @@ impl<T> ScanPossibility<T>{
         }
     }
     
+    /// Test if all variable match the closure
     pub fn all<F>(&self, mut f: F) -> bool
         where F: FnMut(&T) -> bool,
     {
@@ -64,6 +77,7 @@ impl<T> From<Vec<T>> for ScanPossibility<T> {
     }
 }
 
+/// Scan over `LatticeConfig`
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LatticeConfigScan {
     lattice_beta: ScanPossibility<Real>,

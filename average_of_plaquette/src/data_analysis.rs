@@ -1,4 +1,5 @@
 
+//! Data analysis and saving to files
 
 use lattice_qcd_rs::{
     Real,
@@ -12,7 +13,7 @@ use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
 
-
+/// Data point for an average
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct AverageDataPoint {
     average: Real,
@@ -33,6 +34,7 @@ impl AverageDataPoint {
     }
 }
 
+/// Vector of average
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AverageData {
     data: Vec<AverageDataPoint>,
@@ -44,6 +46,7 @@ impl AverageData{
         Self {data, final_average: None}
     }
     
+    /// Average over all average data point
     pub fn final_average(&mut self) -> Real {
         match self.final_average {
             Some(i) => i,
@@ -62,6 +65,8 @@ impl AverageData{
     }
 }
 
+/// Write result to csv "result.csv"
+#[allow(clippy::ptr_arg)]
 pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Result<()> {
     
     let file = File::create("result.csv")?;
@@ -76,6 +81,7 @@ pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Res
     Ok(())
 }
 
+/// Plot data to "plot_beta.svg"
 pub fn plot_data(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
     
     let betas = data.iter().map(|(cfg, _)| cfg.lattice_config().lattice_beta()).collect::<Vec<f64>>();
@@ -109,6 +115,7 @@ fn plot_data_beta(betas: &[f64], avg: &[f64]) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+/// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
 pub fn save_data(cfg: &Config, state: &LatticeStateDefault) -> std::io::Result<()> {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta()))?;

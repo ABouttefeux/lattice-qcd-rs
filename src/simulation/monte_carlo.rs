@@ -129,6 +129,7 @@ impl<T, State, Rng> MonteCarlo<State> for MCWrapper<T, State, Rng>
 #[derive(Clone, Debug, PartialEq)]
 pub struct HybridMonteCarlo<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -138,6 +139,7 @@ pub struct HybridMonteCarlo<State, Rng, I>
 
 impl<State, Rng, I> HybridMonteCarlo<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -165,6 +167,7 @@ impl<State, Rng, I> HybridMonteCarlo<State, Rng, I>
 
 impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarlo<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -233,6 +236,7 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
 #[derive(Clone, Debug, PartialEq)]
 pub struct HybridMonteCarloDiagnostic<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -242,6 +246,7 @@ pub struct HybridMonteCarloDiagnostic<State, Rng, I>
 
 impl<State, Rng, I> HybridMonteCarloDiagnostic<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -277,6 +282,7 @@ impl<State, Rng, I> HybridMonteCarloDiagnostic<State, Rng, I>
 
 impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarloDiagnostic<State, Rng, I>
     where State: LatticeState + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
     I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
     Rng: rand::Rng,
 {
@@ -505,15 +511,15 @@ impl MetropolisHastingsDeltaDiagnostic {
         })
     }
     
-    pub fn prob_replace_last(&self) -> Real {
+    pub const fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
     
-    pub fn has_replace_last(&self) -> bool {
+    pub const fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
     
-    pub fn delta_s(&self) -> Real {
+    pub const fn delta_s(&self) -> Real {
         self.delta_s
     }
     

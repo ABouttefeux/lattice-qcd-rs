@@ -183,18 +183,9 @@ impl Su3Adjoint {
     }
 }
 
-impl Mul<Real> for Su3Adjoint {
-    type Output = Self;
-    fn mul(mut self, rhs: Real) -> Self::Output {
-        self *= rhs;
-        self
-    }
-}
-
-impl Mul<Su3Adjoint> for Real {
-    type Output = Su3Adjoint;
-    fn mul(self, rhs: Su3Adjoint) -> Self::Output {
-        rhs * self
+impl AddAssign for Su3Adjoint {
+    fn add_assign(&mut self, other: Self) {
+        self.data += other.data()
     }
 }
 
@@ -206,9 +197,24 @@ impl Add<Su3Adjoint> for Su3Adjoint {
     }
 }
 
-impl AddAssign for Su3Adjoint {
-    fn add_assign(&mut self, other: Self) {
-        self.data += other.data()
+impl Add<&Su3Adjoint> for Su3Adjoint {
+    type Output = Self;
+    fn add(self, rhs: &Self) -> Self::Output{
+        self + *rhs
+    }
+}
+
+impl Add<Su3Adjoint> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn add(self, rhs: Su3Adjoint) -> Self::Output{
+        rhs + self
+    }
+}
+
+impl Add<&Su3Adjoint> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn add(self, rhs: &Su3Adjoint) -> Self::Output{
+        self + *rhs
     }
 }
 
@@ -218,6 +224,74 @@ impl MulAssign<f64> for Su3Adjoint {
     }
 }
 
+impl Mul<Real> for Su3Adjoint {
+    type Output = Self;
+    fn mul(mut self, rhs: Real) -> Self::Output {
+        self *= rhs;
+        self
+    }
+}
+
+impl Mul<&Real> for Su3Adjoint {
+    type Output = Self;
+    fn mul(self, rhs: &Real) -> Self::Output {
+        self * (*rhs)
+    }
+}
+
+impl Mul<Real> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: Real) -> Self::Output {
+        *self * rhs
+    }
+}
+
+impl Mul<&Real> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: &Real) -> Self::Output {
+        *self * rhs
+    }
+}
+
+impl Mul<Su3Adjoint> for Real {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: Su3Adjoint) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<&Su3Adjoint> for Real {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: &Su3Adjoint) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<Su3Adjoint> for &Real {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: Su3Adjoint) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<&Su3Adjoint> for &Real {
+    type Output = Su3Adjoint;
+    fn mul(self, rhs: &Su3Adjoint) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl DivAssign<f64> for Su3Adjoint {
+    fn div_assign(&mut self, rhs: f64) {
+        self.data /= rhs;
+    }
+}
+
+impl DivAssign<&f64> for Su3Adjoint {
+    fn div_assign(&mut self, rhs: &f64) {
+        self.data /= *rhs;
+    }
+}
 
 impl Div<Real> for Su3Adjoint {
     type Output = Self;
@@ -227,9 +301,30 @@ impl Div<Real> for Su3Adjoint {
     }
 }
 
-impl DivAssign<f64> for Su3Adjoint {
-    fn div_assign(&mut self, rhs: f64) {
-        self.data /= rhs;
+impl Div<&Real> for Su3Adjoint {
+    type Output = Self;
+    fn div(self, rhs: &Real) -> Self::Output {
+        self / (*rhs)
+    }
+}
+
+impl Div<Real> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn div(self, rhs: Real) -> Self::Output {
+        *self / rhs
+    }
+}
+
+impl Div<&Real> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn div(self, rhs: &Real) -> Self::Output {
+        *self / rhs
+    }
+}
+
+impl SubAssign for Su3Adjoint {
+    fn sub_assign(&mut self, other: Self) {
+        self.data -= other.data()
     }
 }
 
@@ -241,14 +336,36 @@ impl Sub<Su3Adjoint> for Su3Adjoint {
     }
 }
 
-impl SubAssign for Su3Adjoint {
-    fn sub_assign(&mut self, other: Self) {
-        self.data -= other.data()
+impl Sub<&Su3Adjoint> for Su3Adjoint {
+    type Output = Self;
+    fn sub(self, rhs: &Self) -> Self::Output{
+        self - *rhs
+    }
+}
+
+impl Sub<Su3Adjoint> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn sub(self, rhs: Su3Adjoint) -> Self::Output{
+        rhs - self
+    }
+}
+
+impl Sub<&Su3Adjoint> for &Su3Adjoint {
+    type Output = Su3Adjoint;
+    fn sub(self, rhs: &Su3Adjoint) -> Self::Output{
+        *self - rhs
     }
 }
 
 impl Neg for Su3Adjoint {
     type Output = Self;
+    fn neg(self) -> Self::Output {
+        Su3Adjoint::new(- self.data)
+    }
+}
+
+impl Neg for &Su3Adjoint {
+    type Output = Su3Adjoint;
     fn neg(self) -> Self::Output {
         Su3Adjoint::new(- self.data)
     }
@@ -306,6 +423,12 @@ impl From<Vector8<Real>> for Su3Adjoint {
 
 impl From<Su3Adjoint> for Vector8<Real> {
     fn from(v: Su3Adjoint) -> Self {
+        v.data
+    }
+}
+
+impl From<&Su3Adjoint> for Vector8<Real> {
+    fn from(v: &Su3Adjoint) -> Self {
         v.data
     }
 }

@@ -9,11 +9,12 @@ extern crate bincode;
 extern crate serde;
 extern crate serde_json;
 extern crate csv;
-
+extern crate rand_xoshiro;
 
 pub mod config;
 pub mod sim;
 pub mod config_scan;
 pub mod data_analysis;
+pub mod rng;
 #[cfg(test)]
 mod test;
