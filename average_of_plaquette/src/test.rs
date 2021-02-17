@@ -1,5 +1,4 @@
 use super::{
-    config::*,
     config_scan::*,
 };
 

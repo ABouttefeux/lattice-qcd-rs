@@ -24,41 +24,14 @@
 //! Let us break the different generator into cathegories.
 //! For more details see (https://rust-random.github.io/book/guide-gen.html)
 //!
-//! Some of thge choice possible.
-//! - [`rand::rngs::ThreadRng`] a CSPRNG. The data is not repoducible but it is resseded often so more entropy can be extracted.
-//! - [`rand::rngs::StdRng`] Non-cryptographic, can be seeded but it is a cylclique RNG. So a limited ammount entropy can be extracted. It is deterministique but not repoducible between platform. It is Fast.
-//! - [`rand_jitter`](https://docs.rs/rand_jitter/0.3.0/rand_jitter/) True RNG but very slow.
-//!
-//! Another example
-//! ```ignore
-//! use rand::rngs::adapter::ReseedingRng;
-//! use rand::rngs::StdRng;
-//! use rand_jitter::JitterRng;
-//!
-//! fn get_nstime() -> u64 {
-//!     use std::time::{SystemTime, UNIX_EPOCH};
-//!
-//!     let dur = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-//!     // The correct way to calculate the current time is
-//!     // `dur.as_secs() * 1_000_000_000 + dur.subsec_nanos() as u64`
-//!     // But this is faster, and the difference in terms of entropy is
-//!     // negligible (log2(10^9) == 29.9).
-//!     dur.as_secs() << 30 | dur.subsec_nanos() as u64
-//! }
-//!
-//!
-//! # fn main() -> Result<(), rand_jitter::TimerError> {
-//! let mut rng_jitter = JitterRng::new_with_timer(get_nstime);
-//! let rounds = rng_jitter.test_timer()?;
-//! rng_jitter.set_rounds(rounds);
-//! let mut rng = ReseedingRng::new(StdRng::from_entropy(), 2.pow(12), rng_jitter);
-//! # Ok(())
-//! # }
-//! ```
-//! Which provide a true RNG with PNRG bias correction which is decently fast.
-//! (Note that this is not a cryptographic secure RNG but this is not a concern for this library)
-//!
-//! However the best case is to use [Xoshiro256PlusPlus](https://docs.rs/rand_xoshiro/0.6.0/rand_xoshiro/struct.Xoshiro256PlusPlus.html) which have good performance and stastistical quality.
+//! Some of the possible choice :
+//! - **Recomanded** [`rand_xoshiro::Xoshiro256PlusPlus`](https://docs.rs/rand_xoshiro/0.6.0/rand_xoshiro/struct.Xoshiro256PlusPlus.html)
+//! Non-cryptographic. It has good performance and stastistical quality, reproducible, and has useful `jump` function.
+//! It is the recomanded PRNG.
+//! - [`rand::rngs::ThreadRng`] a CSPRNG. The data is not repoducible and it is resseded often. It is however slow.
+//! - [`rand::rngs::StdRng`] cryptographic secure, can be seeded.
+//! It is deterministique but not repoducible between platform. It is however slow.
+//! - [`rand_jitter::JitterRng`](https://docs.rs/rand_jitter/0.3.0/rand_jitter/) True RNG but very slow.
 //!
 //! # Examples
 //! ```
@@ -77,7 +50,7 @@
 //!
 //! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
-//! let mut mc = MCWrapper::new(MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
 //!
 //! let number_of_sims = 100;
 //! for _ in 0..number_of_sims / 10 {

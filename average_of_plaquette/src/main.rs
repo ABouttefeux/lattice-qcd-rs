@@ -72,10 +72,13 @@ fn main() {
     });
     pb.tick();
     
-    let result = array_config.par_iter().map(|cfg| {
-        let mut rng = get_rand_from_seed(0xd64beffd9fc8b2a4);
+    let result = array_config.par_iter().enumerate().map(|(index, cfg)| {
+        let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
+        for _ in 0..index{
+            rng.jump();
+        }
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
-        let (av, sim_final) = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, &mut rng);
+        let (av, sim_final, _) = run_simulation_with_progress_bar(cfg.sim_config(), sim_init, &multi_pb, rng);
         let _ = save_data(cfg, &sim_final);
         pb.inc(1);
         (*cfg, av)

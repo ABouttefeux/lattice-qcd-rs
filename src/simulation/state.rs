@@ -15,6 +15,7 @@ use super::{
             LatticePoint,
             LatticeLinkCanonical,
             Direction,
+            LatticeElementToIndex,
         },
         thread::{
             ThreadError
@@ -339,6 +340,10 @@ impl LatticeStateDefault {
     /// see [`LinkMatrix::normalize`].
     pub fn normalize_link_matrices(&mut self) {
         self.link_matrix.normalize()
+    }
+    
+    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical) -> &mut CMatrix3 {
+        &mut self.link_matrix[link.to_index(&self.lattice)]
     }
 }
 

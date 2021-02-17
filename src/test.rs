@@ -393,24 +393,3 @@ fn random_su3(){
         test_matrix_is_su3(&get_random_su3(&mut rng));
     }
 }
-
-#[test]
-fn test_mh_delta(){
-    let mut rng = rand::thread_rng();
-    
-    let size = 1_000_f64;
-    let number_of_pts = 4;
-    let beta = 2_f64;
-    let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
-    
-    let mut mcd = MetropolisHastingsDeltaDiagnostic::new(1, 0.01).unwrap();
-    for _ in 0..10 {
-        let simulation2 = mcd.get_potential_next_element(&simulation, &mut rng).unwrap();
-        println!("ds {}, dh {}", mcd.delta_s(), -simulation.get_hamiltonian_links() + simulation2.get_hamiltonian_links());
-        assert!(
-            ((-mcd.delta_s()).exp().min(1_f64).max(0_f64) -
-            MetropolisHastingsDeltaDiagnostic::get_probability_of_replacement(&simulation, &simulation2)).abs() < 1E-8_f64
-        );
-        simulation = simulation2;
-    }
-}

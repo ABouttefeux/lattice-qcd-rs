@@ -121,6 +121,7 @@ fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
     simulation
 }
 
+#[allow(dead_code)]
 fn simulate_with_log_subblock(mut simulation: LatticeStateDefault, mc: &mut impl MonteCarlo<LatticeStateDefault> , number_of_sims: u64) -> LatticeStateDefault {
     let pb = ProgressBar::new(number_of_sims);
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -144,7 +145,7 @@ fn simulate_with_log_subblock(mut simulation: LatticeStateDefault, mc: &mut impl
     simulation
 }
 
-
+#[allow(clippy::mutex_atomic)]
 fn simulate_loop_with_input<MC>(
     mut simulation: LatticeStateDefault,
     mc: &mut MC,
@@ -271,20 +272,20 @@ fn sim_dmh() {
     let spread_parameter = 0.5;
     let number_of_rand = 10;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
-    let mut mh = MCWrapper::new(MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
     let number_of_sims = 1000;
     let sub_block = 100;
     
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim, mc : &MCWrapper<MetropolisHastingsDeltaDiagnostic, LatticeStateDefault, ThreadRng>| {
+        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<ThreadRng>| {
             let average = sim.average_trace_plaquette().unwrap().real();
-            format!("A {:.6},P {:.2}", average, mc.mcd().prob_replace_last())
+            format!("A {:.6},P {:.2}", average, mc.prob_replace_last())
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
-        
+    
     println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());
 }
