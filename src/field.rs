@@ -26,6 +26,8 @@ use super::{
 use na::{
     Matrix3,
     Vector4,
+    base::dimension::Dim,
+    ComplexField,
 };
 use  std::{
     ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
@@ -526,7 +528,7 @@ impl LinkMatrix {
     
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
-    pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique)-> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))? ;
         if link.is_dir_negative() {
@@ -697,6 +699,86 @@ impl EField {
     
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+    
+    pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint, lattice: &LatticeCyclique) -> Option<CMatrix3> {
+        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            return None
+        }
+        Direction::POSITIVES.iter().map(|dir| {
+            let e_i = self.get_e_field(point, dir, lattice)?;
+            let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, - *dir), lattice)?;
+            let p_mi = lattice.add_point_direction(*point, - dir);
+            let e_m_i = self.get_e_field(&p_mi, dir, lattice)?;
+            Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
+        }).sum::<Option<CMatrix3>>()
+    }
+    
+    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Option<Real> {
+        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            return None;
+        }
+        let sum = lattice.get_points().par_bridge().map(|point| {
+            self.get_gauss(link_matrix, &point, lattice).map(|el| (su3::GENERATORS.iter().copied().sum::<CMatrix3>() * el).trace().abs())
+        }).sum::<Option<Real>>()?;
+        Some(sum)
+    }
+    
+    /// project to that the gauss law is approximatively respected ( up to  `f64::EPSILON * 10` per point)
+    pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Option<Self> {
+        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+            return None;
+        }
+        let mut return_val = self.project_to_gauss_step(link_matrix, lattice);
+        loop {
+            let val_dif = return_val.get_gauss_sum_div(link_matrix, lattice)?;
+            //println!("{}", val_dif);
+            if val_dif.is_nan() {
+                return None;
+            }
+            if val_dif<= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
+                break;
+            }
+            for _ in 0..10 {
+                return_val = return_val.project_to_gauss_step(link_matrix, lattice);
+                //println!("{}", return_val[0][0][0]);
+            }
+        }
+        Some(return_val)
+    }
+    
+    /// Done one step to project to gauss law
+    /// # Panic
+    /// panics if the link matric and lattice is not of the correct size.
+    fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Self {
+        /// see https://arxiv.org/pdf/1512.02374.pdf
+        // TODO verify
+        const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
+        let data = lattice.get_points().collect::<Vec<LatticePoint>>().par_iter().map(|point| {
+            let e = self.get_e_vec(&point, lattice).unwrap();
+            Vector4::from_iterator(Direction::POSITIVES.iter().map( |dir| {
+                let u = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice).unwrap();
+                let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
+                let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, dir), lattice).unwrap();
+                Su3Adjoint::new(Vector8::from_iterator((0..8).map(|index| {
+                    2_f64 * ( su3::GENERATORS[index] * (( u * gauss * u.adjoint() * gauss_p - gauss) * K + su3::GENERATORS[index] * na::Complex::from(e[dir.to_index()][index]) )).trace().real()
+                })))
+            }))
+        }).collect();
+        Self::new(data)
+    }
+}
+
+impl Index<usize> for EField {
+    type Output = Vector4<Su3Adjoint>;
+    fn index(&self, pos: usize) -> &Self::Output{
+        &self.data[pos]
+    }
+}
+
+impl IndexMut<usize> for EField {
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+        &mut self.data[pos]
     }
 }
 

@@ -105,7 +105,7 @@ fn test_leap_frog() {
 }
 
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
-    let size = 1000_f64;
+    let size = 10_000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;
     let spinner = ProgressBar::new_spinner();
@@ -208,7 +208,7 @@ fn sim_hmc() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let delta_t = 0.075_f64;
+    let delta_t = 0.00075_f64;
     let number_of_step = 100;
     //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
     let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);

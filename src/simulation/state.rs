@@ -106,16 +106,16 @@ pub trait LatticeHamiltonianSimulationState
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
     /// # Panic
-    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
+    /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
         // &rand_distr::StandardNormal
         // TODO verify
-        let d = rand_distr::Normal::new(0.0, 1_f64 / self.beta()).expect("Distribution not valide, check beta");
+        let d = rand_distr::Normal::new(0.0, 0.5_f64 / self.beta()).expect("Distribution not valide, check beta");
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
         if self.lattice().get_number_of_points() != new_e_field.len() {
             panic!("Length of EField not compatible")
         }
-        self.set_e_field(new_e_field);
+        self.set_e_field(new_e_field.project_to_gauss(self.link_matrix(), self.lattice()).unwrap());
     }
     
     /// The "Electrical" field of this state.
@@ -153,13 +153,13 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
     
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Panic
-    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
+    /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     fn new_random_e(lattice: LatticeCyclique, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
     {
         // TODO verify
         // rand_distr::StandardNormal
-        let d = rand_distr::Normal::new(0.0, 1_f64 / beta).expect("Distribution not valide, check Beta.");
-        let e_field = EField::new_deterministe(&lattice, rng, &d);
+        let d = rand_distr::Normal::new(0.0, 0.5_f64 / beta).expect("Distribution not valide, check Beta.");
+        let e_field = EField::new_deterministe(&lattice, rng, &d).project_to_gauss(&link_matrix, &lattice).unwrap();
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
 }
@@ -521,13 +521,7 @@ impl LatticeHamiltonianSimulationStateSync {
     
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
-        Direction::DIRECTIONS.iter().map(|dir| {
-            let e_i = self.e_field().get_e_field(point, dir, self.lattice())?;
-            let u_mi = self.link_matrix().get_matrix(&LatticeLink::new(*point, - *dir), self.lattice())?;
-            let p_mi = self.lattice().add_point_direction(*point, & - *dir);
-            let e_m_i = self.e_field().get_e_field(&p_mi, dir, self.lattice())?;
-            Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
-        }).sum::<Option<CMatrix3>>()
+        self.e_field().get_gauss(self.link_matrix(), point, self.lattice())
     }
 }
 
@@ -670,6 +664,10 @@ impl<State> SimulationStateLeap<State>
         s.simulate_to_leapfrog(delta_t, integrator)
     }
     
+    /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
+    pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
+        self.e_field().get_gauss(self.link_matrix(), point, self.lattice())
+    }
 }
 
 /// This state is a leap frog state
@@ -769,16 +767,26 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
     }
     
     /// # Panic
-    /// Panics if N(0, 1/beta ) is not a valide distribution (for exampple beta = 0)
+    /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
-        let d = rand_distr::Normal::new(0.0, 1_f64 / lattice_state.beta()).expect("Distribution not valide, check Beta.");
-        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d);
+        let d = rand_distr::Normal::new(0.0, 0.5_f64 / lattice_state.beta()).expect("Distribution not valide, check Beta.");
+        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d).project_to_gauss(lattice_state.link_matrix(), lattice_state.lattice()).unwrap();
         Self{lattice_state, e_field, t: 0}
     }
     
     pub fn new_e_cold(lattice_state: State) -> Self {
         let e_field = EField::new_cold(&lattice_state.lattice());
         Self{lattice_state, e_field, t: 0}
+    }
+}
+
+impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
+    where Self: LatticeHamiltonianSimulationState,
+    State: LatticeState,
+{
+    /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
+    pub fn get_gauss(&self, point: &LatticePoint) -> Option<CMatrix3> {
+        self.e_field.get_gauss(self.link_matrix(), point, self.lattice())
     }
 }
 

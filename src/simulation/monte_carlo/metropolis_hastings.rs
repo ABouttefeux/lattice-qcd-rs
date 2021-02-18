@@ -245,7 +245,7 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
         self.delta_s = 0_f64;
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
         let d_d = rand::distributions::Uniform::new(0, 4);
-        let mut return_val = vec![];
+        let mut return_val = Vec::with_capacity(self.number_of_update);
         
         (0..self.number_of_update).for_each(|_| {
             let point = LatticePoint::new([

@@ -145,6 +145,22 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });
     groupe_sim.finish();
+    
+    let mut groupe_gauss_proj = c.benchmark_group("Gauss Projection");
+    groupe_gauss_proj.sample_size(10);
+    
+    let array_size: [usize; 4] = [2, 4, 8, 10];
+    for n in array_size.iter() {
+        groupe_gauss_proj.bench_with_input(BenchmarkId::new("size", n), n,
+            |b,i| b.iter(|| {
+                let mut state = LatticeStateDefault::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
+                let d = rand_distr::Normal::new(0.0, 0.5_f64).unwrap();
+                let e_field = EField::new_deterministe(state.lattice(), &mut rng, &d);
+                e_field.project_to_gauss(state.link_matrix(), state.lattice());
+            })
+        );
+    }
+    groupe_gauss_proj.finish();
 }
 
 fn benchmark_base(c: &mut Criterion) {
