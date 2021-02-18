@@ -130,7 +130,7 @@ pub trait LatticeHamiltonianSimulationState
     fn t(&self) -> usize;
     
     /// get the derivative \partial_t U(link)
-    fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
+    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
     /// get the derivative \partial_t E(point)
     fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>>;
     
@@ -342,8 +342,15 @@ impl LatticeStateDefault {
         self.link_matrix.normalize()
     }
     
-    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical) -> &mut CMatrix3 {
-        &mut self.link_matrix[link.to_index(&self.lattice)]
+    /// Get a mutable reference to the link matrix at `link`
+    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical) -> Option<&mut CMatrix3> {
+        let index = link.to_index(&self.lattice);
+        if index < self.link_matrix.len(){
+            Some(&mut self.link_matrix[index])
+        }
+        else{
+            None
+        }
     }
 }
 
@@ -359,10 +366,12 @@ impl LatticeStateNew for LatticeStateDefault {
 impl LatticeState for LatticeStateDefault{
     const CA: Real = 3_f64;
     
-    /// The link matrices of this state.
-    fn link_matrix(&self) -> &LinkMatrix {
-        &self.link_matrix
-    }
+    getter_trait!(
+        /// The link matrices of this state.
+        link_matrix, LinkMatrix
+    );
+    getter_trait!(lattice, LatticeCyclique);
+    getter_copy_trait!(beta, Real);
     
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
@@ -371,14 +380,6 @@ impl LatticeState for LatticeStateDefault{
             panic!("Link matrices are not of the correct size");
         }
         self.link_matrix = link_matrix
-    }
-    
-    fn lattice(&self) -> &LatticeCyclique {
-        &self.lattice
-    }
-    
-    fn beta(&self) -> Real {
-        self.beta
     }
     
     /// Get the default pure gauge Hamiltonian.
@@ -535,10 +536,12 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
     
     const CA: Real = 3_f64;
     
-    /// The link matrices of this state.
-    fn link_matrix(&self) -> &LinkMatrix {
-        &self.link_matrix
-    }
+    getter_trait!(
+        /// The link matrices of this state.
+        link_matrix, LinkMatrix
+    );
+    getter_trait!(lattice, LatticeCyclique);
+    getter_copy_trait!(beta, Real);
     
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
@@ -547,14 +550,6 @@ impl LatticeState for LatticeHamiltonianSimulationStateSync {
             panic!("Link matrices are not of the correct size");
         }
         self.link_matrix = link_matrix
-    }
-    
-    fn lattice(&self) -> &LatticeCyclique {
-        &self.lattice
-    }
-    
-    fn beta(&self) -> Real {
-        self.beta
     }
     
     /// Get the Hamiltonian of the state.
@@ -624,7 +619,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of U_i(x).
-    fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
         let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
         let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
@@ -666,9 +661,7 @@ pub struct SimulationStateLeap<State>
 impl<State> SimulationStateLeap<State>
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState
 {
-    pub fn state(&self) -> &State {
-        &self.state
-    }
+    getter!(state, State);
     
     /// Create a leap state from a sync one by integrating by half a setp the e_field
     pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, SimulationError>
@@ -727,33 +720,27 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
     where State: LatticeHamiltonianSimulationState + SimulationStateSynchrone
 {
     
-    fn get_hamiltonian_efield(&self) -> Real {
-        self.state().get_hamiltonian_efield()
-    }
+    project!(get_hamiltonian_efield, state, Real);
     
-    /// The "Electrical" field of this state.
-    fn e_field(&self) -> &EField {
-        self.state().e_field()
-    }
+    project!(
+        /// The "Electrical" field of this state.
+        e_field, state, &EField
+    );
     
-    /// # Panic
-    /// panic under the same condition as `State::set_e_field`
-    fn set_e_field(&mut self, e_field: EField){
-        self.state.set_e_field(e_field)
-    }
+    project_mut!(
+        /// # Panic
+        /// panic under the same condition as `State::set_e_field`
+        set_e_field, state, (), e_field: EField
+    );
     
-    /// return the time state, i.e. the number of time the simulation ran.
-    fn t(&self) -> usize {
-        self.state().t()
-    }
+    project!(
+        /// return the time state, i.e. the number of time the simulation ran.
+        t, state, usize
+    );
     
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
-        self.state().get_derivative_e(point)
-    }
+    project!(get_derivative_e, state, Option<Vector4<Su3Adjoint>>, point: &LatticePoint);
+    project!(get_derivative_u, state, Option<CMatrix3>, link: &LatticeLinkCanonical);
     
-    fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
-        self.state().get_derivatives_u(link)
-    }
 }
 
 /// wrapper to implement [`LatticeHamiltonianSimulationState`] from a [`LatticeState`] using
@@ -878,7 +865,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of U_i(x).
-    fn get_derivatives_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
         let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
         let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;

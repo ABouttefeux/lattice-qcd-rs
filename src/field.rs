@@ -136,6 +136,7 @@ impl Su3Adjoint {
     /// let m = su3.to_matrix();
     /// assert_eq!(su3.t(), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
     /// ```
+    #[inline]
     pub fn t(&self) -> na::Complex<Real> {
         // todo optimize
         let m = self.to_matrix();
@@ -152,6 +153,7 @@ impl Su3Adjoint {
     /// let m = su3.to_matrix();
     /// assert_eq!(su3.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant());
     /// ```
+    #[inline]
     pub fn d(&self) -> na::Complex<Real> {
         self.to_matrix().determinant() * I
     }
@@ -367,7 +369,7 @@ impl Neg for Su3Adjoint {
 impl Neg for &Su3Adjoint {
     type Output = Su3Adjoint;
     fn neg(self) -> Self::Output {
-        Su3Adjoint::new(- self.data)
+        Su3Adjoint::new(- self.data())
     }
 }
 

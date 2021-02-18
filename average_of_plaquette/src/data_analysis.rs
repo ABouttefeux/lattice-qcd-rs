@@ -13,6 +13,7 @@ use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
 
+
 /// Data point for an average
 #[derive(Clone, Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct AverageDataPoint {
@@ -68,7 +69,6 @@ impl AverageData{
 /// Write result to csv "result.csv"
 #[allow(clippy::ptr_arg)]
 pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Result<()> {
-    
     let file = File::create("result.csv")?;
     let mut wtr = csv::Writer::from_writer(file);
     for (cfg, av) in data {
@@ -81,15 +81,31 @@ pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Res
     Ok(())
 }
 
+pub fn write_data_to_file_csv_with_n(data: &Vec<(Config, AverageData)>) -> std::io::Result<()> {
+    let file = File::create("result.csv")?;
+    let mut wtr = csv::Writer::from_writer(file);
+    for (cfg, av) in data {
+        let mut data_block = vec![
+            cfg.lattice_config().lattice_beta(),
+            cfg.lattice_config().lattice_number_of_points() as f64,
+            av.clone().final_average()
+        ];
+        let mut val = av.data().iter().map(|el| el.average()).collect();
+        data_block.append(&mut val);
+        wtr.serialize(& data_block)?;
+    }
+    wtr.flush()?;
+    Ok(())
+}
+
 /// Plot data to "plot_beta.svg"
-pub fn plot_data(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
+pub fn plot_data_average(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
     
     let betas = data.iter().map(|(cfg, _)| cfg.lattice_config().lattice_beta()).collect::<Vec<f64>>();
     let avg = data.iter().map(|(_, avg)| avg.clone().final_average()).collect::<Vec<f64>>();
     
     plot_data_beta(&betas, &avg)
 }
-
 
 fn plot_data_beta(betas: &[f64], avg: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let root = SVGBackend::new("plot_beta.svg", (640, 480)).into_drawing_area();
@@ -110,6 +126,34 @@ fn plot_data_beta(betas: &[f64], avg: &[f64]) -> Result<(), Box<dyn std::error::
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
     chart.draw_series(betas.iter().zip(avg.iter()).map(|(beta, avg)| {
+        Circle::new((*beta, *avg), 2, BLACK.filled())
+    }))?;
+    Ok(())
+}
+
+pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
+    let root = SVGBackend::new("plot_beta_volume.svg", (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+    
+    let betas_n = data.iter().map(|(cfg, _)| {
+        cfg.lattice_config().lattice_beta() / cfg.lattice_config().lattice_number_of_points() as f64
+    }).collect::<Vec<f64>>();
+    let avg = data.iter().map(|(_, avg)| avg.clone().final_average()).collect::<Vec<f64>>();
+    
+    let mut chart = ChartBuilder::on(&root)
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(60)
+        .build_cartesian_2d(
+            0_f64..betas_n.last().unwrap() * 1.1_f64,
+            0_f64..avg.last().unwrap() * 1.1_f64
+        )?;
+    
+    chart.configure_mesh()
+        .x_desc("Beta / N")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+    chart.draw_series(betas_n.iter().zip(avg.iter()).map(|(beta, avg)| {
         Circle::new((*beta, *avg), 2, BLACK.filled())
     }))?;
     Ok(())

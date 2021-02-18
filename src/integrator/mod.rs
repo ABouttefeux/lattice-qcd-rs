@@ -111,7 +111,7 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) 
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).expect("Link matrix not found");
-    initial_value + l.get_derivatives_u(link).expect("Derivative not found") * Complex::from(delta_t)
+    initial_value + l.get_derivative_u(link).expect("Derivative not found") * Complex::from(delta_t)
 }
 
 /// function for "Electrical" field intregration

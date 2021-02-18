@@ -284,79 +284,55 @@ struct FactorialStorageStatic {
     data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE]
 }
 
+macro_rules! set_factorial_storage {
+    ($data:ident, 0) => {
+        $data[0] = 1;
+    };
+    ($data:ident, $e:expr) => {
+        $data[$e] = $data[$e - 1] * $e as FactorialNumber;
+    };
+}
+
 impl FactorialStorageStatic {
     /// compile time evaluation of all 25 factorial numbers
     pub const fn new() -> Self {
         let mut data : [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] = [1; FACTORIAL_STORAGE_STAT_SIZE];
         // cant do for in constant function :(
-        let i = 1;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 2;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 3;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 4;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 5;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 6;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 7;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 8;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 9;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 10;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 11;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 12;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 13;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 14;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 15;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 16;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 17;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 18;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 19;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 20;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 21;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 22;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 23;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 24;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 25;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 26;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 27;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 28;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 29;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 30;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 31;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 32;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 33;
-        data[i] = data[i - 1] * i as FactorialNumber;
-        let i = 34;
-        data[i] = data[i - 1] * i as FactorialNumber;
+        set_factorial_storage!(data, 0);
+        set_factorial_storage!(data, 1);
+        set_factorial_storage!(data, 2);
+        set_factorial_storage!(data, 3);
+        set_factorial_storage!(data, 4);
+        set_factorial_storage!(data, 5);
+        set_factorial_storage!(data, 6);
+        set_factorial_storage!(data, 7);
+        set_factorial_storage!(data, 8);
+        set_factorial_storage!(data, 9);
+        set_factorial_storage!(data, 10);
+        set_factorial_storage!(data, 11);
+        set_factorial_storage!(data, 12);
+        set_factorial_storage!(data, 13);
+        set_factorial_storage!(data, 14);
+        set_factorial_storage!(data, 15);
+        set_factorial_storage!(data, 16);
+        set_factorial_storage!(data, 17);
+        set_factorial_storage!(data, 18);
+        set_factorial_storage!(data, 19);
+        set_factorial_storage!(data, 20);
+        set_factorial_storage!(data, 21);
+        set_factorial_storage!(data, 22);
+        set_factorial_storage!(data, 23);
+        set_factorial_storage!(data, 24);
+        set_factorial_storage!(data, 25);
+        set_factorial_storage!(data, 26);
+        set_factorial_storage!(data, 27);
+        set_factorial_storage!(data, 28);
+        set_factorial_storage!(data, 29);
+        set_factorial_storage!(data, 30);
+        set_factorial_storage!(data, 31);
+        set_factorial_storage!(data, 32);
+        set_factorial_storage!(data, 33);
+        set_factorial_storage!(data, 34);
         Self {data}
     }
     
@@ -437,4 +413,12 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// test that [`N`] is indeed what we need
 fn test_constante(){
     assert_eq!(N, get_factorial_size_for_exp() + 1)
+}
+
+#[cfg(test)]
+#[test]
+fn test_factorial(){
+    for i in 0..FACTORIAL_STORAGE_STAT_SIZE {
+        assert_eq!(*FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap(), utils::factorial(i));
+    }
 }

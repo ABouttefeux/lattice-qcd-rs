@@ -32,7 +32,7 @@ use rand_distr::Distribution;
 use na::ComplexField;
 use rayon::prelude::*;
 
-/// Metropolis Hastings algorithm.
+/// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 pub struct MetropolisHastings<State>
     where State: LatticeState,
 {
@@ -76,7 +76,7 @@ impl<State> MonteCarloDefault<State> for MetropolisHastings<State>
     }
 }
 
-/// Metropolis Hastings algorithm with diagnostics.
+/// Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 pub struct MetropolisHastingsDiagnostic<State>
     where State: LatticeState,
 {
@@ -147,6 +147,30 @@ impl<State> MonteCarloDefault<State> for MetropolisHastingsDiagnostic<State>
     }
 }
 
+#[inline]
+fn get_delta_s_old_new_cmp(
+    link_matrix: &LinkMatrix,
+    lattice: &LatticeCyclique,
+    link: &LatticeLinkCanonical,
+    new_link: &na::Matrix3<Complex>,
+    beta : Real,
+    old_matrix: &na::Matrix3<Complex>,
+) -> Real {
+    let dir_j = link.dir();
+    let a: na::Matrix3<na::Complex<Real>> = Direction::POSITIVES.iter().par_bridge()
+    .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
+        let el_1 = link_matrix.get_sij(link.pos(), dir_j, dir_i, lattice).unwrap().adjoint();
+        let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - *dir_i);
+        let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
+        let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_j);
+        let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
+        let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_i);
+        let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
+        el_1 + u1 * u2 * u3
+    }).sum();
+    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+}
+
 /// Metropolis Hastings algorithm with diagnostics.
 pub struct MetropolisHastingsDeltaDiagnostic<Rng>
     where Rng: rand::Rng,
@@ -198,8 +222,8 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
         self.rng
     }
     
+    #[inline]
     fn get_delta_s(
-        &self,
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique,
         link: &LatticeLinkCanonical,
@@ -213,21 +237,10 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
             Some((_, m)) => old_matrix = *m,
             None => old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap(),
         }
-        let dir_j = link.dir();
-        let a: na::Matrix3<na::Complex<Real>> = Direction::POSITIVES.iter().par_bridge()
-        .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
-            let el_1 = link_matrix.get_sij(link.pos(), dir_j, dir_i, lattice).unwrap().adjoint();
-            let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - *dir_i);
-            let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
-            let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_j);
-            let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
-            let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), - dir_i), *dir_i);
-            let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
-            el_1 + u1 * u2 * u3
-        }).sum();
-        -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+        get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
-        
+    
+    #[inline]
     fn get_potential_modif(&mut self, state: &LatticeStateDefault) -> Vec<(LatticeLinkCanonical, na::Matrix3<Complex>)> {
         self.delta_s = 0_f64;
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
@@ -249,27 +262,28 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
             let rand_m = su3::orthonormalize_matrix(&su3::get_random_su3_close_to_unity(self.spread, &mut self.rng));
             let new_link = rand_m * old_link_m;
             
-            self.delta_s += self.get_delta_s(state.link_matrix(), state.lattice(), &link, &new_link, state.beta(), &return_val);
+            self.delta_s += Self::get_delta_s(state.link_matrix(), state.lattice(), &link, &new_link, state.beta(), &return_val);
             return_val.push((link, new_link));
         });
         
         return_val
     }
     
-    fn get_next_element_default(&mut self, mut state: LatticeStateDefault) -> Result<LatticeStateDefault, SimulationError> {
+    #[inline]
+    fn get_next_element_default(&mut self, mut state: LatticeStateDefault) -> LatticeStateDefault {
         
         let potential_modif = self.get_potential_modif(&state);
         let proba = (-self.delta_s).exp().min(1_f64).max(0_f64);
         self.prob_replace_last = proba;
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
-        if d.sample(&mut self.rng)  {
+        if d.sample(&mut self.rng) {
             self.has_replace_last = true;
-            potential_modif.iter().for_each(|(link, matrix)| *state.get_link_mut(link) = *matrix);
-            Ok(state)
+            potential_modif.iter().for_each(|(link, matrix)| *state.get_link_mut(link).unwrap() = *matrix);
+            state
         }
         else{
             self.has_replace_last = false;
-            return Ok(state);
+            state
         }
     }
 }
@@ -277,8 +291,9 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
 impl<Rng> MonteCarlo<LatticeStateDefault> for MetropolisHastingsDeltaDiagnostic<Rng>
     where Rng: rand::Rng,
 {
+    #[inline]
     fn get_next_element(&mut self, state: LatticeStateDefault) -> Result<LatticeStateDefault, SimulationError>{
-        self.get_next_element_default(state)
+        Ok(self.get_next_element_default(state))
     }
 }
 
@@ -297,7 +312,7 @@ fn test_mh_delta(){
         let mut simulation2 = simulation.clone();
         mcd.get_potential_modif(&simulation)
             .iter()
-            .for_each(|(link, matrix)| *simulation2.get_link_mut(link) = *matrix);
+            .for_each(|(link, matrix)| *simulation2.get_link_mut(link).unwrap() = *matrix);
         println!("ds {}, dh {}", mcd.delta_s(), -simulation.get_hamiltonian_links() + simulation2.get_hamiltonian_links());
         let prob_of_replacement = (simulation.get_hamiltonian_links() - simulation2.get_hamiltonian_links()).exp()
             .min(1_f64)
@@ -307,5 +322,105 @@ fn test_mh_delta(){
             prob_of_replacement).abs() < 1E-8_f64
         );
         simulation = simulation2;
+    }
+}
+
+
+/// Metropolis Hastings algorithm optimize to do one step.
+pub struct MetropolisHastingsDeltaOneDiagnostic<Rng>
+    where Rng: rand::Rng,
+{
+    spread: Real,
+    has_replace_last: bool,
+    prob_replace_last: Real,
+    rng: Rng
+}
+
+impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
+    where Rng: rand::Rng,
+{
+    /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
+    /// than 0.
+    ///
+    /// `number_of_update` is the number of times a link matrix is randomly changed.
+    /// `spread` is the spead factor for the random matrix change
+    /// ( used in [`su3::get_random_su3_close_to_unity`]).
+    pub fn new(spread: Real, rng: Rng) -> Option<Self> {
+        if spread <= 0_f64 || spread >= 1_f64 {
+            return None;
+        }
+        Some(Self {
+            spread,
+            has_replace_last: false,
+            prob_replace_last: 0_f64,
+            rng,
+        })
+    }
+    
+    getter_copy!(prob_replace_last, Real);
+    getter_copy!(has_replace_last, bool);
+    
+    pub fn rng_owned(self) -> Rng {
+        self.rng
+    }
+    
+    #[inline]
+    fn get_delta_s(
+        link_matrix: &LinkMatrix,
+        lattice: &LatticeCyclique,
+        link: &LatticeLinkCanonical,
+        new_link: &na::Matrix3<Complex>,
+        beta : Real,
+    ) -> Real {
+        let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
+        get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
+    }
+    
+    #[inline]
+    fn get_potential_modif(&mut self, state: &LatticeStateDefault) -> (LatticeLinkCanonical, na::Matrix3<Complex>) {
+        let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
+        let d_d = rand::distributions::Uniform::new(0, 4);
+        
+        let point = LatticePoint::new([
+            d_p.sample(&mut self.rng),
+            d_p.sample(&mut self.rng),
+            d_p.sample(&mut self.rng),
+            d_p.sample(&mut self.rng),
+        ]);
+        let direction = Direction::POSITIVES[d_d.sample(&mut self.rng)];
+        let link = LatticeLinkCanonical::new(point, direction).unwrap();
+        let index = link.to_index(state.lattice());
+        
+        let old_link_m = state.link_matrix()[index];
+        let rand_m = su3::orthonormalize_matrix(&su3::get_random_su3_close_to_unity(self.spread, &mut self.rng));
+        let new_link = rand_m * old_link_m;
+        (link, new_link)
+    }
+    
+    #[inline]
+    fn get_next_element_default(&mut self, mut state: LatticeStateDefault) -> LatticeStateDefault {
+        let (link, matrix) = self.get_potential_modif(&state);
+        let delta_s = Self::get_delta_s(state.link_matrix(), state.lattice(), &link, &matrix, state.beta());
+        let proba = (-delta_s).exp().min(1_f64).max(0_f64);
+        self.prob_replace_last = proba;
+        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        if d.sample(&mut self.rng) {
+            self.has_replace_last = true;
+            *state.get_link_mut(&link).unwrap() = matrix;
+            state
+        }
+        else {
+            self.has_replace_last = false;
+            state
+        }
+    }
+}
+
+impl<Rng> MonteCarlo<LatticeStateDefault> for MetropolisHastingsDeltaOneDiagnostic<Rng>
+    where Rng: rand::Rng,
+{
+    #[inline]
+    fn get_next_element(&mut self, state: LatticeStateDefault) -> Result<LatticeStateDefault, SimulationError>{
+        Ok(self.get_next_element_default(state))
     }
 }
