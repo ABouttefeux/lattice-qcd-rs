@@ -130,9 +130,9 @@ pub trait LatticeHamiltonianSimulationState
     fn t(&self) -> usize;
     
     /// get the derivative \partial_t U(link)
-    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3>;
+    fn get_derivative_u(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<CMatrix3>;
     /// get the derivative \partial_t E(point)
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>>;
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>>;
     
     /// Get the energy of the conjugate momenta configuration
     fn get_hamiltonian_efield(&self) -> Real;
@@ -613,27 +613,27 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of U_i(x).
-    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+    fn get_derivative_u(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
-        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
-        let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
-        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
+        let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
+        let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
+        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()));
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES.iter().map(|dir| {
-            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
+            let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
             let sum_s: CMatrix3 = Direction::DIRECTIONS.iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
-                    self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
+                    link_matrix.get_sij(point, dir, dir_2, lattice)
                         .map(|el| el.adjoint())
                 }).sum::<Option<CMatrix3>>()?;
             Some(Su3Adjoint::new(
                 Vector8::<Real>::from_fn(|index, _| {
-                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / self.lattice().size()
+                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / lattice.size()
                 })
             ))
         });
@@ -736,8 +736,13 @@ impl<State> LatticeHamiltonianSimulationState for SimulationStateLeap<State>
         t, state, usize
     );
     
-    project!(get_derivative_e, state, Option<Vector4<Su3Adjoint>>, point: &LatticePoint);
-    project!(get_derivative_u, state, Option<CMatrix3>, link: &LatticeLinkCanonical);
+    fn get_derivative_u(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<CMatrix3> {
+        State::get_derivative_u(link, link_matrix, e_field, lattice)
+    }
+    
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
+        State::get_derivative_e(point, link_matrix, e_field, lattice)
+    }
     
 }
 
@@ -770,7 +775,8 @@ impl<State> LatticeHamiltonianSimulationStateSyncDefault<State>
     /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
         let d = rand_distr::Normal::new(0.0, 0.5_f64 / lattice_state.beta()).expect("Distribution not valide, check Beta.");
-        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d).project_to_gauss(lattice_state.link_matrix(), lattice_state.lattice()).unwrap();
+        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d)
+            .project_to_gauss(lattice_state.link_matrix(), lattice_state.lattice()).unwrap();
         Self{lattice_state, e_field, t: 0}
     }
     
@@ -873,27 +879,27 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of U_i(x).
-    fn get_derivative_u(&self, link: &LatticeLinkCanonical) -> Option<CMatrix3> {
+    fn get_derivative_u(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
-        let u_i = self.link_matrix().get_matrix(&LatticeLink::from(*link), self.lattice())?;
-        let e_i = self.e_field().get_e_field(link.pos(), link.dir(), self.lattice())?;
-        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / self.lattice().size()));
+        let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
+        let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
+        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()));
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(&self, point: &LatticePoint) -> Option<Vector4<Su3Adjoint>> {
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES.iter().map(|dir| {
-            let u_i = self.link_matrix().get_matrix(&LatticeLink::new(*point, *dir), self.lattice())?;
+            let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
             let sum_s: CMatrix3 = Direction::DIRECTIONS.iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
-                    self.link_matrix().get_sij(point, dir, dir_2, self.lattice())
+                    link_matrix.get_sij(point, dir, dir_2, lattice)
                         .map(|el| el.adjoint())
                 }).sum::<Option<CMatrix3>>()?;
             Some(Su3Adjoint::new(
                 Vector8::<Real>::from_fn(|index, _| {
-                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / self.lattice().size()
+                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / lattice.size()
                 })
             ))
         });

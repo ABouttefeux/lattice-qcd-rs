@@ -105,7 +105,7 @@ fn test_leap_frog() {
 }
 
 fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
-    let size = 10_000_f64;
+    let size = 1000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;
     let spinner = ProgressBar::new_spinner();
@@ -208,7 +208,7 @@ fn sim_hmc() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let delta_t = 0.00075_f64;
+    let delta_t = 0.1_f64;
     let number_of_step = 100;
     //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
     let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
@@ -217,7 +217,7 @@ fn sim_hmc() {
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
         &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, StdRng, SymplecticEulerRayon>| {
             let average = sim.average_trace_plaquette().unwrap().real();
-            format!("A {:.6},P {:.2},R {}", average, mc.prob_replace_last(), mc.has_replace_last())
+            format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
         }
     );
     
@@ -248,7 +248,7 @@ fn sim_mh() {
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
         &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, StdRng>| {
             let average = sim.average_trace_plaquette().unwrap().real();
-            format!("A {:.6},P {:.2},R {}", average, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
+            format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
@@ -281,7 +281,7 @@ fn sim_dmh() {
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
         &|sim, mc : &MetropolisHastingsDeltaDiagnostic<ThreadRng>| {
             let average = sim.average_trace_plaquette().unwrap().real();
-            format!("A {:.6},P {:.2}", average, mc.prob_replace_last())
+            format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);

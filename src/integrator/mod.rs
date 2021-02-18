@@ -63,10 +63,15 @@ use super::{
     lattice::{
         LatticeLinkCanonical,
         LatticeLink,
-        LatticePoint
+        LatticePoint,
+        LatticeCyclique
     },
     CMatrix3,
-    field::Su3Adjoint,
+    field::{
+        Su3Adjoint,
+        LinkMatrix,
+        EField,
+    },
 };
 use na::Vector4;
 
@@ -106,19 +111,19 @@ pub trait SymplecticIntegrator<StateSync, StateLeap>
 }
 
 /// function for link intregration
-fn integrate_link<State>(link: &LatticeLinkCanonical, l: &State, delta_t: Real) -> CMatrix3
+fn integrate_link<State>(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, delta_t: Real) -> CMatrix3
     where State: LatticeHamiltonianSimulationState,
 {
     let canonical_link = LatticeLink::from(*link);
-    let initial_value = l.link_matrix().get_matrix(&canonical_link, l.lattice()).expect("Link matrix not found");
-    initial_value + l.get_derivative_u(link).expect("Derivative not found") * Complex::from(delta_t)
+    let initial_value = link_matrix.get_matrix(&canonical_link, lattice).expect("Link matrix not found");
+    initial_value + State::get_derivative_u(link, link_matrix, e_field, lattice).expect("Derivative not found") * Complex::from(delta_t)
 }
 
 /// function for "Electrical" field intregration
-fn integrate_efield<State>(point: &LatticePoint, l: &State, delta_t: Real) -> Vector4<Su3Adjoint>
+fn integrate_efield<State>(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, delta_t: Real) -> Vector4<Su3Adjoint>
     where State: LatticeHamiltonianSimulationState,
 {
-    let initial_value = *l.e_field().get_e_vec(point, l.lattice()).expect("E Field not found");
-    let deriv = l.get_derivative_e(point).expect("Derivative not found");
+    let initial_value = *e_field.get_e_vec(point, lattice).expect("E Field not found");
+    let deriv = State::get_derivative_e(point, link_matrix, e_field, lattice).expect("Derivative not found");
     initial_value + deriv.map(|el| el * delta_t)
 }

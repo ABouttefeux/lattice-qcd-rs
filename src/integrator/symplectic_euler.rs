@@ -27,6 +27,7 @@ use super::{
             LatticeHamiltonianSimulationStateNew,
             SimulationStateLeap,
         },
+        lattice::LatticeCyclique,
     },
     SymplecticIntegrator,
     integrate_link,
@@ -34,30 +35,30 @@ use super::{
 };
 use std::vec::Vec;
 
-fn get_link_matrix_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
+fn get_link_matrix_integrate<State> (link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, number_of_thread: usize, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
     where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_vec(
-        l.lattice().get_links_space(),
-        l,
-        &|link, l| integrate_link(link, l, delta_t),
+        lattice.get_links_space(),
+        &(link_matrix, e_field, lattice),
+        &|link, (link_matrix, e_field, lattice)| integrate_link::<State>(link, link_matrix, e_field, lattice, delta_t),
         number_of_thread,
-        l.lattice().get_number_of_canonical_links_space(),
-        l.lattice(),
+        lattice.get_number_of_canonical_links_space(),
+        lattice,
         CMatrix3::zeros(),
     )
 }
 
-fn get_e_field_integrate<State> (l: &State, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector4<Su3Adjoint>>, ThreadError>
+fn get_e_field_integrate<State> (link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, number_of_thread: usize, delta_t: Real) -> Result<Vec<Vector4<Su3Adjoint>>, ThreadError>
     where State: LatticeHamiltonianSimulationState
 {
     run_pool_parallel_vec(
-        l.lattice().get_points(),
-        l,
-        &|point, l| integrate_efield(point, l, delta_t),
+        lattice.get_points(),
+        &(link_matrix, e_field, lattice),
+        &|point, (link_matrix, e_field, lattice)| integrate_efield::<State>(point, link_matrix, e_field, lattice, delta_t),
         number_of_thread,
-        l.lattice().get_number_of_points(),
-        l.lattice(),
+        lattice.get_number_of_points(),
+        lattice,
         Vector4::from_element(Su3Adjoint::default()),
     )
 }
@@ -92,37 +93,32 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
 {
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
-        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
-        let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
+        let link_matrix = get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?;
+        let e_field = get_e_field_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?;
         
         State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
     
     fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
-        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
-        // I do not like the clone of e_field :(.
-        let mut state = SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
-        let e_field = get_e_field_integrate(l, number_of_thread, delta_t)?;
-        state.set_e_field(EField::new(e_field));
-        Ok(state)
+        let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?);
+        let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), number_of_thread, delta_t)?);
+        SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
     }
     
     fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
-        let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
+        let e_field = get_e_field_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t/ 2_f64)?;
         // we do not advance the step counter
         SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
     
     fn integrate_leap_sync(&self, l: &SimulationStateLeap<State>, delta_t: Real) -> Result<State, SimulationError>{
         let number_of_thread = self.number_of_thread;
-        let link_matrix = get_link_matrix_integrate(l, number_of_thread, delta_t)?;
+        let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?);
         // we advace the counter by one
         // I do not like the clone of e_field :(.
-        let mut state = State::new(l.lattice().clone(), l.beta(), l.e_field().clone(), LinkMatrix::new(link_matrix), l.t() + 1)?;
-        let e_field = get_e_field_integrate(l, number_of_thread, delta_t/ 2_f64)?;
-        state.set_e_field(EField::new(e_field));
-        Ok(state)
+        let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), number_of_thread, delta_t/ 2_f64)?);
+        State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
     }
 }
