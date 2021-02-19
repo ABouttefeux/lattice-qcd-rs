@@ -99,7 +99,7 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
         State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
     
-    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?);
         let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), number_of_thread, delta_t)?);
@@ -108,7 +108,7 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
     
     fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let number_of_thread = self.number_of_thread;
-        let e_field = get_e_field_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t/ 2_f64)?;
+        let e_field = get_e_field_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t / 2_f64)?;
         // we do not advance the step counter
         SimulationStateLeap::<State>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
     }
@@ -118,7 +118,7 @@ impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for Symplect
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?);
         // we advace the counter by one
         // I do not like the clone of e_field :(.
-        let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), number_of_thread, delta_t/ 2_f64)?);
+        let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), number_of_thread, delta_t / 2_f64)?);
         State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
     }
 }

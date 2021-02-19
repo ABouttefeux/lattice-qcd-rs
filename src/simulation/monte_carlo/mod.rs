@@ -52,7 +52,7 @@ pub trait MonteCarloDefault<State>
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
-        if d.sample(rng)  {
+        if d.sample(rng) {
             return Ok(potential_next);
         }
         else{

@@ -159,7 +159,7 @@ impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
 }
 
 /// Create a matrix (v1, v2 , v1* x v2*)
-fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2:  na::Vector3<Complex>) -> na::Matrix3<Complex> {
+fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> na::Matrix3<Complex> {
     // TODO find a better way
     let cross_vec: na::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
     let iter = v1.iter().chain(v2.iter()).chain(cross_vec.iter()).copied();
@@ -277,7 +277,7 @@ pub fn get_factorial_size_for_exp() -> usize {
     return n;
 }
 
-const FACTORIAL_STORAGE_STAT_SIZE: usize =  utils::MAX_NUMBER_FACTORIAL + 1;
+const FACTORIAL_STORAGE_STAT_SIZE: usize = utils::MAX_NUMBER_FACTORIAL + 1;
 
 /// static store for factorial number
 struct FactorialStorageStatic {

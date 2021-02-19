@@ -256,7 +256,7 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternalDiagnostics<
         let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
         self.prob_replace_last = proba;
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
-        if d.sample(rng)  {
+        if d.sample(rng) {
             self.has_replace_last = true;
             return Ok(potential_next);
         }

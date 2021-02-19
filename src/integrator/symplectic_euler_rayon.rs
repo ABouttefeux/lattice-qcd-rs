@@ -76,14 +76,14 @@ impl Default for SymplecticEulerRayon {
 impl<State> SymplecticIntegrator<State, SimulationStateLeap<State>> for SymplecticEulerRayon
     where State: SimulationStateSynchrone + LatticeHamiltonianSimulationState + LatticeHamiltonianSimulationStateNew,
 {
-    fn integrate_sync_sync(&self, l: &State, delta_t: Real) ->  Result<State, SimulationError> {
+    fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let link_matrix = get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), delta_t);
         let e_field = get_e_field_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), delta_t);
         
         State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
     }
     
-    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) ->  Result<SimulationStateLeap<State>, SimulationError> {
+    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State>, delta_t: Real) -> Result<SimulationStateLeap<State>, SimulationError> {
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State>(l.link_matrix(), l.e_field(), l.lattice(), delta_t));
         
         let e_field = EField::new(get_e_field_integrate::<State>(&link_matrix, l.e_field(), l.lattice(), delta_t));

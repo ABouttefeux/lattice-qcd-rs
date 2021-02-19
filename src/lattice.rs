@@ -216,7 +216,7 @@ impl<'a> Iterator for IteratorLatticeLinkCanonical<'a> {
 
 /// Iterator over [`LatticePoint`]
 #[derive(Clone, Debug)]
-pub struct IteratorLatticePoint<'a>  {
+pub struct IteratorLatticePoint<'a> {
     lattice: &'a LatticeCyclique,
     element: Option<LatticePoint>,
 }

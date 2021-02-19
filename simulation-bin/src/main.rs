@@ -7,6 +7,7 @@ extern crate rand;
 extern crate rand_distr;
 extern crate indicatif;
 extern crate bincode;
+extern crate rand_xoshiro;
 
 #[allow(unused_imports)]
 use lattice_qcd_rs::{
@@ -29,8 +30,6 @@ use na::ComplexField;
 
 use rand::{
     SeedableRng,
-    rngs::StdRng,
-    rngs::ThreadRng,
 };
 // use rayon::iter::IntoParallelIterator;
 // use rayon::prelude::ParallelIterator;
@@ -43,6 +42,7 @@ use std::sync::*;
 use std::thread;
 #[cfg(test)]
 use std::io::prelude::*;
+use rand_xoshiro::Xoshiro256PlusPlus;
 
 use dialoguer::{
     Select,
@@ -50,7 +50,7 @@ use dialoguer::{
 };
 
 fn main() {
-    let items = vec!["Hybrid Monte Carlo", "Metropolis Hastings absolute", "Metropolis Hastings Delta"];
+    let items = vec!["Hybrid Monte Carlo", "Metropolis Hastings absolute", "Metropolis Hastings Delta", "MHD + HMC"];
     let selection = Select::with_theme(&ColorfulTheme::default())
         .items(&items)
         .with_prompt("Choose an algorithm.")
@@ -61,6 +61,7 @@ fn main() {
         Some(0) => sim_hmc(),
         Some(1) => sim_mh(),
         Some(2) => sim_dmh(),
+        Some(3) => sim_dmh_hmc(),
         None => println!("no selection"),
         _ => unreachable!(),
     }
@@ -174,7 +175,7 @@ fn simulate_loop_with_input<MC>(
     let stop_sim_c = Arc::clone(&stop_sim);
     let h = thread::spawn(move || {
         let mut stdin = io::stdin();
-        let _ = stdin.read(&mut [0u8]).unwrap();
+        let _ = stdin.read(&mut [0u8; 4]).unwrap();
         *stop_sim_c.lock().unwrap() = true;
     });
     
@@ -201,7 +202,7 @@ fn sim_hmc() {
     let mut rng_seeder = rand::thread_rng();
     let seed = rng_seeder.next_u64();
     println!("Begining simulation HMC with seed {:#08x}", seed);
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
     let simulation = generate_state_with_logs(&mut rng);
@@ -215,7 +216,7 @@ fn sim_hmc() {
     let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
-        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, StdRng, SymplecticEulerRayon>| {
+        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, Xoshiro256PlusPlus, SymplecticEulerRayon>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
         }
@@ -230,7 +231,7 @@ fn sim_mh() {
     let mut rng_seeder = rand::thread_rng();
     let seed = rng_seeder.next_u64();
     println!("Begining simulation MH with seed {:#08x}", seed);
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
     let simulation = generate_state_with_logs(&mut rng);
@@ -246,7 +247,7 @@ fn sim_mh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
-        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, StdRng>| {
+        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
         }
@@ -259,18 +260,16 @@ fn sim_mh() {
 
 fn sim_dmh() {
     let t = Instant::now();
-    //let mut rng_seeder = rand::thread_rng();
-    //let seed = rng_seeder.next_u64();
-    //println!("Begining simulation MH Delta with seed {:#08x}", seed);
-    //let mut rng = StdRng::seed_from_u64(seed);
-    //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let mut rng = rand::thread_rng();
+    let mut rng_seeder = rand::thread_rng();
+    let seed = rng_seeder.next_u64();
+    println!("Begining simulation MH Delta with seed {:#08x}", seed);
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     let simulation = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.5;
-    let number_of_rand = 10;
+    let number_of_rand = 1;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
     let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
     let number_of_sims = 1000;
@@ -279,13 +278,53 @@ fn sim_dmh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<ThreadRng>| {
+        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
         }
     );
     //let simulation = simulate_loop_with_input_diag_mh(simulation, &mut mh, number_of_sims, 1000);
     
+    println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
+    println!("{:?}", t.elapsed());
+}
+
+fn sim_dmh_hmc() {
+    let t = Instant::now();
+    let mut rng_seeder = rand::thread_rng();
+    let seed = rng_seeder.next_u64();
+    println!("Begining simulation MH Delta -> HMC with seed {:#08x}", seed);
+    let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
+    let simulation = generate_state_with_logs(&mut rng);
+    
+    println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
+    
+    let spread_parameter = 0.5;
+    let number_of_rand = 1;
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+    let number_of_sims = 1000;
+    let sub_block = 100;
+    
+    let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
+        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+            let average = sim.average_trace_plaquette().unwrap().real();
+            format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
+        }
+    );
+    
+    let rng = mh.rng_owned();
+    let delta_t = 0.1_f64;
+    let number_of_step = 100;
+    //let mut hmc = HybridMonteCarlo::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
+    let mut hmc = HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
+    let number_of_sims = 10;
+    
+    let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
+        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, Xoshiro256PlusPlus, SymplecticEulerRayon>| {
+            let average = sim.average_trace_plaquette().unwrap().real();
+            format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
+        }
+    );
     println!("final plaquette average {}", simulation.average_trace_plaquette().unwrap());
     println!("{:?}", t.elapsed());
 }

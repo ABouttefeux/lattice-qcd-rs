@@ -6,8 +6,8 @@ edition = "2018"
 readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
 categories = ["Science", "Simulation"]
-description  = "Lattice QCD"
-keywords  = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
+description = "Lattice QCD"
+keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
 publish = false
 
 [features]

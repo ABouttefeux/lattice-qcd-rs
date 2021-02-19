@@ -124,7 +124,7 @@ pub trait LatticeHamiltonianSimulationState
     /// Replace the electrical field with the given input. It should panic if the input is not of the correct size.
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
-    fn  set_e_field(&mut self, e_field: EField);
+    fn set_e_field(&mut self, e_field: EField);
     
     /// return the time state, i.e. the number of time the simulation ran.
     fn t(&self) -> usize;
@@ -167,7 +167,7 @@ pub trait LatticeHamiltonianSimulationStateNew where Self: LatticeHamiltonianSim
 /// [`LatticeHamiltonianSimulationState`] who represent link matrices at the same time position as its conjugate momenta
 /// `e_field`.
 ///
-///  If you have a LatticeState and want the default way of adding the conjugate momenta and doing simulation look at
+/// If you have a LatticeState and want the default way of adding the conjugate momenta and doing simulation look at
 /// [`LatticeHamiltonianSimulationStateSyncDefault`].
 ///
 /// I would adivce of implementing this trait and not [`SimulationStateLeapFrog`], as there is
@@ -621,7 +621,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, _e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
@@ -887,7 +887,7 @@ impl LatticeHamiltonianSimulationState for LatticeHamiltonianSimulationStateSync
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
+    fn get_derivative_e(point: &LatticePoint, link_matrix: &LinkMatrix, _e_field: &EField, lattice: &LatticeCyclique) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
         let mut iterator = Direction::POSITIVES.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;

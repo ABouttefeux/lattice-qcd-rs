@@ -278,7 +278,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
 ///     iter,
 ///     &c,
-///     &|has_greeted: &mut bool, i: &LatticePoint,  c: &usize| {
+///     &|has_greeted: &mut bool, i: &LatticePoint, c: &usize| {
 ///          if ! *has_greeted {
 ///              *has_greeted = true;
 ///              println!("Hello from the thread");
@@ -426,7 +426,7 @@ pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_
 /// # use lattice_qcd_rs::thread::run_pool_parallel_rayon;
 /// let iter = 0..1000;
 /// let c = 5;
-/// let result = run_pool_parallel_rayon(iter, &c, |i, c1| i * i  * c1);
+/// let result = run_pool_parallel_rayon(iter, &c, |i, c1| i * i * c1);
 /// assert_eq!(result[687], 687 * 687 * c);
 /// assert_eq!(result[10], 10 * 10 * c);
 /// ```

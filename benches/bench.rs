@@ -8,6 +8,7 @@ use lattice_qcd_rs::{
     su3::su3_exp_r,
     integrator::*,
     simulation::*,
+    Complex,
 };
 use std::{
     f64,
@@ -15,6 +16,7 @@ use std::{
     vec::Vec,
 };
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use rayon::prelude::*;
 
 #[allow(deprecated)]
 fn bench_simulation_creation_deterministe(
@@ -134,13 +136,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     groupe_sim.sample_size(10);
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
-        let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
+        let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
         groupe_sim.bench_with_input(BenchmarkId::new("thread", n), n,
             |b,i| b.iter(|| simulate_euler(&mut sim, *i))
         );
     }
     
-    let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 20, &d, 4).unwrap();
+    let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
     groupe_sim.bench_function("simulate(20) rayon", |b| {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });
@@ -153,7 +155,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for n in array_size.iter() {
         groupe_gauss_proj.bench_with_input(BenchmarkId::new("size", n), n,
             |b,i| b.iter(|| {
-                let mut state = LatticeStateDefault::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
+                let state = LatticeStateDefault::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
                 let d = rand_distr::Normal::new(0.0, 0.5_f64).unwrap();
                 let e_field = EField::new_deterministe(state.lattice(), &mut rng, &d);
                 e_field.project_to_gauss(state.link_matrix(), state.lattice());
@@ -161,6 +163,20 @@ fn criterion_benchmark(c: &mut Criterion) {
         );
     }
     groupe_gauss_proj.finish();
+    
+    let mut groupe_clone = c.benchmark_group("Clone");
+    groupe_clone.sample_size(100);
+    let link_m = LinkMatrix::new(vec![na::Matrix3::<Complex>::identity(); 10_000]);
+    groupe_clone.bench_function("rayon clone", |b| {
+        b.iter(|| LinkMatrix::new(link_m.data().par_iter().copied().collect()))
+    });
+    
+    groupe_clone.bench_function("clone", |b| {
+        b.iter(|| link_m.clone())
+    });
+    
+    groupe_clone.finish()
+    
 }
 
 fn benchmark_base(c: &mut Criterion) {
