@@ -47,20 +47,21 @@ impl<D> LatticeCyclique<D>
     /// the link return is `[x - 1, y, z, t]` (modulo the `lattice::dim()``) with direction `+x`
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint, LatticeLinkCanonical};
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::from([1, 0, 2, 0]);
+    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint, LatticeLinkCanonical};
+    /// # use lattice_qcd_rs::dim::U4;
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+    /// let point = LatticePoint::<U4>::new([1, 0, 2, 0].into());
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, Direction::XNeg),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([0, 0, 2, 0]), Direction::XPos).unwrap()
+    ///     lattice.get_link_canonical(point, DirectionEnum::XNeg.into()),
+    ///     LatticeLinkCanonical::new(LatticePoint::new([0, 0, 2, 0].into()), DirectionEnum::XPos.into()).unwrap()
     /// );
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, Direction::XPos),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2, 0]), Direction::XPos).unwrap()
+    ///     lattice.get_link_canonical(point, DirectionEnum::XPos.into()),
+    ///     LatticeLinkCanonical::new(LatticePoint::new([1, 0, 2, 0].into()), DirectionEnum::XPos.into()).unwrap()
     /// );
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, Direction::YNeg),
-    ///     LatticeLinkCanonical::new(LatticePoint::from([1, 3, 2, 0]), Direction::YPos).unwrap()
+    ///     lattice.get_link_canonical(point, DirectionEnum::YNeg.into()),
+    ///     LatticeLinkCanonical::new(LatticePoint::new([1, 3, 2, 0].into()), DirectionEnum::YPos.into()).unwrap()
     /// );
     /// ```
     pub fn get_link_canonical(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLinkCanonical<D> {
@@ -127,7 +128,7 @@ impl<D> LatticeCyclique<D>
     
     /// Total number of canonical links oriented in space for a set time.
     ///
-    /// basically the number of element return by [`LatticeCyclique::get_links_space`]
+    /// basically the number of element return by [`LatticeCyclique::get_links`]
     pub fn get_number_of_canonical_links_space(&self) -> usize {
         self.get_number_of_points() * D::dim()
     }
@@ -145,12 +146,13 @@ impl<D> LatticeCyclique<D>
     /// get the next point in the lattice following the direction `dir`
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint};
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::from([1, 0, 2, 0]);
-    /// assert_eq!(lattice.add_point_direction(point, &Direction::XPos), LatticePoint::from([2, 0, 2, 0]));
+    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint};
+    /// # use lattice_qcd_rs::dim::U4;
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+    /// let point = LatticePoint::<U4>::from([1, 0, 2, 0]);
+    /// assert_eq!(lattice.add_point_direction(point, &DirectionEnum::XPos.into()), LatticePoint::from([2, 0, 2, 0]));
     /// // In the following case we get [_, 3, _, _] because `dim = 4`, and this lattice is cyclique.
-    /// assert_eq!(lattice.add_point_direction(point, &Direction::YNeg), LatticePoint::from([1, 3, 2, 0]) );
+    /// assert_eq!(lattice.add_point_direction(point, &DirectionEnum::YNeg.into()), LatticePoint::from([1, 3, 2, 0]));
     /// ```
     pub fn add_point_direction(&self, mut point: LatticePoint<D>, dir: &Direction<D>) -> LatticePoint<D> {
         if dir.is_positive() {
@@ -189,9 +191,10 @@ impl<'a, D> IteratorLatticeLinkCanonical<'a, D>
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] will return `first_el`.
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::lattice::{IteratorLatticeLinkCanonical, LatticeCyclique, LatticeLinkCanonical, LatticePoint, Direction};
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
-    /// let first_el = LatticeLinkCanonical::new(LatticePoint::from([1, 0, 2, 0]), Direction::YPos).unwrap();
+    /// # use lattice_qcd_rs::lattice::{IteratorLatticeLinkCanonical, LatticeCyclique, LatticeLinkCanonical, LatticePoint, DirectionEnum};
+    /// # use lattice_qcd_rs::dim::U4;
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+    /// let first_el = LatticeLinkCanonical::<U4>::new(LatticePoint::from([1, 0, 2, 0]), DirectionEnum::YPos.into()).unwrap();
     /// let mut iter = IteratorLatticeLinkCanonical::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
@@ -388,10 +391,10 @@ impl<D> Index<usize> for LatticePoint<D>
     
     /// Get the element at position `pos`
     /// # Panic
-    /// Panics if the position is out of bound (greater or equal to 4)
+    /// Panics if the position is out of bound
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::LatticePoint;
-    /// let point = LatticePoint::new([0; 4]);
+    /// let point = LatticePoint::new([0; 4].into());
     /// let _ = point[4];
     /// ```
     fn index(&self, pos: usize) -> &Self::Output{
@@ -407,10 +410,10 @@ impl<D> IndexMut<usize> for LatticePoint<D>
     
     /// Get the element at position `pos`
     /// # Panic
-    /// Panics if the position is out of bound (greater or equal to 4)
+    /// Panics if the position is out of bound
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::LatticePoint;
-    /// let mut point = LatticePoint::new([0; 4]);
+    /// let mut point = LatticePoint::new([0; 4].into());
     /// point[4] += 1;
     /// ```
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
@@ -427,6 +430,7 @@ impl<D, T> From<T> for LatticePoint<D>
         LatticePoint::new(VectorN::from(data))
     }
 }
+
 
 macro_rules! implement_from_lattice_point{
     ($(($l:literal, $i:ident)) ,+) => {
@@ -556,11 +560,11 @@ impl<D> LatticeLinkCanonical<D>
     /// The creation of an element this ways does not guaranties that the element is inside a lattice.
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XNeg);
+    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, DirectionEnum};
+    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XNeg.into());
     /// assert_eq!(l, None);
     ///
-    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XPos);
+    /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into());
     /// assert!(l.is_some());
     /// ```
     pub fn new (from: LatticePoint<D>, dir: Direction<D>) -> Option<Self> {
@@ -587,17 +591,17 @@ impl<D> LatticeLinkCanonical<D>
     /// Set the direction to dir
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::YPos).unwrap();
-    /// lattice_link_canonical.set_dir(Direction::XPos);
-    /// assert_eq!(*lattice_link_canonical.dir(), Direction::XPos);
+    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, DirectionEnum};
+    /// let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::YPos.into()).unwrap();
+    /// lattice_link_canonical.set_dir(DirectionEnum::XPos.into());
+    /// assert_eq!(*lattice_link_canonical.dir(), DirectionEnum::XPos.into());
     /// ```
     /// # Panic
     /// panic if a negative direction is given.
     /// ```should_panic
-    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, Direction};
-    /// # let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4]), Direction::XPos).unwrap();
-    /// lattice_link_canonical.set_dir(Direction::XNeg);
+    /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, DirectionEnum};
+    /// # let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into()).unwrap();
+    /// lattice_link_canonical.set_dir(DirectionEnum::XNeg.into());
     /// ```
     pub fn set_dir(&mut self, dir: Direction<D>) {
         if dir.is_negative(){
@@ -782,6 +786,7 @@ impl From<f64> for Sign {
     }
 }
 
+
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -796,7 +801,6 @@ pub struct Direction<D>
 impl<D> Direction<D>
     where D: DimName
 {
-    
     pub fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
         if index_dir >= D::dim() {
             return None;
@@ -804,10 +808,11 @@ impl<D> Direction<D>
         Some(Self {index_dir, is_positive, _phantom: PhantomData})
     }
     
+    
     /// List of all positives directions.
     pub fn positives() -> Vec<Self> {
         //TODO improve
-        let mut x = vec![];
+        let mut x = Vec::with_capacity(D::dim());
         for i in 0..D::dim() {
             x.push(Self::new(i, true).unwrap());
         }
@@ -817,7 +822,7 @@ impl<D> Direction<D>
     /// List all directions.
     pub fn directions() -> Vec<Self> {
         //TODO improve
-        let mut x = vec![];
+        let mut x = Vec::with_capacity(2 * D::dim());
         for i in 0..D::dim() {
             x.push(Self::new(i, true).unwrap());
             x.push(Self::new(i, false).unwrap());
@@ -885,9 +890,9 @@ impl<D> Direction<D>
     /// # use lattice_qcd_rs::lattice::Direction;
     /// # use lattice_qcd_rs::dim::U4;
     /// # extern crate nalgebra;
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), Direction<U4>::new(0, true).unwrap());
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), Direction<U4>::new(1, false).unwrap());
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), Direction<U4>::new(4, true).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), Direction::<U4>::new(0, true).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), Direction::<U4>::new(1, false).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), Direction::<U4>::new(3, true).unwrap());
     /// ```
     pub fn from_vector(v: &VectorN<Real, D>) -> Self {
         let mut max = 0_f64;
@@ -1060,10 +1065,11 @@ impl DirectionEnum {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::DirectionEnum;
+    /// # use lattice_qcd_rs::dim::U4;
     /// # extern crate nalgebra;
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), DirectionEnum::XPos);
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), DirectionEnum::YNeg);
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), DirectionEnum::TPos);
+    /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), DirectionEnum::XPos);
+    /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), DirectionEnum::YNeg);
+    /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), DirectionEnum::TPos);
     /// ```
     pub fn from_vector(v: &Vector4<Real>) -> Self {
         let mut max = 0_f64;

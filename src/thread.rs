@@ -134,11 +134,12 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 /// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_with_initialisation_mutable(
-///     l.get_links_space(),
+///     l.get_links(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     rand::thread_rng,
@@ -224,19 +225,20 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
 /// let c = 5_usize;
 /// let result = run_pool_parallel_vec(
 ///     l.get_points(),
 ///     &c,
-///     &|i: &LatticePoint, c: &usize| i[0] * c,
+///     &|i: &LatticePoint<_>, c: &usize| i[0] * c,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     0,
 /// ).unwrap();
-/// let point = LatticePoint::new([3, 0, 5, 0]);
+/// let point = LatticePoint::new([3, 0, 5, 0].into());
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
@@ -278,14 +280,15 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// ```
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
-/// let l = LatticeCyclique::new(1_f64, 25).unwrap();
+/// use lattice_qcd_rs::dim::U4;
+/// let l = LatticeCyclique::<U4>::new(1_f64, 25).unwrap();
 /// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
 ///     iter,
 ///     &c,
-///     &|has_greeted: &mut bool, i: &LatticePoint, c: &usize| {
+///     &|has_greeted: &mut bool, i: &LatticePoint<_>, c: &usize| {
 ///          if ! *has_greeted {
 ///              *has_greeted = true;
 ///              println!("Hello from the thread");
@@ -309,11 +312,12 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
-///     l.get_links_space(),
+///     l.get_links(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     rand::thread_rng,

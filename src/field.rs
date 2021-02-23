@@ -471,12 +471,13 @@ impl LinkMatrix {
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::dim::U4;
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
     /// assert_eq!(
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
@@ -723,13 +724,14 @@ impl<D> EField<D>
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::dim::U4;
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
     /// assert_eq!(
     ///     EField::new_deterministe(&lattice, &mut rng_1, &distribution),
     ///     EField::new_deterministe(&lattice, &mut rng_2, &distribution)
@@ -878,10 +880,12 @@ impl<D> IndexMut<usize> for EField<D>
 #[cfg(test)]
 #[test]
 fn test_get_e_field_pos_neg() {
+    use super::lattice;
+    
     let l = LatticeCyclique::new(1_f64, 4).unwrap();
-    let e = EField::new(vec![Vector4::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
+    let e = EField::new(vec![VectorN::<_, na::U4>::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
     assert_eq!(
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XPos, &l),
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XNeg, &l)
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XPos.into(), &l),
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XNeg.into(), &l)
     );
 }

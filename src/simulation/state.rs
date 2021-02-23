@@ -418,7 +418,7 @@ impl LatticeState<na::U4> for LatticeStateDefault{
         if self.lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             panic!("Link matrices are not of the correct size");
         }
-        self.link_matrix = link_matrix
+        self.link_matrix = link_matrix;
     }
     
     /// Get the default pure gauge Hamiltonian.
@@ -677,8 +677,10 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
                 })
             ))
         });
-        // TODO cleanup
-        Some(Vector4::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
+        if iterator.any(|el| el.is_none()){
+            return None;
+        }
+        Some(Vector4::from_iterator(iterator.map(|el| el.unwrap())))
     }
     
 }

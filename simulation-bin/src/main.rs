@@ -94,7 +94,7 @@ fn test_leap_frog() {
     let mut rng = rand::thread_rng();
     let state = generate_state_with_logs(&mut rng);
     println!("h_l {}", state.get_hamiltonian_links());
-    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault>::new_random_e_state(state, &mut rng);
+    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault, _>::new_random_e_state(state, &mut rng);
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(0.01, 1, &SymplecticEulerRayon::new()).unwrap();
