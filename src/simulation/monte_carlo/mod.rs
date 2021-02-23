@@ -12,6 +12,12 @@ use super::{
 };
 use std::marker::PhantomData;
 use rand_distr::Distribution;
+use na::{
+    DimName,
+    DefaultAllocator,
+    VectorN,
+    base::allocator::Allocator,
+};
 
 pub mod hybride_monte_carlo;
 pub mod metropolis_hastings;
@@ -22,8 +28,11 @@ pub use metropolis_hastings::*;
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
 /// It is also a Markov chain
-pub trait MonteCarlo<State>
-    where State: LatticeState,
+pub trait MonteCarlo<State, D>
+    where State: LatticeState<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError>;
 }
@@ -31,8 +40,11 @@ pub trait MonteCarlo<State>
 /// Some times is is esayer to just implement a potential next element, the rest is done automatically.
 ///
 /// To get an [`MonteCarlo`] use the wrapper [`MCWrapper`]
-pub trait MonteCarloDefault<State>
-    where State: LatticeState,
+pub trait MonteCarloDefault<State, D>
+    where State: LatticeState<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
 {
     
     /// Generate a radom element from the previous element ( like a Markov chain).
@@ -63,20 +75,26 @@ pub trait MonteCarloDefault<State>
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug)]
-pub struct MCWrapper<MCD, State, Rng>
-    where MCD: MonteCarloDefault<State>,
-    State: LatticeState,
+pub struct MCWrapper<MCD, State, D, Rng>
+    where MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
 {
     mcd: MCD,
     rng: Rng,
-    _phantom: PhantomData<State>,
+    _phantom: PhantomData<(State, D)>,
 }
 
-impl<MCD, State, Rng> MCWrapper<MCD, State, Rng>
-    where MCD: MonteCarloDefault<State>,
-    State: LatticeState,
+impl<MCD, State, Rng, D> MCWrapper<MCD, State, D, Rng>
+    where MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
 {
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self{
@@ -94,10 +112,13 @@ impl<MCD, State, Rng> MCWrapper<MCD, State, Rng>
     }
 }
 
-impl<T, State, Rng> MonteCarlo<State> for MCWrapper<T, State, Rng>
-    where T: MonteCarloDefault<State>,
-    State: LatticeState,
+impl<T, State, D, Rng> MonteCarlo<State, D> for MCWrapper<T, State, D, Rng>
+    where T: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         self.mcd.get_next_element_default(state, &mut self.rng)

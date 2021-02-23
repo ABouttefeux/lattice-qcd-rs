@@ -73,7 +73,6 @@
 //! }
 //! ```
 
-
 macro_rules! getter {
     ($(#[$meta:meta])* $i:ident, $t:ty) => {
         $(#[$meta])*

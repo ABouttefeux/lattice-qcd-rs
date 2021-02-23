@@ -17,7 +17,11 @@ use crossbeam::thread;
 use super::lattice::{LatticeCyclique, LatticeElementToIndex};
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
-
+use na::{
+    DimName,
+    DefaultAllocator,
+    base::allocator::Allocator,
+};
 
 // TODO gives option to use rayon
 
@@ -235,20 +239,23 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// let point = LatticePoint::new([3, 0, 5, 0]);
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
-pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
+pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
     number_of_thread: usize,
     capacity: usize,
-    l: &LatticeCyclique,
+    l: &LatticeCyclique<D>,
     default_data: Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
-    Key: Eq + Send + Clone + Sync + LatticeElementToIndex,
+    Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
     Data: Send + Clone,
     F: Fn(&Key, &CommonData) -> Data,
     F: Sync + Clone,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
@@ -317,14 +324,14 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F>(
 /// ).unwrap();
 /// ```
 #[allow(clippy::too_many_arguments)]
-pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
+pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit, D>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
     closure_init: FInit,
     number_of_thread: usize,
     capacity: usize,
-    l: &LatticeCyclique,
+    l: &LatticeCyclique<D>,
     default_data: Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
@@ -334,7 +341,10 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     F: Sync + Clone,
     FInit: FnOnce() -> InitData,
     FInit: Send + Clone,
-    Key: LatticeElementToIndex,
+    Key: LatticeElementToIndex<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
 {
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);

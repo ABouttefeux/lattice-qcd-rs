@@ -51,7 +51,7 @@ pub fn run_simulation_with_progress_bar_volume<Rng>(
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         let sum = simulation.lattice().get_points().par_bridge().map(|point| {
-            simulation.link_matrix().get_pij(&point, &Direction::POSITIVES[0], &Direction::POSITIVES[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
+            simulation.link_matrix().get_pij(&point, &Direction::positives()[0], &Direction::positives()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
         }).sum::<Option<f64>>().unwrap();
         let number_of_plaquette = simulation.lattice().get_number_of_points() as f64;
         let c1 = 8_f64 / 3_f64;

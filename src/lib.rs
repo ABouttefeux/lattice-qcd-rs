@@ -133,7 +133,7 @@ pub use rand_distr::Distribution;
 pub use rand::{Rng, SeedableRng};
 
 #[macro_use]
-pub mod macro_def;
+mod macro_def;
 pub mod lattice;
 pub mod su3;
 pub mod su2;
@@ -143,6 +143,7 @@ pub mod integrator;
 pub mod thread;
 pub mod utils;
 pub mod simulation;
+pub mod dim;
 
 #[cfg(test)]
 mod test;

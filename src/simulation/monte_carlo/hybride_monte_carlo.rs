@@ -6,6 +6,7 @@ use super::{
         super::{
             Real,
             integrator::SymplecticIntegrator,
+            field::Su3Adjoint,
         },
         state::{
             SimulationStateSynchrone,
@@ -18,6 +19,12 @@ use super::{
 };
 use std::marker::PhantomData;
 use rand_distr::Distribution;
+use na::{
+    DimName,
+    DefaultAllocator,
+    VectorN,
+    base::allocator::Allocator,
+};
 
 /// Hybrid Monte Carlo algorithm ( HCM for short).
 ///
@@ -28,21 +35,31 @@ use rand_distr::Distribution;
 /// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
 /// Which means that the methode has a high acceptance rate.
 #[derive(Clone, Debug, PartialEq)]
-pub struct HybridMonteCarlo<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+pub struct HybridMonteCarlo<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
-    internal: HybridMonteCarloInternal<LatticeHamiltonianSimulationStateSyncDefault<State>, I>,
+    internal: HybridMonteCarloInternal<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
-impl<State, Rng, I> HybridMonteCarlo<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -56,7 +73,7 @@ impl<State, Rng, I> HybridMonteCarlo<State, Rng, I>
         rng: Rng,
     ) -> Self {
         Self {
-            internal: HybridMonteCarloInternal::<LatticeHamiltonianSimulationStateSyncDefault<State>, I>::new(delta_t, number_of_steps, integrator),
+            internal: HybridMonteCarloInternal::<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
             rng,
         }
     }
@@ -66,33 +83,48 @@ impl<State, Rng, I> HybridMonteCarlo<State, Rng, I>
     }
 }
 
-impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarlo<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State ,D> ,D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
-        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
+        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng).map(|el| el.get_state_owned())
     }
 }
 
 /// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
 #[derive(Clone, Debug, PartialEq)]
-struct HybridMonteCarloInternal<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+struct HybridMonteCarloInternal<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     delta_t: Real,
     number_of_steps: usize,
     integrator: I,
-    _phantom: PhantomData<State>,
+    _phantom: PhantomData<(State, D)>,
 }
 
-impl<State, I> HybridMonteCarloInternal<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+impl<State, I, D> HybridMonteCarloInternal<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -109,9 +141,14 @@ impl<State, I> HybridMonteCarloInternal<State, I>
     }
 }
 
-impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
@@ -135,21 +172,31 @@ impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternal<State, I>
 /// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
 /// Which means that the methode has a high acceptance rate.
 #[derive(Clone, Debug, PartialEq)]
-pub struct HybridMonteCarloDiagnostic<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+pub struct HybridMonteCarloDiagnostic<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
-    internal: HybridMonteCarloInternalDiagnostics<LatticeHamiltonianSimulationStateSyncDefault<State>, I>,
+    internal: HybridMonteCarloInternalDiagnostics<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
-impl<State, Rng, I> HybridMonteCarloDiagnostic<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -163,7 +210,7 @@ impl<State, Rng, I> HybridMonteCarloDiagnostic<State, Rng, I>
         rng: Rng,
     ) -> Self {
         Self {
-            internal: HybridMonteCarloInternalDiagnostics::<LatticeHamiltonianSimulationStateSyncDefault<State>, I>::new(delta_t, number_of_steps, integrator),
+            internal: HybridMonteCarloInternalDiagnostics::<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
             rng,
         }
     }
@@ -181,35 +228,50 @@ impl<State, Rng, I> HybridMonteCarloDiagnostic<State, Rng, I>
     }
 }
 
-impl<State, Rng, I> MonteCarlo<State> for HybridMonteCarloDiagnostic<State, Rng, I>
-    where State: LatticeState + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State>: SimulationStateSynchrone,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State>>>,
+impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State, Rng, I, D>
+    where State: LatticeState<D> + Clone,
+    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
-        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State>::new_random_e_state(state, self.get_rng());
+        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng).map(|el| el.get_state_owned())
     }
 }
 
 /// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
 #[derive(Clone, Debug, PartialEq)]
-struct HybridMonteCarloInternalDiagnostics<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+struct HybridMonteCarloInternalDiagnostics<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     delta_t: Real,
     number_of_steps: usize,
     integrator: I,
     has_replace_last: bool,
     prob_replace_last: Real,
-    _phantom: PhantomData<State>,
+    _phantom: PhantomData<(State, D)>,
 }
 
-impl<State, I> HybridMonteCarloInternalDiagnostics<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+impl<State, I, D> HybridMonteCarloInternalDiagnostics<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -236,9 +298,14 @@ impl<State, I> HybridMonteCarloInternalDiagnostics<State, I>
     }
 }
 
-impl<State, I> MonteCarloDefault<State> for HybridMonteCarloInternalDiagnostics<State, I>
-    where State: SimulationStateSynchrone,
-    I: SymplecticIntegrator<State, SimulationStateLeap<State>>,
+impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagnostics<State, I, D>
+    where State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
