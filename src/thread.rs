@@ -14,7 +14,12 @@ use std::{
     vec::Vec
 };
 use crossbeam::thread;
-use super::lattice::{LatticeCyclique, LatticeElementToIndex};
+use super::lattice::{
+    LatticeCyclique,
+    LatticeElementToIndex,
+    Direction,
+    DirectionList,
+};
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
 use na::{
@@ -235,7 +240,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
-///     0,
+///     &0,
 /// ).unwrap();
 /// let point = LatticePoint::new([3, 0, 5, 0].into());
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
@@ -247,7 +252,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
     number_of_thread: usize,
     capacity: usize,
     l: &LatticeCyclique<D>,
-    default_data: Data,
+    default_data: &Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
     Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
@@ -257,6 +262,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
@@ -298,7 +304,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 ///     4,
 ///     100000,
 ///     &l,
-///     0,
+///     &0,
 /// ).unwrap();
 /// ```
 /// will print "Hello from the thread" four times.
@@ -323,7 +329,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
-///     nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
+///     &nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
 /// ).unwrap();
 /// ```
 #[allow(clippy::too_many_arguments)]
@@ -335,7 +341,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     number_of_thread: usize,
     capacity: usize,
     l: &LatticeCyclique<D>,
-    default_data: Data,
+    default_data: &Data,
 ) -> Result<Vec<Data>, ThreadError>
     where CommonData: Sync,
     Key: Eq + Send + Clone + Sync,
@@ -348,6 +354,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);

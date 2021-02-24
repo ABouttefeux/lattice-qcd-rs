@@ -23,7 +23,11 @@ use super::{
             SimulationStateLeap,
             LatticeState,
         },
-        lattice::LatticeCyclique,
+        lattice::{
+            LatticeCyclique,
+            Direction,
+            DirectionList,
+        },
     },
     SymplecticIntegrator,
     integrate_link,
@@ -46,6 +50,7 @@ fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EFie
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     run_pool_parallel_rayon(
         lattice.get_links(),
@@ -62,6 +67,7 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     run_pool_parallel_rayon(
         lattice.get_points(),
@@ -98,6 +104,7 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let link_matrix = get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t);

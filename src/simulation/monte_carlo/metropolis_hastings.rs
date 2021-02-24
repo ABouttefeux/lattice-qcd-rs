@@ -16,7 +16,8 @@ use super::{
                 Direction,
                 LatticeElementToIndex,
                 LatticeLink,
-                LatticeCyclique
+                LatticeCyclique,
+                DirectionList,
             }
         },
         state::{
@@ -44,6 +45,7 @@ pub struct MetropolisHastings<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     number_of_update: usize,
     spread: Real,
@@ -55,6 +57,7 @@ impl<State, D> MetropolisHastings<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
@@ -79,6 +82,7 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastings<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
@@ -97,6 +101,7 @@ pub struct MetropolisHastingsDiagnostic<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     number_of_update: usize,
     spread: Real,
@@ -110,6 +115,7 @@ impl<State, D> MetropolisHastingsDiagnostic<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
@@ -144,6 +150,7 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
@@ -182,7 +189,7 @@ fn get_delta_s_old_new_cmp(
 ) -> Real
 {
     let dir_j = link.dir();
-    let a: na::Matrix3<na::Complex<Real>> = Direction::<na::U4>::positives().par_iter()
+    let a: na::Matrix3<na::Complex<Real>> = Direction::<na::U4>::get_all_positive_directions().par_iter()
     .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
         let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
         let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
@@ -270,12 +277,12 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     {
         self.delta_s = 0_f64;
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
-        let d_d = rand::distributions::Uniform::new(0, 4);
+        let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<na::U4>::dim_st());
         let mut return_val = Vec::with_capacity(self.number_of_update);
         
         (0..self.number_of_update).for_each(|_| {
             let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
-            let direction = Direction::positives()[d_d.sample(&mut self.rng)];
+            let direction = Direction::get_all_positive_directions()[d_d.sample(&mut self.rng)];
             let link = LatticeLinkCanonical::new(point, direction).unwrap();
             let index = link.to_index(state.lattice());
             
@@ -404,7 +411,7 @@ impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
         let d_d = rand::distributions::Uniform::new(0, 4);
         
         let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
-        let direction = Direction::positives()[d_d.sample(&mut self.rng)];
+        let direction = Direction::get_all_positive_directions()[d_d.sample(&mut self.rng)];
         let link = LatticeLinkCanonical::new(point, direction).unwrap();
         let index = link.to_index(state.lattice());
         

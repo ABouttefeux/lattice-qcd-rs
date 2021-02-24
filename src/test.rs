@@ -229,7 +229,7 @@ fn test_thread_vec() {
     let l = LatticeCyclique::<na::U4>::new(1_f64, 10).unwrap();
     let iter = 0..10000;
     let c = 5;
-    let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, 0).unwrap();
+    let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, &0).unwrap();
     for i in iter {
         assert_eq!(*result.get(i).unwrap(), i * i *c);
     }

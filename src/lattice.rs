@@ -37,6 +37,7 @@ impl<D> LatticeCyclique<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     
     /// Number space + time dimension.
@@ -108,7 +109,7 @@ impl<D> LatticeCyclique<D>
     
     /// Get an Iterator over all canonical link
     pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
-        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::positives().first().unwrap()));
+        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::get_all_positive_directions().first().unwrap()));
     }
     
     /// Get an Iterator over all points.
@@ -191,6 +192,7 @@ impl<'a, D> IteratorLatticeLinkCanonical<'a, D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] will return `first_el`.
     /// # Example
@@ -214,12 +216,13 @@ impl<'a, D> Iterator for IteratorLatticeLinkCanonical<'a, D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     type Item = LatticeLinkCanonical<D>;
     
     // TODO improve
     fn next(&mut self) -> Option<Self::Item> {
-        let link_iter = Direction::positives();
+        let link_iter = Direction::get_all_positive_directions();
         let previous_el = self.element;
         match &mut self.element {
             Some(element) => {
@@ -262,6 +265,7 @@ impl<'a, D> IteratorLatticePoint<'a, D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// create a new iterator. The first [`IteratorLatticePoint::next()`] will return `first_el`.
     /// # Example
@@ -285,6 +289,7 @@ impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     type Item = LatticePoint<D>;
     
@@ -458,6 +463,7 @@ pub trait LatticeElementToIndex<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// Given a lattice return an index from the element
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize;
@@ -467,6 +473,7 @@ impl<D> LatticeElementToIndex<D> for LatticePoint<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
         self.iter().enumerate().map(|(index, pos)| {
@@ -479,6 +486,7 @@ impl<D> LatticeElementToIndex<D> for Direction<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// equivalent to [`Direction::to_index()`]
     fn to_index(&self, _: &LatticeCyclique<D>) -> usize {
@@ -490,6 +498,7 @@ impl<D> LatticeElementToIndex<D> for LatticeLinkCanonical<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
         self.pos().to_index(l) * D::dim() + self.dir().to_index()
@@ -500,6 +509,7 @@ impl<D> LatticeElementToIndex<D> for usize
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// return self
     fn to_index(&self, _l: &LatticeCyclique<D>) -> usize {
@@ -811,9 +821,9 @@ impl<D> Direction<D>
         Some(Self {index_dir, is_positive, _phantom: PhantomData})
     }
     
-    
     /// List of all positives directions.
-    pub fn positives() -> Vec<Self> {
+    /// This is very slow use [`DirectionList::get_all_positive_directions`] instead
+    pub fn positives_vec() -> Vec<Self> {
         //TODO improve
         let mut x = Vec::with_capacity(D::dim());
         for i in 0..D::dim() {
@@ -823,7 +833,8 @@ impl<D> Direction<D>
     }
     
     /// List all directions.
-    pub fn directions() -> Vec<Self> {
+    /// This is very slow use [`DirectionList::get_all_directions`] instead
+    pub fn directions_vec() -> Vec<Self> {
         //TODO improve
         let mut x = Vec::with_capacity(2 * D::dim());
         for i in 0..D::dim() {
@@ -874,9 +885,14 @@ impl<D> Direction<D>
     where D: DimName,
     DefaultAllocator: Allocator<Real, D>,
 {
+    
     /// Convert the direction into a vector of norm `a`;
     pub fn to_vector(&self, a: f64) -> VectorN<Real, D> {
         self.to_unit_vector() * a
+    }
+    
+    pub fn dim() -> usize {
+        D::dim()
     }
     
     /// Convert the direction into a vector of norm `1`;
@@ -885,6 +901,17 @@ impl<D> Direction<D>
         v[self.index_dir] = 1_f64;
         v
     }
+    
+}
+
+
+impl<D> Direction<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<Real, D>,
+    Direction<D>: DirectionList,
+{
+    
+    
     
     /// Find the direction the vector point the most.
     /// For a zero vector return [`DirectionEnum::XPos`].
@@ -901,7 +928,7 @@ impl<D> Direction<D>
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
-        for (i, dir) in Self::positives().iter().enumerate() {
+        for (i, dir) in Self::get_all_positive_directions().iter().enumerate() {
             let scalar_prod = v.dot(&dir.to_vector(1_f64));
             if scalar_prod.abs() > max {
                 max = scalar_prod.abs();
@@ -911,15 +938,13 @@ impl<D> Direction<D>
         }
         Self::new(index_max, is_positive).expect("Unreachable")
     }
-    
-    pub fn dim() -> usize {
-        D::dim()
-    }
 }
-
+/// List all possible direction
 pub trait DirectionList: Sized {
+    /// List all directions.
     fn get_all_directions()->& 'static [Self];
-    fn get_positives_directions()->& 'static [Self];
+    /// List all positive directions.
+    fn get_all_positive_directions()->& 'static [Self];
 }
 
 implement_direction_list!();
@@ -960,6 +985,7 @@ impl<D: DimName> From<&Direction<D>> for usize {
 impl<D> From<VectorN<Real, D>> for Direction<D>
     where D: DimName,
     DefaultAllocator: Allocator<Real, D>,
+    Direction<D>: DirectionList,
 {
     fn from(v: VectorN<Real, D>) -> Self {
         Direction::from_vector(&v)
@@ -970,6 +996,7 @@ impl<D> From<VectorN<Real, D>> for Direction<D>
 impl<D> From<&VectorN<Real, D>> for Direction<D>
     where D: DimName,
     DefaultAllocator: Allocator<Real, D>,
+    Direction<D>: DirectionList,
 {
     fn from(v: &VectorN<Real, D>) -> Self {
         Direction::<D>::from_vector(v)

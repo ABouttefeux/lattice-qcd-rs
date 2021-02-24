@@ -11,6 +11,7 @@ use super::{
         LatticeLink,
         Direction,
         LatticeElementToIndex,
+        DirectionList,
     },
     Vector8,
     su3,
@@ -490,6 +491,7 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
@@ -512,6 +514,8 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
+        Direction<D>: DirectionList,
         D: Eq,
     {
         if number_of_thread == 0 {
@@ -529,27 +533,19 @@ impl LinkMatrix {
             number_of_thread,
             l.get_number_of_canonical_links_space(),
             l,
-            Self::zeros(),
+            &CMatrix3::zeros(),
         )?;
         Ok(Self {data})
-    }
-    
-    // work arround wierd bug
-    fn zeros() -> CMatrix3 {
-        CMatrix3::zeros()
     }
     
     pub fn new_cold<D>(l: &LatticeCyclique<D>) -> Self
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
+        Direction<D>: DirectionList,
     {
-        Self {data: vec![Self::identity(); l.get_number_of_canonical_links_space()]}
-    }
-    
-    // work arround wierd bug
-    fn identity() -> CMatrix3 {
-        CMatrix3::identity()
+        Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
     }
     
     /// get the link matrix associated to given link using the notation
@@ -558,6 +554,7 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))? ;
@@ -575,6 +572,7 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
@@ -589,6 +587,7 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
@@ -601,14 +600,15 @@ impl LinkMatrix {
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         if lattice.get_number_of_canonical_links_space() != self.len() {
             return None;
         }
         // the order does not matter as we sum
         let sum = lattice.get_points().par_bridge().map(|point| {
-            Direction::positives().iter().map( |dir_i|{
-                Direction::positives().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+            Direction::get_all_positive_directions().iter().map( |dir_i|{
+                Direction::get_all_positive_directions().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j|{
                         self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                     }).sum::<Option<na::Complex<Real>>>()
@@ -701,6 +701,7 @@ impl<D> EField<D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     /// Create a new "Electrical" field.
@@ -788,7 +789,7 @@ impl<D> EField<D>
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None
         }
-        Direction::positives().iter().map(|dir| {
+        Direction::get_all_positive_directions().iter().map(|dir| {
             let e_i = self.get_e_field(point, dir, lattice)?;
             let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, - *dir), lattice)?;
             let p_mi = lattice.add_point_direction(*point, &- dir);
@@ -841,7 +842,7 @@ impl<D> EField<D>
         let data = lattice.get_points().collect::<Vec<LatticePoint<D>>>().par_iter().map(|point| {
             let e = self.get_e_vec(&point, lattice).unwrap();
             VectorN::<_, D>::from_fn(|index_dir, _| {
-                let dir = Direction::<D>::positives()[index_dir];
+                let dir = Direction::<D>::get_all_positive_directions()[index_dir];
                 let u = link_matrix.get_matrix(&LatticeLink::new(*point, dir), lattice).unwrap();
                 let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
                 let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, &dir), lattice).unwrap();

@@ -4,6 +4,10 @@
 use super::{
     super::{
         Real,
+        lattice::{
+            Direction,
+            DirectionList,
+        }
     },
     state::{
         LatticeState,
@@ -33,6 +37,7 @@ pub trait MonteCarlo<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError>;
 }
@@ -45,6 +50,7 @@ pub trait MonteCarloDefault<State, D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     
     /// Generate a radom element from the previous element ( like a Markov chain).
@@ -82,6 +88,7 @@ pub struct MCWrapper<MCD, State, D, Rng>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     mcd: MCD,
     rng: Rng,
@@ -95,6 +102,7 @@ impl<MCD, State, Rng, D> MCWrapper<MCD, State, D, Rng>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self{
@@ -119,6 +127,7 @@ impl<T, State, D, Rng> MonteCarlo<State, D> for MCWrapper<T, State, D, Rng>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         self.mcd.get_next_element_default(state, &mut self.rng)

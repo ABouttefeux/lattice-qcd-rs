@@ -7,6 +7,10 @@ use super::{
             Real,
             integrator::SymplecticIntegrator,
             field::Su3Adjoint,
+            lattice::{
+                Direction,
+                DirectionList,
+            }
         },
         state::{
             SimulationStateSynchrone,
@@ -45,6 +49,7 @@ pub struct HybridMonteCarlo<State, Rng, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternal<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
     rng: Rng,
@@ -60,6 +65,7 @@ impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -93,6 +99,7 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, 
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
@@ -110,6 +117,7 @@ struct HybridMonteCarloInternal<State, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     delta_t: Real,
     number_of_steps: usize,
@@ -125,6 +133,7 @@ impl<State, I, D> HybridMonteCarloInternal<State, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -149,6 +158,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
@@ -182,6 +192,7 @@ pub struct HybridMonteCarloDiagnostic<State, Rng, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternalDiagnostics<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
     rng: Rng,
@@ -197,6 +208,7 @@ impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -238,6 +250,7 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
@@ -255,6 +268,7 @@ struct HybridMonteCarloInternalDiagnostics<State, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     delta_t: Real,
     number_of_steps: usize,
@@ -272,6 +286,7 @@ impl<State, I, D> HybridMonteCarloInternalDiagnostics<State, I, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -306,6 +321,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagno
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {

@@ -16,6 +16,7 @@ use super::{
             LatticeLinkCanonical,
             Direction,
             LatticeElementToIndex,
+            DirectionList,
         },
         thread::{
             ThreadError
@@ -55,6 +56,7 @@ pub trait LatticeState<D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     
     /// The link matrices of this state.
@@ -100,6 +102,7 @@ pub trait LatticeStateNew<D>
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     ///Create a new simulation state
     fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError>;
@@ -121,6 +124,7 @@ pub trait LatticeHamiltonianSimulationState<D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
     /// # Panic
@@ -172,6 +176,7 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// Create a new simulation state
     fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError>;
@@ -206,6 +211,7 @@ pub trait SimulationStateSynchrone<D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// does half a step for the conjugate momenta.
     fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
@@ -285,6 +291,7 @@ pub trait SimulationStateLeapFrog<D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// Simulate the state to synchrone by finishing the half setp
     fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
@@ -427,8 +434,8 @@ impl LatticeState<na::U4> for LatticeStateDefault{
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::positives().iter().map(|dir_i| {
-                Direction::positives().iter()
+            Direction::get_all_positive_directions().iter().map(|dir_i| {
+                Direction::get_all_positive_directions().iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -591,8 +598,8 @@ impl LatticeState<na::U4> for LatticeHamiltonianSimulationStateSync {
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::positives().iter().map(|dir_i| {
-                Direction::positives().iter()
+            Direction::get_all_positive_directions().iter().map(|dir_i| {
+                Direction::get_all_positive_directions().iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -625,7 +632,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::positives().iter().map(|dir_i| {
+            Direction::get_all_positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found").to_matrix();
                 (e_i * e_i).trace().real()
             }).sum::<Real>()
@@ -662,10 +669,10 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
     fn get_derivative_e(point: &LatticePoint<na::U4>, link_matrix: &LinkMatrix, _e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::positives();
-        let mut iterator = dir_pos.iter().map(|dir| {
+        let dir_pos = Direction::get_all_positive_directions();
+        let iterator = dir_pos.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
-            let sum_s: CMatrix3 = Direction::directions().iter()
+            let sum_s: CMatrix3 = Direction::get_all_directions().iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     link_matrix.get_sij(point, dir, dir_2, lattice)
@@ -677,7 +684,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
                 })
             ))
         });
-        if iterator.any(|el| el.is_none()){
+        if iterator.clone().any(|el| el.is_none()){
             return None;
         }
         Some(Vector4::from_iterator(iterator.map(|el| el.unwrap())))
@@ -695,6 +702,7 @@ pub struct SimulationStateLeap<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     state: State,
     _phantom: PhantomData<D>,
@@ -707,6 +715,7 @@ impl<State, D> SimulationStateLeap<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     getter!(state, State);
     
@@ -731,6 +740,7 @@ impl<State, D> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {}
 
     /// We just transmit the function of `State`, there is nothing new.
@@ -741,6 +751,7 @@ impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     const CA: Real = State::CA;
     
@@ -774,6 +785,7 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for SimulationStateLeap<S
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, SimulationError> {
         let state = State::new(lattice, beta, e_field, link_matrix, t)?;
@@ -789,6 +801,7 @@ impl<State, D> LatticeHamiltonianSimulationState<D> for SimulationStateLeap<Stat
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     project!(get_hamiltonian_efield, state, Real);
@@ -831,6 +844,7 @@ pub struct LatticeHamiltonianSimulationStateSyncDefault<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     lattice_state: State,
     e_field: EField<D>,
@@ -847,6 +861,7 @@ impl<State, D> serde::Serialize for LatticeHamiltonianSimulationStateSyncDefault
     VectorN<Su3Adjoint, D>: Sync + Send,
     EField<D>: Serialize,
     State: Serialize + Clone,
+    Direction<D>: DirectionList,
 {
     fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
         where T: serde::Serializer,
@@ -865,6 +880,7 @@ impl<'de, State, D> serde::Deserialize<'de> for LatticeHamiltonianSimulationStat
     VectorN<Su3Adjoint, D>: Sync + Send,
     EField<D>: Deserialize<'de>,
     State: Deserialize<'de>,
+    Direction<D>: DirectionList,
 {
     fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
         where T: serde::Deserializer<'de>,
@@ -883,6 +899,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     pub fn get_state_owned(self) -> State {
         self.lattice_state
@@ -915,6 +932,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
@@ -931,6 +949,7 @@ impl<State, D> SimulationStateSynchrone<D> for LatticeHamiltonianSimulationState
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {}
 
 impl<State, D> LatticeState<D> for LatticeHamiltonianSimulationStateSyncDefault<State, D>
@@ -940,6 +959,7 @@ impl<State, D> LatticeState<D> for LatticeHamiltonianSimulationStateSyncDefault<
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     fn link_matrix(&self) -> &LinkMatrix{
@@ -975,6 +995,7 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for LatticeHamiltonianSim
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
@@ -992,7 +1013,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::positives().iter().map(|dir_i| {
+            Direction::get_all_positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
                 (e_i * e_i).trace().real()
             }).sum::<Real>()
@@ -1029,10 +1050,10 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
     fn get_derivative_e(point: &LatticePoint<na::U4>, link_matrix: &LinkMatrix, _e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<Vector4<Su3Adjoint>> {
         let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::positives();
+        let dir_pos = Direction::get_all_positive_directions();
         let mut iterator = dir_pos.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
-            let sum_s: CMatrix3 = Direction::directions().iter()
+            let sum_s: CMatrix3 = Direction::get_all_directions().iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     link_matrix.get_sij(point, dir, dir_2, lattice)

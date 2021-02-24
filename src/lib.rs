@@ -176,6 +176,7 @@ pub mod thread;
 pub mod utils;
 pub mod simulation;
 pub mod dim;
+pub mod prelude;
 
 #[cfg(test)]
 mod test;

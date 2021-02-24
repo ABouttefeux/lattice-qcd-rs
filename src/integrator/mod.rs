@@ -64,7 +64,9 @@ use super::{
         LatticeLinkCanonical,
         LatticeLink,
         LatticePoint,
-        LatticeCyclique
+        LatticeCyclique,
+        Direction,
+        DirectionList,
     },
     CMatrix3,
     field::{
@@ -112,6 +114,7 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError>;
@@ -128,6 +131,7 @@ fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMa
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = link_matrix.get_matrix(&canonical_link, lattice).expect("Link matrix not found");
@@ -142,6 +146,7 @@ fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix,
     VectorN<usize, D>: Copy + Send + Sync,
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     let initial_value = e_field.get_e_vec(point, lattice).expect("E Field not found");
     let deriv = State::get_derivative_e(point, link_matrix, e_field, lattice).expect("Derivative not found");

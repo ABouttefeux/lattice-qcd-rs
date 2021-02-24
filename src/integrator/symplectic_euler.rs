@@ -30,7 +30,11 @@ use super::{
             LatticeHamiltonianSimulationStateNew,
             SimulationStateLeap,
         },
-        lattice::LatticeCyclique,
+        lattice::{
+            LatticeCyclique,
+            Direction,
+            DirectionList,
+        },
     },
     SymplecticIntegrator,
     integrate_link,
@@ -46,6 +50,7 @@ fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EFie
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     run_pool_parallel_vec(
         lattice.get_links(),
@@ -54,7 +59,7 @@ fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EFie
         number_of_thread,
         lattice.get_number_of_canonical_links_space(),
         lattice,
-        CMatrix3::zeros(),
+        &CMatrix3::zeros(),
     )
 }
 
@@ -66,6 +71,7 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Send + Sync,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     run_pool_parallel_vec(
         lattice.get_points(),
@@ -74,7 +80,7 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
         number_of_thread,
         lattice.get_number_of_points(),
         lattice,
-        VectorN::<_, D>::from_element(Su3Adjoint::default()),
+        &VectorN::<_, D>::from_element(Su3Adjoint::default()),
     )
 }
 
@@ -111,6 +117,7 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Send + Sync,
     D: Eq,
+    Direction<D>: DirectionList,
 {
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;

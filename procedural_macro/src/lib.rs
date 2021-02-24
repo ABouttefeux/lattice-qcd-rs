@@ -26,18 +26,18 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
                 }
             );
         }
-        let u_indent = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
-        let u_dir_indent = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
-        let u_dir_pos_indent = syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
+        let u_ident = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
+        let u_dir_ident = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
+        let u_dir_pos_ident = syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
         let s = quote!{
-            const #u_dir_indent: [Direction<#u_indent>; #i * 2] = [ #(#array_direction),* ];
-            const #u_dir_pos_indent: [Direction<#u_indent>; #i] = [ #(#array_direction_positives),* ];
-            impl DirectionList for Direction<#u_indent> {
+            const #u_dir_ident: [Direction<#u_ident>; #i * 2] = [ #(#array_direction),* ];
+            const #u_dir_pos_ident: [Direction<#u_ident>; #i] = [ #(#array_direction_positives),* ];
+            impl DirectionList for Direction<#u_ident> {
                 fn get_all_directions() -> & 'static [Self] {
-                    &#u_dir_indent
+                    &#u_dir_ident
                 }
-                fn get_positives_directions() -> & 'static [Self] {
-                    &#u_dir_pos_indent
+                fn get_all_positive_directions() -> & 'static [Self] {
+                    &#u_dir_pos_ident
                 }
             }
         };
