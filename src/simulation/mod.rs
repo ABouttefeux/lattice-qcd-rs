@@ -14,6 +14,7 @@ pub use monte_carlo::*;
 
 /// Error returned by simulation.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum SimulationError {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),

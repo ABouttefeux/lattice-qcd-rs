@@ -267,10 +267,11 @@ type FactorialNumber = u128;
 /// Return N such that `1/(N-7)!` < [`f64::EPSILON`].
 ///
 /// This number is needed for the computation of exponential matrix
+#[allow(clippy::as_conversions)] // no try into for f64
 pub fn get_factorial_size_for_exp() -> usize {
     let mut n : usize = 7;
     let mut factorial_value = 1;
-    while 1_f64 / (factorial_value as Real) >= Real::EPSILON {
+    while 1_f64 / (factorial_value as f64) >= Real::EPSILON {
         n += 1;
         factorial_value *= n - 7;
     }
@@ -295,6 +296,7 @@ macro_rules! set_factorial_storage {
 
 impl FactorialStorageStatic {
     /// compile time evaluation of all 25 factorial numbers
+    #[allow(clippy::as_conversions)] // constant function cant use try into
     pub const fn new() -> Self {
         let mut data : [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] = [1; FACTORIAL_STORAGE_STAT_SIZE];
         // cant do for in constant function :(
@@ -358,16 +360,17 @@ const N: usize = 26;
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 #[inline]
+#[allow(clippy::as_conversions)] // no try into for f64
 pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
     let n = N - 1;
-    let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t();
     for i in (0..n).rev() {
-        let q0_n = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
+        let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
         let q2_n = I * q1;
         
@@ -387,15 +390,16 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 #[inline]
+#[allow(clippy::as_conversions)] // no try into for f64
 pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     let n = N - 1;
-    let mut q0: Complex = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t();
     for i in (0..n).rev() {
-        let q0_n = Complex::from(1f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
+        let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
         let q2_n = q1;
         

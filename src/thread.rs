@@ -23,10 +23,9 @@ use na::{
     base::allocator::Allocator,
 };
 
-// TODO gives option to use rayon
-
 /// Multithreading error.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ThreadError {
     /// Tried to run some jobs with 0 threads
     ThreadNumberIncorect,

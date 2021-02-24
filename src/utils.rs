@@ -1,6 +1,8 @@
 
 //! Utils function and structure
 
+use std::convert::TryInto;
+
 type FactorialNumber = u128;
 
 /// Smallest number sur that (n+1)! overflow u128.
@@ -14,6 +16,7 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 /// assert_eq!(factorial(4), 24);
 /// assert_eq!(factorial(6), 720);
 /// ```
+#[allow(clippy::as_conversions)] // constant function cant use try into
 pub const fn factorial(n: usize) -> FactorialNumber {
     if n == 0 {
         return 1;
@@ -65,7 +68,7 @@ impl FactorialStorageDyn {
             return self.data[value];
         }
         for i in len..value + 1{
-            self.data.push(self.data[i - 1] * i as FactorialNumber);
+            self.data.push(self.data[i - 1] * TryInto::<FactorialNumber>::try_into(i).unwrap());
         }
         self.data[value]
     }
@@ -97,7 +100,7 @@ impl FactorialStorageDyn {
     pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
         let mut value_m : FactorialNumber = self.data[value.min(self.data.len() -1 )];
         for i in self.data.len() - 1..value{
-            value_m *= (i + 1) as FactorialNumber;
+            value_m *= TryInto::<FactorialNumber>::try_into(i + 1).unwrap();
         }
         value_m
     }

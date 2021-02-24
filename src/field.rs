@@ -596,6 +596,7 @@ impl LinkMatrix {
     }
     
     /// Take the average of the trace of all plaquettes
+    #[allow(clippy::as_conversions)] // no try into for f64
     pub fn average_trace_plaquette<D>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>>
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
@@ -807,6 +808,7 @@ impl<D> EField<D>
     }
     
     /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
+    #[allow(clippy::as_conversions)] // no try into for f64
     pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;

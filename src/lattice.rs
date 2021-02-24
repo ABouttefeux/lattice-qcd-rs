@@ -9,12 +9,16 @@ use na::{
     DefaultAllocator,
 };
 use approx::*;
-use super::Real;
+use super::{
+    Real,
+    dim::*,
+};
 use std::ops::{Index, IndexMut, Neg};
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 use std::marker::PhantomData;
 use std::convert::TryInto;
+use lattice_qcd_rs_procedural_macro::implement_direction_list;
 
 /// a cyclique lattice in space. Does not store point and links but is used to generate them.
 #[derive(Clone, Debug, PartialEq)]
@@ -373,6 +377,7 @@ impl<D> LatticePoint<D>
         self.data.len()
     }
     
+    #[allow(clippy::unused_self)]
     pub fn is_empty(&self) -> bool {
         D::dim() == 0
     }
@@ -435,7 +440,6 @@ impl<D, T> From<T> for LatticePoint<D>
 macro_rules! implement_from_lattice_point{
     ($(($l:literal, $i:ident)) ,+) => {
         $(
-            use na::$i;
             impl From<LatticePoint<$i>> for [usize; $l] {
                 fn  from(data: LatticePoint<$i>) -> [usize; $l] {
                     data.data.into()
@@ -444,8 +448,8 @@ macro_rules! implement_from_lattice_point{
         )*
     }
 }
-implement_from_lattice_point!((1, U1), (2, U2), (3, U3), (4, U4), (5, U5), (6, U6), (7, U7), (8, U8), (9, U9), (10, U10));
 
+implement_from_lattice_point!((1, U1), (2, U2), (3, U3), (4, U4), (5, U5), (6, U6), (7, U7), (8, U8), (9, U9), (10, U10));
 
 /// Trait to convert an element on a lattice to an [`usize`].
 ///
@@ -786,7 +790,6 @@ impl From<f64> for Sign {
     }
 }
 
-
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -914,6 +917,12 @@ impl<D> Direction<D>
     }
 }
 
+pub trait DirectionList: Sized {
+    fn get_all_directions()->& 'static [Self];
+    fn get_positives_directions()->& 'static [Self];
+}
+
+implement_direction_list!();
 
 impl<D: DimName> Neg for Direction<D> {
     type Output = Self;
@@ -1022,12 +1031,12 @@ impl DirectionEnum {
     pub const DIRECTIONS_SPACE : [Self; 6] = [DirectionEnum::XPos, DirectionEnum::YPos, DirectionEnum::ZPos, DirectionEnum::XNeg, DirectionEnum::YNeg, DirectionEnum::ZNeg];
     
     /// Convert the direction into a vector of norm `a`;
-    pub fn to_vector(&self, a: f64) -> Vector4<Real> {
+    pub fn to_vector(self, a: f64) -> Vector4<Real> {
         self.to_unit_vector() * a
     }
     
     /// Convert the direction into a vector of norm `1`;
-    pub fn to_unit_vector(&self) -> Vector4<Real> {
+    pub fn to_unit_vector(self) -> Vector4<Real> {
         match self {
             DirectionEnum::XPos => Vector4::<Real>::new(1_f64, 0_f64, 0_f64, 0_f64),
             DirectionEnum::XNeg => Vector4::<Real>::new(-1_f64, 0_f64, 0_f64, 0_f64),
@@ -1048,7 +1057,7 @@ impl DirectionEnum {
     /// assert_eq!( DirectionEnum::TPos.is_positive(), true);
     /// assert_eq!( DirectionEnum::YNeg.is_positive(), false);
     /// ```
-    pub const fn is_positive(&self) -> bool {
+    pub const fn is_positive(self) -> bool {
         match self {
             DirectionEnum::XPos | DirectionEnum::YPos | DirectionEnum::ZPos | DirectionEnum::TPos => true,
             DirectionEnum::XNeg | DirectionEnum::YNeg | DirectionEnum::ZNeg | DirectionEnum::TNeg => false,
@@ -1056,7 +1065,7 @@ impl DirectionEnum {
     }
     
     /// Get if the position is Negative. see [`DirectionEnum::is_positive`]
-    pub const fn is_negative(&self) -> bool {
+    pub const fn is_negative(self) -> bool {
         ! self.is_positive()
     }
     
@@ -1155,7 +1164,7 @@ impl DirectionEnum {
     /// assert_eq!(DirectionEnum::TPos.to_index(), 3);
     /// assert_eq!(DirectionEnum::TNeg.to_index(), 3);
     /// ```
-    pub const fn to_index(&self) -> usize {
+    pub const fn to_index(self) -> usize {
         match self {
             DirectionEnum::XPos | DirectionEnum::XNeg => 0,
             DirectionEnum::YPos | DirectionEnum::YNeg => 1,
