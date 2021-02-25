@@ -900,8 +900,7 @@ impl<D: DimName> Neg for &Direction<D> {
     type Output = Direction<D>;
     
     fn neg(self) -> Self::Output {
-        let return_val = *self;
-        - return_val
+        - *self
     }
 }
 

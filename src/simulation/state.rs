@@ -331,13 +331,23 @@ pub trait SimulationStateLeapFrog<D>
 /// It has the default pure gauge hamiltonian
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeStateDefault {
-    lattice : LatticeCyclique<na::U4>,
+pub struct LatticeStateDefault<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
+    lattice : LatticeCyclique<D>,
     beta: Real,
     link_matrix: LinkMatrix,
 }
 
-impl LatticeStateDefault {
+impl<D> LatticeStateDefault<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
     /// Create a cold configuration. i.e. all the links are set to the unit matrix.
     ///
     /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
@@ -359,15 +369,15 @@ impl LatticeStateDefault {
     /// ```
     /// extern crate rand;
     /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclique, dim};
     /// use rand::{SeedableRng, rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// assert_eq!(
-    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
-    ///     LatticeStateDefault::new_deterministe(1_f64, 1_f64, 4, &mut rng_2).unwrap()
+    ///     LatticeStateDefault::<dim::U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
+    ///     LatticeStateDefault::<dim::U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -389,7 +399,7 @@ impl LatticeStateDefault {
     }
     
     /// Get a mutable reference to the link matrix at `link`
-    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical<na::U4>) -> Option<&mut CMatrix3> {
+    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical<D>) -> Option<&mut CMatrix3> {
         let index = link.to_index(&self.lattice);
         if index < self.link_matrix.len(){
             Some(&mut self.link_matrix[index])
@@ -400,8 +410,13 @@ impl LatticeStateDefault {
     }
 }
 
-impl LatticeStateNew<na::U4> for LatticeStateDefault {
-    fn new(lattice: LatticeCyclique<na::U4>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError> {
+impl<D> LatticeStateNew<D> for LatticeStateDefault<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
+    fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, SimulationError> {
         if lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return Err(SimulationError::InitialisationError);
         }
@@ -409,14 +424,19 @@ impl LatticeStateNew<na::U4> for LatticeStateDefault {
     }
 }
 
-impl LatticeState<na::U4> for LatticeStateDefault{
+impl<D> LatticeState<D> for LatticeStateDefault<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
     const CA: Real = 3_f64;
     
     getter_trait!(
         /// The link matrices of this state.
         link_matrix, LinkMatrix
     );
-    getter_trait!(lattice, LatticeCyclique<na::U4>);
+    getter_trait!(lattice, LatticeCyclique<D>);
     getter_copy_trait!(beta, Real);
     
     /// # Panic
@@ -446,11 +466,11 @@ impl LatticeState<na::U4> for LatticeStateDefault{
     }
 }
 
-/// Depreciated use [`LatticeHamiltonianSimulationStateSyncDefault`] using [`LatticeStateDefault`] instead.
+/// Depreciated use [`LatticeHamiltonianSimulationStateSyncDefault`] using [`LatticeStateDefault::<U4>`] instead.
 #[derive(Debug, PartialEq, Clone)]
 #[deprecated(
     since = "0.1.0",
-    note = "Please use `LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault>` instead"
+    note = "Please use `LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<dim::U4>>` instead"
 )]
 pub struct LatticeHamiltonianSimulationStateSync {
     lattice : LatticeCyclique<na::U4>,
@@ -1009,7 +1029,14 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for LatticeHamiltonianSim
     }
 }
 
-impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault, na::U4> {
+impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
         // TODO optimize
@@ -1022,13 +1049,13 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     }
     
     /// The "Electrical" field of this state.
-    fn e_field(&self) -> &EField<na::U4> {
+    fn e_field(&self) -> &EField<D> {
         &self.e_field
     }
     
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
-    fn set_e_field(&mut self, e_field: EField<na::U4>) {
+    fn set_e_field(&mut self, e_field: EField<D>) {
         if self.lattice().get_number_of_points() != e_field.len() {
             panic!("e_field is not of the correct size")
         }
@@ -1041,7 +1068,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     }
     
     /// Get the derive of U_i(x).
-    fn get_derivative_u(link: &LatticeLinkCanonical<na::U4>, link_matrix: &LinkMatrix, e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<CMatrix3> {
+    fn get_derivative_u(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
         let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
         let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
@@ -1049,12 +1076,12 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint<na::U4>, link_matrix: &LinkMatrix, _e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<Vector4<Su3Adjoint>> {
+    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, _e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<VectorN<Su3Adjoint, D>> {
         let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::get_all_positive_directions();
-        let mut iterator = dir_pos.iter().map(|dir| {
+        let dir_pos = Direction::<D>::get_all_positive_directions();
+        let iterator = dir_pos.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
-            let sum_s: CMatrix3 = Direction::get_all_directions().iter()
+            let sum_s: CMatrix3 = Direction::<D>::get_all_directions().iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     link_matrix.get_sij(point, dir, dir_2, lattice)
@@ -1066,8 +1093,11 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
                 })
             ))
         });
-        // TODO cleanup
-        Some(Vector4::new(iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?, iterator.next().unwrap()?))
+        let mut return_vector = VectorN::<_, D>::from_element(Su3Adjoint::default());
+        for (index, element) in iterator.enumerate() {
+            return_vector[index] = element?;
+        }
+        Some(return_vector)
     }
     
 }

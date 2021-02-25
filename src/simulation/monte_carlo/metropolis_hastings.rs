@@ -179,17 +179,22 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
 }
 
 #[inline]
-fn get_delta_s_old_new_cmp(
+fn get_delta_s_old_new_cmp<D>(
     link_matrix: &LinkMatrix,
-    lattice: &LatticeCyclique<na::U4>,
-    link: &LatticeLinkCanonical<na::U4>,
+    lattice: &LatticeCyclique<D>,
+    link: &LatticeLinkCanonical<D>,
     new_link: &na::Matrix3<Complex>,
     beta : Real,
     old_matrix: &na::Matrix3<Complex>,
 ) -> Real
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
 {
     let dir_j = link.dir();
-    let a: na::Matrix3<na::Complex<Real>> = Direction::<na::U4>::get_all_positive_directions().par_iter()
+    let a: na::Matrix3<na::Complex<Real>> = Direction::<D>::get_all_positive_directions().par_iter()
     .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
         let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
         let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
@@ -255,14 +260,19 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_delta_s(
+    fn get_delta_s<D>(
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<na::U4>,
-        link: &LatticeLinkCanonical<na::U4>,
+        lattice: &LatticeCyclique<D>,
+        link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-        previous_modification: &[(LatticeLinkCanonical<na::U4>, na::Matrix3<Complex>)],
-    ) -> Real {
+        previous_modification: &[(LatticeLinkCanonical<D>, na::Matrix3<Complex>)],
+    ) -> Real
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let old_matrix_opt = previous_modification.iter().filter(|(link_m, _)| link_m == link ).last();
         let old_matrix;
         match old_matrix_opt {
@@ -273,11 +283,15 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_potential_modif(&mut self, state: &LatticeStateDefault) -> Vec<(LatticeLinkCanonical<na::U4>, na::Matrix3<Complex>)>
+    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>) -> Vec<(LatticeLinkCanonical<D>, na::Matrix3<Complex>)>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         self.delta_s = 0_f64;
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
-        let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<na::U4>::dim_st());
+        let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<D>::dim_st());
         let mut return_val = Vec::with_capacity(self.number_of_update);
         
         (0..self.number_of_update).for_each(|_| {
@@ -298,7 +312,12 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_next_element_default(&mut self, mut state: LatticeStateDefault) -> LatticeStateDefault {
+    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         
         let potential_modif = self.get_potential_modif(&state);
         let proba = (-self.delta_s).exp().min(1_f64).max(0_f64);
@@ -316,11 +335,15 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
 }
 
-impl<Rng> MonteCarlo<LatticeStateDefault, na::U4> for MetropolisHastingsDeltaDiagnostic<Rng>
+impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDiagnostic<Rng>
     where Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault) -> Result<LatticeStateDefault, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
         Ok(self.get_next_element_default(state))
     }
 }
@@ -333,7 +356,7 @@ fn test_mh_delta(){
     let size = 1_000_f64;
     let number_of_pts = 4;
     let beta = 2_f64;
-    let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    let mut simulation = LatticeStateDefault::<na::U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
     
     let mut mcd = MetropolisHastingsDeltaDiagnostic::new(1, 0.01, rng).unwrap();
     for _ in 0..10 {
@@ -393,22 +416,31 @@ impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_delta_s(
+    fn get_delta_s<D>(
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<na::U4>,
-        link: &LatticeLinkCanonical<na::U4>,
+        lattice: &LatticeCyclique<D>,
+        link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-    ) -> Real {
+    ) -> Real
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     
     #[inline]
-    fn get_potential_modif(&mut self, state: &LatticeStateDefault) -> (LatticeLinkCanonical<na::U4>, na::Matrix3<Complex>)
+    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>)
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
     {
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
-        let d_d = rand::distributions::Uniform::new(0, 4);
+        let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<D>::dim_st());
         
         let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
         let direction = Direction::get_all_positive_directions()[d_d.sample(&mut self.rng)];
@@ -422,7 +454,12 @@ impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_next_element_default(&mut self, mut state: LatticeStateDefault) -> LatticeStateDefault {
+    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let (link, matrix) = self.get_potential_modif(&state);
         let delta_s = Self::get_delta_s(state.link_matrix(), state.lattice(), &link, &matrix, state.beta());
         let proba = (-delta_s).exp().min(1_f64).max(0_f64);
@@ -440,11 +477,15 @@ impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
     }
 }
 
-impl<Rng> MonteCarlo<LatticeStateDefault, na::U4> for MetropolisHastingsDeltaOneDiagnostic<Rng>
+impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaOneDiagnostic<Rng>
     where Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault) -> Result<LatticeStateDefault, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
         Ok(self.get_next_element_default(state))
     }
 }

@@ -127,6 +127,7 @@ use lattice_qcd_rs::{
    simulation::state::{LatticeStateDefault, LatticeState},
    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDeltaDiagnostic},
    ComplexField,
+   dim::U4,
 };
 
 let mut rng = rand::thread_rng();
@@ -134,7 +135,7 @@ let mut rng = rand::thread_rng();
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
-let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 
 let number_of_rand = 20;
 let spread_parameter = 1E-5_f64;
@@ -154,6 +155,7 @@ Alternatively other Monte Carlo algorithm can be used like,
 use lattice_qcd_rs::{
    simulation::state::{LatticeStateDefault, LatticeState},
    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDiagnostic},
+   dim::U4,
 };
 
 let mut rng = rand::thread_rng();
@@ -161,7 +163,7 @@ let mut rng = rand::thread_rng();
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
-let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 
 let number_of_rand = 20;
 let spread_parameter = 1E-5_f64;
@@ -182,6 +184,7 @@ use lattice_qcd_rs::{
    simulation::state::{LatticeStateDefault, LatticeState},
    simulation::monte_carlo::HybridMonteCarloDiagnostic,
    integrator::SymplecticEulerRayon,
+   dim::U4,
 };
 
 let mut rng = rand::thread_rng();
@@ -189,7 +192,7 @@ let mut rng = rand::thread_rng();
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
-let mut simulation = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 
 let delta_t = 1E-3_f64;
 let number_of_step = 10;

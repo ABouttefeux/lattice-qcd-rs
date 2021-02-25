@@ -3,6 +3,7 @@ use lattice_qcd_rs::{
     simulation::*,
     ComplexField,
     lattice::{Direction, DirectionList},
+    dim::U4,
 };
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use super::{
@@ -17,7 +18,7 @@ pub const fn get_pb_template() -> &'static str {
 }
 
 /// Generate a hot configuration with the given config
-pub fn generate_state_default(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault {
+pub fn generate_state_default(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault<U4> {
     LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).expect("Invalide Configuration")
 }
 
@@ -30,10 +31,10 @@ pub fn get_mc_from_config<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHa
 
 pub fn run_simulation_with_progress_bar_average<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault,
+    inital_state : LatticeStateDefault<U4>,
     mp : &MultiProgress,
     rng: Rng,
-) -> (AverageData, LatticeStateDefault, Rng)
+) -> (AverageData, LatticeStateDefault<U4>, Rng)
     where Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
@@ -43,10 +44,10 @@ pub fn run_simulation_with_progress_bar_average<Rng>(
 
 pub fn run_simulation_with_progress_bar_volume<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault,
+    inital_state : LatticeStateDefault<U4>,
     mp : &MultiProgress,
     rng: Rng,
-) -> (AverageData, LatticeStateDefault, Rng)
+) -> (AverageData, LatticeStateDefault<U4>, Rng)
     where Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
@@ -65,11 +66,11 @@ pub fn run_simulation_with_progress_bar_volume<Rng>(
 /// Run a simulation with a progress bar
 fn run_simulation_with_progress_bar<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault,
+    inital_state : LatticeStateDefault<U4>,
     mp : &MultiProgress,
     rng: Rng,
-    closure: &dyn Fn(&LatticeStateDefault) -> f64,
-) -> (AverageData, LatticeStateDefault, Rng)
+    closure: &dyn Fn(&LatticeStateDefault<U4>) -> f64,
+) -> (AverageData, LatticeStateDefault<U4>, Rng)
     where Rng: rand::Rng,
 {
     
