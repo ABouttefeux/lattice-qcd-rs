@@ -684,10 +684,11 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
                 })
             ))
         });
-        if iterator.clone().any(|el| el.is_none()){
-            return None;
+        let mut return_vector = Vector4::from_element(Su3Adjoint::default());
+        for (index, element) in iterator.enumerate() {
+            return_vector[index] = element?;
         }
-        Some(Vector4::from_iterator(iterator.map(|el| el.unwrap())))
+        Some(return_vector)
     }
     
 }

@@ -17,7 +17,7 @@ use std::ops::{Index, IndexMut, Neg};
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 use std::marker::PhantomData;
-use std::convert::TryInto;
+use std::convert::{TryInto};
 use lattice_qcd_rs_procedural_macro::implement_direction_list;
 
 /// a cyclique lattice in space. Does not store point and links but is used to generate them.
@@ -30,6 +30,7 @@ pub struct LatticeCyclique<D>
 {
     size: Real,
     dim: usize,
+    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
     _phantom: PhantomData<D>,
 }
 
@@ -322,39 +323,26 @@ impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
 ///
 /// We use the representation `[x, y, z]`.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D> : Copy,
 {
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
     data: na::VectorN<usize, D>
 }
 
-#[cfg(feature = "serde-serialize")]
-impl<D> serde::Serialize for LatticePoint<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D> : serde::Serialize + Copy,
+impl<'a, D> IntoIterator for &'a LatticePoint<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D> : Copy,
 {
-    fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
-        where T: serde::Serializer,
-    {
-        self.data.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<'de, D> serde::Deserialize<'de> for LatticePoint<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: serde::Deserialize<'de> + Copy,
-{
-    fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
-        where T: serde::Deserializer<'de>,
-    {
-        serde::Deserialize::deserialize(deserializer).map(|data| {
-            Self {data}
-        })
+    type Item = &'a usize;
+    type IntoIter = <&'a VectorN<usize, D> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
     }
 }
 
@@ -526,42 +514,17 @@ impl<D> LatticeElementToIndex<D> for usize
 ///
 /// This object can be used to safly index in a [`std::collections::HashMap`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLinkCanonical<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy,
 {
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
     from: LatticePoint<D>,
     dir: Direction<D>,
 }
 
-#[cfg(feature = "serde-serialize")]
-impl<D> serde::Serialize for LatticeLinkCanonical<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D> : serde::Serialize + Copy,
-{
-    fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
-        where T: serde::Serializer,
-    {
-        (self.from, self.dir).serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<'de, D> serde::Deserialize<'de> for LatticeLinkCanonical<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: serde::Deserialize<'de> + Copy,
-{
-    fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
-        where T: serde::Deserializer<'de>,
-    {
-        serde::Deserialize::deserialize(deserializer).map(|(from, dir)| {
-            Self {from, dir}
-        })
-    }
-}
 
 impl<D> LatticeLinkCanonical<D>
     where D: DimName,
@@ -662,41 +625,15 @@ impl<D> From<&LatticeLinkCanonical<D>> for LatticeLink<D>
 /// It also means that there is no guarantee that the object is inside a lattice.
 /// You can use modulus over the elements to use inside a lattice.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLink<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy,
 {
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
     from: LatticePoint<D>,
     dir: Direction<D>,
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<D> serde::Serialize for LatticeLink<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D> : serde::Serialize + Copy,
-{
-    fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
-        where T: serde::Serializer,
-    {
-        (self.from, self.dir).serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<'de, D> serde::Deserialize<'de> for LatticeLink<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: serde::Deserialize<'de> + Copy,
-{
-    fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
-        where T: serde::Deserializer<'de>,
-    {
-        serde::Deserialize::deserialize(deserializer).map(|(from, dir)| {
-            Self {from, dir}
-        })
-    }
 }
 
 impl<D> LatticeLink<D>
@@ -808,6 +745,7 @@ pub struct Direction<D>
 {
     index_dir: usize,
     is_positive: bool,
+    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
     _phantom: PhantomData<D>,
 }
 
@@ -1034,7 +972,6 @@ impl From<&DirectionEnum> for Direction<na::U4> {
         Self::new(d.to_index(), d.is_positive()).expect("unreachable")
     }
 }
-
 
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]

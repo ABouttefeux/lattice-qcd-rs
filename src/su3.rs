@@ -215,8 +215,7 @@ fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
-// TODO better doc
-/// Get a radom SU(3) matrix close the origine.
+/// Get a radom SU(3) matrix close the matrices with diagonal (+/- 1, +/- 1, +/- 1).
 ///
 /// Note that it diverges from SU(3) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.

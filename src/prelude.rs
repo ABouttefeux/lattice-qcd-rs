@@ -1,3 +1,7 @@
+//! reexport for easy use,
+//! `use lattice_qcd_rs::prelude::*`
+//!
+
 pub use super::{
     Real,
     Complex,
@@ -7,8 +11,8 @@ pub use super::{
         
     },
     field::Su3Adjoint,
-    na::U4,
-    na::U3,
+    dim::U4,
+    dim::U3,
     simulation::{
         LatticeState,
         LatticeStateDefault,

@@ -190,6 +190,24 @@ impl Su3Adjoint {
     }
 }
 
+impl<'a> IntoIterator for &'a Su3Adjoint {
+    type Item = &'a Real;
+    type IntoIter = <&'a Vector8<Real> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Su3Adjoint {
+    type Item = &'a mut Real;
+    type IntoIter = <&'a mut Vector8<Real> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
+    }
+}
+
 impl AddAssign for Su3Adjoint {
     fn add_assign(&mut self, other: Self) {
         self.data += other.data()
@@ -634,6 +652,32 @@ impl LinkMatrix {
             su3::orthonormalize_matrix_mut(el);
         });
     }
+    
+    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
+        self.data.iter()
+    }
+    
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
+        self.data.iter_mut()
+    }
+}
+
+impl<'a> IntoIterator for &'a LinkMatrix {
+    type Item = &'a CMatrix3;
+    type IntoIter = <&'a Vec<CMatrix3> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut LinkMatrix {
+    type Item = &'a mut CMatrix3;
+    type IntoIter = <&'a mut Vec<CMatrix3> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
+    }
 }
 
 impl Index<usize> for LinkMatrix {
@@ -651,6 +695,7 @@ impl IndexMut<usize> for LinkMatrix {
 
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -658,41 +703,8 @@ pub struct EField<D>
     DefaultAllocator: Allocator<Su3Adjoint, D>,
     VectorN<Su3Adjoint, D>: Sync + Send,
 {
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<Su3Adjoint, D>: Serialize", deserialize = "VectorN<Su3Adjoint, D>: Deserialize<'de>")) )]
     data: Vec<VectorN<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<D> serde::Serialize for EField<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>:Copy,
-    na::DefaultAllocator: na::base::allocator::Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Vec<VectorN<Su3Adjoint, D>>: Serialize,
-{
-    fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
-        where T: serde::Serializer,
-    {
-        self.data.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<'de, D> serde::Deserialize<'de> for EField<D>
-    where D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy,
-    na::DefaultAllocator: na::base::allocator::Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Vec<VectorN<Su3Adjoint, D>>: Deserialize<'de>,
-{
-    fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
-        where T: serde::Deserializer<'de>,
-    {
-        serde::Deserialize::deserialize(deserializer).map(|data| {
-            Self {data}
-        })
-    }
 }
 
 impl<D> EField<D>
@@ -852,6 +864,38 @@ impl<D> EField<D>
             })
         }).collect();
         Self::new(data)
+    }
+}
+
+impl<'a, D> IntoIterator for &'a EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    type Item = &'a VectorN<Su3Adjoint, D>;
+    type IntoIter = <&'a Vec<VectorN<Su3Adjoint, D>> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a, D> IntoIterator for &'a mut EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    type Item = &'a mut VectorN<Su3Adjoint, D>;
+    type IntoIter = <&'a mut Vec<VectorN<Su3Adjoint, D>> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
     }
 }
 
