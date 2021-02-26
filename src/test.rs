@@ -28,11 +28,11 @@ const EPSILON: f64 = 0.000000001_f64;
 
 /// test the size of iterators
 fn test_itrerator(points: usize){
-    let l = LatticeCyclique::new(1_f64, points).unwrap();
-    let array: Vec<LatticeLinkCanonical> = l.get_links_space().collect();
+    let l = LatticeCyclique::<na::U4>::new(1_f64, points).unwrap();
+    let array: Vec<LatticeLinkCanonical<na::U4>> = l.get_links().collect();
     assert_eq!(array.len(), 4 * points * points * points * points);
     assert_eq!(4 * points * points * points * points, l.get_number_of_canonical_links_space());
-    let array: Vec<LatticePoint> = l.get_points().collect();
+    let array: Vec<LatticePoint<na::U4>> = l.get_points().collect();
     assert_eq!(array.len(), points * points * points * points);
     assert_eq!(array.len(), l.get_number_of_points());
 }
@@ -226,10 +226,10 @@ fn test_thread() {
 #[test]
 /// test [`run_pool_parallel_vec`]
 fn test_thread_vec() {
-    let l = LatticeCyclique::new(1_f64, 10).unwrap();
+    let l = LatticeCyclique::<na::U4>::new(1_f64, 10).unwrap();
     let iter = 0..10000;
     let c = 5;
-    let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, 0).unwrap();
+    let result = run_pool_parallel_vec(iter.clone(), &c, &|i, c| {i * i * c} , 4, 10000, &l, &0).unwrap();
     for i in iter {
         assert_eq!(*result.get(i).unwrap(), i * i *c);
     }

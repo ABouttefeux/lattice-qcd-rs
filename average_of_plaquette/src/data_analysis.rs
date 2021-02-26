@@ -3,6 +3,7 @@
 
 use lattice_qcd_rs::{
     Real,
+    dim::U4,
 };
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
@@ -160,7 +161,7 @@ pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn st
 }
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
-pub fn save_data(cfg: &Config, state: &LatticeStateDefault) -> std::io::Result<()> {
+pub fn save_data(cfg: &Config, state: &LatticeStateDefault<U4>) -> std::io::Result<()> {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta()))?;
     file.write_all(&encoded)?;

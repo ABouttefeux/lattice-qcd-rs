@@ -19,6 +19,7 @@ use lattice_qcd_rs::{
     Real,
     Complex,
     su3::*,
+    dim::U4,
 };
 use std::{
     time::Instant,
@@ -82,7 +83,7 @@ fn test_write_read() -> std::io::Result<()> {
     f.read_to_end(&mut encoded_2)?;
     println!("{}", encoded_2.len());
     println!("read");
-    let decoded: LatticeStateDefault = bincode::deserialize(&encoded_2).unwrap();
+    let decoded: LatticeStateDefault<U4> = bincode::deserialize(&encoded_2).unwrap();
     println!("decoded");
     assert_eq!(decoded, state);
     Ok(())
@@ -94,7 +95,7 @@ fn test_leap_frog() {
     let mut rng = rand::thread_rng();
     let state = generate_state_with_logs(&mut rng);
     println!("h_l {}", state.get_hamiltonian_links());
-    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault>::new_random_e_state(state, &mut rng);
+    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, _>::new_random_e_state(state, &mut rng);
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(0.01, 1, &SymplecticEulerRayon::new()).unwrap();
@@ -105,7 +106,7 @@ fn test_leap_frog() {
     assert!((h1-h2).abs() < 0.1);
 }
 
-fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
+fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault<U4> {
     let size = 1000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;
@@ -123,7 +124,7 @@ fn generate_state_with_logs(rng: &mut impl rand::Rng) -> LatticeStateDefault {
 }
 
 #[allow(dead_code)]
-fn simulate_with_log_subblock(mut simulation: LatticeStateDefault, mc: &mut impl MonteCarlo<LatticeStateDefault> , number_of_sims: u64) -> LatticeStateDefault {
+fn simulate_with_log_subblock(mut simulation: LatticeStateDefault<U4>, mc: &mut impl MonteCarlo<LatticeStateDefault<U4>, U4> , number_of_sims: u64) -> LatticeStateDefault<U4> {
     let pb = ProgressBar::new(number_of_sims);
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         "{prefix:10} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>4}/{len:4} [ETA {eta_precise}] {msg}"
@@ -148,13 +149,13 @@ fn simulate_with_log_subblock(mut simulation: LatticeStateDefault, mc: &mut impl
 
 #[allow(clippy::mutex_atomic)]
 fn simulate_loop_with_input<MC>(
-    mut simulation: LatticeStateDefault,
+    mut simulation: LatticeStateDefault<U4>,
     mc: &mut MC,
     number_of_sims: u64,
     sub_block: u64,
-    closure_message : &dyn Fn(&LatticeStateDefault, &MC) -> String
-) -> LatticeStateDefault
-    where MC: MonteCarlo<LatticeStateDefault>
+    closure_message : &dyn Fn(&LatticeStateDefault<U4>, &MC) -> String
+) -> LatticeStateDefault<U4>
+    where MC: MonteCarlo<LatticeStateDefault<U4>, U4>
 {
     
     println!();
@@ -216,7 +217,7 @@ fn sim_hmc() {
     let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
-        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, Xoshiro256PlusPlus, SymplecticEulerRayon>| {
+        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<_>, Xoshiro256PlusPlus, SymplecticEulerRayon, _>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
         }
@@ -247,7 +248,7 @@ fn sim_mh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
-        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault>, LatticeStateDefault, Xoshiro256PlusPlus>| {
+        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault<_>, _>, LatticeStateDefault<_>, _, Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
         }
@@ -278,7 +279,7 @@ fn sim_dmh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+        &|sim: &LatticeStateDefault<U4>, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
         }
@@ -306,7 +307,7 @@ fn sim_dmh_hmc() {
     let sub_block = 100;
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+        &|sim: &LatticeStateDefault<U4>, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
         }
@@ -320,7 +321,7 @@ fn sim_dmh_hmc() {
     let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
-        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault, Xoshiro256PlusPlus, SymplecticEulerRayon>| {
+        &|sim: &LatticeStateDefault<U4>, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<_>, Xoshiro256PlusPlus, SymplecticEulerRayon, _>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
         }

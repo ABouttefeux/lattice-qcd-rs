@@ -15,7 +15,7 @@ serde-serialize = ["serde"]
 default = ["serde-serialize"]
 
 [workspace]
-members = ["simulation-bin", "average_of_plaquette"]
+members = ["simulation-bin", "average_of_plaquette", "procedural_macro"]
 
 [dependencies]
 nalgebra = { version = "0.24.0", features = ["serde-serialize"] }
@@ -27,6 +27,7 @@ rand_distr = "0.4.0"
 crossbeam = "0.8.0"
 rayon = "1.5.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
+lattice_qcd_rs-procedural_macro = {path = "procedural_macro"}
 
 [dev-dependencies]
 criterion = "0.3"

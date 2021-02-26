@@ -11,6 +11,7 @@ use super::{
         LatticeLink,
         Direction,
         LatticeElementToIndex,
+        DirectionList,
     },
     Vector8,
     su3,
@@ -25,9 +26,11 @@ use super::{
 };
 use na::{
     Matrix3,
-    Vector4,
-    base::dimension::Dim,
     ComplexField,
+    DimName,
+    DefaultAllocator,
+    base::allocator::Allocator,
+    VectorN,
 };
 use std::{
     ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
@@ -184,6 +187,24 @@ impl Su3Adjoint {
     /// Get a mutlable reference over the data.
     pub fn data_mut(&mut self) -> &mut Vector8<Real> {
         &mut self.data
+    }
+}
+
+impl<'a> IntoIterator for &'a Su3Adjoint {
+    type Item = &'a Real;
+    type IntoIter = <&'a Vector8<Real> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Su3Adjoint {
+    type Item = &'a mut Real;
+    type IntoIter = <&'a mut Vector8<Real> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
     }
 }
 
@@ -469,25 +490,31 @@ impl LinkMatrix {
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::dim::U4;
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
     /// assert_eq!(
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
     /// );
     /// ```
-    pub fn new_deterministe(
-        l: &LatticeCyclique,
+    pub fn new_deterministe<D>(
+        l: &LatticeCyclique<D>,
         rng: &mut impl rand::Rng,
-    ) -> Self {
+    ) -> Self
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
         let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
-        for _ in l.get_links_space() {
+        for _ in l.get_links() {
             // the iterator *should* be in order
             let matrix = su3::get_random_su3(rng);
             data.push(matrix);
@@ -498,10 +525,17 @@ impl LinkMatrix {
     
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
-    pub fn new_random_threaded(
-        l: &LatticeCyclique,
+    pub fn new_random_threaded<D>(
+        l: &LatticeCyclique<D>,
         number_of_thread: usize,
-    ) -> Result<Self, ThreadError> {
+    ) -> Result<Self, ThreadError>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
+        Direction<D>: DirectionList,
+        D: Eq,
+    {
         if number_of_thread == 0 {
             return Err(ThreadError::ThreadNumberIncorect);
         }
@@ -510,25 +544,36 @@ impl LinkMatrix {
             return Ok(LinkMatrix::new_deterministe(l, &mut rng));
         }
         let data = run_pool_parallel_vec_with_initialisation_mutable(
-            l.get_links_space(),
+            l.get_links(),
             &(),
             &|rng, _, _| su3::get_random_su3(rng),
             rand::thread_rng,
             number_of_thread,
             l.get_number_of_canonical_links_space(),
             l,
-            CMatrix3::zeros(),
+            &CMatrix3::zeros(),
         )?;
         Ok(Self {data})
     }
     
-    pub fn new_cold(l: &LatticeCyclique) -> Self{
+    pub fn new_cold<D>(l: &LatticeCyclique<D>) -> Self
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
+        Direction<D>: DirectionList,
+    {
         Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
     }
     
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
-    pub fn get_matrix(&self, link: &LatticeLink, l: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_matrix<D>(&self, link: &LatticeLink<D>, l: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))? ;
         if link.is_dir_negative() {
@@ -541,7 +586,12 @@ impl LinkMatrix {
     }
     
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
-    pub fn get_sij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_sij<D>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
         let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
@@ -551,27 +601,38 @@ impl LinkMatrix {
     }
     
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
-    pub fn get_pij(&self, point: &LatticePoint, dir_i: &Direction, dir_j: &Direction, lattice: &LatticeCyclique) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_pij<D>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
     }
     
     /// Take the average of the trace of all plaquettes
-    pub fn average_trace_plaquette(&self, lattice: &LatticeCyclique) -> Option<na::Complex<Real>>{
+    #[allow(clippy::as_conversions)] // no try into for f64
+    pub fn average_trace_plaquette<D>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
         if lattice.get_number_of_canonical_links_space() != self.len() {
             return None;
         }
         // the order does not matter as we sum
         let sum = lattice.get_points().par_bridge().map(|point| {
-            Direction::POSITIVES.iter().map( |dir_i|{
-                Direction::POSITIVES.iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+            Direction::get_all_positive_directions().iter().map( |dir_i|{
+                Direction::get_all_positive_directions().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j|{
                         self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                     }).sum::<Option<na::Complex<Real>>>()
             }).sum::<Option<na::Complex<Real>>>()
         }).sum::<Option<na::Complex<Real>>>()?;
-        let number_of_directions = (Direction::POSITIVES.len() * (Direction::POSITIVES.len() - 1)) / 2;
+        let number_of_directions = (D::dim() * (D::dim() - 1)) / 2;
         let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
     }
@@ -591,6 +652,32 @@ impl LinkMatrix {
             su3::orthonormalize_matrix_mut(el);
         });
     }
+    
+    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
+        self.data.iter()
+    }
+    
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
+        self.data.iter_mut()
+    }
+}
+
+impl<'a> IntoIterator for &'a LinkMatrix {
+    type Item = &'a CMatrix3;
+    type IntoIter = <&'a Vec<CMatrix3> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut LinkMatrix {
+    type Item = &'a mut CMatrix3;
+    type IntoIter = <&'a mut Vec<CMatrix3> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
+    }
 }
 
 impl Index<usize> for LinkMatrix {
@@ -609,20 +696,33 @@ impl IndexMut<usize> for LinkMatrix {
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct EField
+pub struct EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
 {
-    data: Vec<Vector4<Su3Adjoint>>, // use a Vec<[Su3Adjoint; 4]> instead ?
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<Su3Adjoint, D>: Serialize", deserialize = "VectorN<Su3Adjoint, D>: Deserialize<'de>")) )]
+    data: Vec<VectorN<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 
-impl EField {
+impl<D> EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
     
     /// Create a new "Electrical" field.
-    pub const fn new (data: Vec<Vector4<Su3Adjoint>>) -> Self {
+    pub fn new (data: Vec<VectorN<Su3Adjoint, D>>) -> Self {
         Self {data}
     }
     
     /// Get the raw data.
-    pub const fn data(&self) -> &Vec<Vector4<Su3Adjoint>> {
+    pub fn data(&self) -> &Vec<VectorN<Su3Adjoint, D>> {
         &self.data
     }
     
@@ -638,31 +738,28 @@ impl EField {
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::dim::U4;
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
-    /// let lattice = LatticeCyclique::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
     /// assert_eq!(
     ///     EField::new_deterministe(&lattice, &mut rng_1, &distribution),
     ///     EField::new_deterministe(&lattice, &mut rng_2, &distribution)
     /// );
     /// ```
     pub fn new_deterministe(
-        l: &LatticeCyclique,
+        l: &LatticeCyclique<D>,
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.get_number_of_points());
         for _ in l.get_points() {
             // iterator *should* be ordoned
-            let p1 = Su3Adjoint::random(rng, d);
-            let p2 = Su3Adjoint::random(rng, d);
-            let p3 = Su3Adjoint::random(rng, d);
-            let p4 = Su3Adjoint::random(rng, d);
-            data.push(Vector4::new(p1, p2, p3, p4));
+            data.push(VectorN::<Su3Adjoint, D>::from_fn(|_, _| Su3Adjoint::random(rng, d)));
         }
         Self {data}
     }
@@ -670,7 +767,7 @@ impl EField {
     /// Single thread generation by seeding a new rng number.
     /// To create a seedable and reproducible set use [`EField::new_deterministe`]..
     pub fn new_random(
-        l: &LatticeCyclique,
+        l: &LatticeCyclique<D>,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut rng = rand::thread_rng();
@@ -678,17 +775,17 @@ impl EField {
     }
     
     
-    pub fn new_cold(l: &LatticeCyclique) -> Self {
+    pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
-        Self {data: vec![Vector4::new(p1, p1, p1, p1); l.get_number_of_points()]}
+        Self {data: vec![VectorN::<Su3Adjoint, D>::from_element(p1); l.get_number_of_points()]}
     }
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
-    pub fn get_e_vec(&self, point: &LatticePoint, l: &LatticeCyclique) -> Option<&Vector4<Su3Adjoint>> {
+    pub fn get_e_vec(&self, point: &LatticePoint<D>, l: &LatticeCyclique<D>) -> Option<&VectorN<Su3Adjoint, D>> {
         self.data.get(point.to_index(l))
     }
     
     /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e. `E_{-dir}(point) = E_{dir}(point)`.
-    pub fn get_e_field(&self, point: &LatticePoint, dir: &Direction, l: &LatticeCyclique) -> Option<&Su3Adjoint> {
+    pub fn get_e_field(&self, point: &LatticePoint<D>, dir: &Direction<D>, l: &LatticeCyclique<D>) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
             Some(vec) => vec.get(dir.to_index()),
@@ -700,20 +797,20 @@ impl EField {
         self.data.is_empty()
     }
     
-    pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint, lattice: &LatticeCyclique) -> Option<CMatrix3> {
+    pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None
         }
-        Direction::POSITIVES.iter().map(|dir| {
+        Direction::get_all_positive_directions().iter().map(|dir| {
             let e_i = self.get_e_field(point, dir, lattice)?;
             let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, - *dir), lattice)?;
-            let p_mi = lattice.add_point_direction(*point, - dir);
+            let p_mi = lattice.add_point_direction(*point, &- dir);
             let e_m_i = self.get_e_field(&p_mi, dir, lattice)?;
             Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
         }).sum::<Option<CMatrix3>>()
     }
     
-    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Option<Real> {
+    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
@@ -724,7 +821,8 @@ impl EField {
     }
     
     /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
-    pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Option<Self> {
+    #[allow(clippy::as_conversions)] // no try into for f64
+    pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
@@ -749,14 +847,14 @@ impl EField {
     /// Done one step to project to gauss law
     /// # Panic
     /// panics if the link matric and lattice is not of the correct size.
-    fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique) -> Self {
+    fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Self {
         /// see https://arxiv.org/pdf/1512.02374.pdf
         // TODO verify
         const K: na::Complex<f64> = na::Complex::new(-0.12_f64, 0_f64);
-        let data = lattice.get_points().collect::<Vec<LatticePoint>>().par_iter().map(|point| {
+        let data = lattice.get_points().collect::<Vec<LatticePoint<D>>>().par_iter().map(|point| {
             let e = self.get_e_vec(&point, lattice).unwrap();
-            Vector4::from_fn(|index_dir, _| {
-                let dir = Direction::POSITIVES[index_dir];
+            VectorN::<_, D>::from_fn(|index_dir, _| {
+                let dir = Direction::<D>::get_all_positive_directions()[index_dir];
                 let u = link_matrix.get_matrix(&LatticeLink::new(*point, dir), lattice).unwrap();
                 let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
                 let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, &dir), lattice).unwrap();
@@ -769,14 +867,58 @@ impl EField {
     }
 }
 
-impl Index<usize> for EField {
-    type Output = Vector4<Su3Adjoint>;
+impl<'a, D> IntoIterator for &'a EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    type Item = &'a VectorN<Su3Adjoint, D>;
+    type IntoIter = <&'a Vec<VectorN<Su3Adjoint, D>> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl<'a, D> IntoIterator for &'a mut EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    type Item = &'a mut VectorN<Su3Adjoint, D>;
+    type IntoIter = <&'a mut Vec<VectorN<Su3Adjoint, D>> as IntoIterator>::IntoIter;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
+    }
+}
+
+impl<D> Index<usize> for EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+{
+    type Output = VectorN<Su3Adjoint, D>;
     fn index(&self, pos: usize) -> &Self::Output{
         &self.data[pos]
     }
 }
 
-impl IndexMut<usize> for EField {
+impl<D> IndexMut<usize> for EField<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+{
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
         &mut self.data[pos]
     }
@@ -785,10 +927,12 @@ impl IndexMut<usize> for EField {
 #[cfg(test)]
 #[test]
 fn test_get_e_field_pos_neg() {
+    use super::lattice;
+    
     let l = LatticeCyclique::new(1_f64, 4).unwrap();
-    let e = EField::new(vec![Vector4::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
+    let e = EField::new(vec![VectorN::<_, na::U4>::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
     assert_eq!(
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XPos, &l),
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0]), &Direction::XNeg, &l)
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XPos.into(), &l),
+        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XNeg.into(), &l)
     );
 }

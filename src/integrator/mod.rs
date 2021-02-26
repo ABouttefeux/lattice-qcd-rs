@@ -20,12 +20,13 @@
 //! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
+//! use lattice_qcd_rs::dim::U4;
 //!
 //! let mut rng = rand::thread_rng();
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U4>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! ```
@@ -38,12 +39,13 @@
 //! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! # use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
+//! # use lattice_qcd_rs::dim::U4;
 //! #
 //! # let mut rng = rand::thread_rng();
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U4>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let h = state1.get_hamiltonian_total();
@@ -64,7 +66,9 @@ use super::{
         LatticeLinkCanonical,
         LatticeLink,
         LatticePoint,
-        LatticeCyclique
+        LatticeCyclique,
+        Direction,
+        DirectionList,
     },
     CMatrix3,
     field::{
@@ -73,7 +77,12 @@ use super::{
         EField,
     },
 };
-use na::Vector4;
+use na::{
+    DimName,
+    DefaultAllocator,
+    base::allocator::Allocator,
+    VectorN,
+};
 
 pub mod symplectic_euler;
 pub mod symplectic_euler_rayon;
@@ -99,9 +108,15 @@ pub trait Integrator<State, State2>
 /// The integrator should be capable of switching between Sync state
 /// (q (ok link matrices) at time T , p(or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
-pub trait SymplecticIntegrator<StateSync, StateLeap>
-    where StateSync: SimulationStateSynchrone,
-    StateLeap: SimulationStateLeapFrog,
+pub trait SymplecticIntegrator<StateSync, StateLeap, D>
+    where StateSync: SimulationStateSynchrone<D>,
+    StateLeap: SimulationStateLeapFrog<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     
     fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError>;
@@ -111,8 +126,14 @@ pub trait SymplecticIntegrator<StateSync, StateLeap>
 }
 
 /// function for link intregration
-fn integrate_link<State>(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, delta_t: Real) -> CMatrix3
-    where State: LatticeHamiltonianSimulationState,
+fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
+    where State: LatticeHamiltonianSimulationState<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = link_matrix.get_matrix(&canonical_link, lattice).expect("Link matrix not found");
@@ -120,10 +141,16 @@ fn integrate_link<State>(link: &LatticeLinkCanonical, link_matrix: &LinkMatrix, 
 }
 
 /// function for "Electrical" field intregration
-fn integrate_efield<State>(point: &LatticePoint, link_matrix: &LinkMatrix, e_field: &EField, lattice: &LatticeCyclique, delta_t: Real) -> Vector4<Su3Adjoint>
-    where State: LatticeHamiltonianSimulationState,
+fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> VectorN<Su3Adjoint, D>
+    where State: LatticeHamiltonianSimulationState<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
 {
-    let initial_value = *e_field.get_e_vec(point, lattice).expect("E Field not found");
+    let initial_value = e_field.get_e_vec(point, lattice).expect("E Field not found");
     let deriv = State::get_derivative_e(point, link_matrix, e_field, lattice).expect("Derivative not found");
     initial_value + deriv.map(|el| el * delta_t)
 }

@@ -51,8 +51,7 @@ pub static PAULI_MATRICES: Lazy<[&CMatrix2; 3]> = Lazy::new(||
     [&PAULI_1, &PAULI_2, &PAULI_3]
 );
 
-// TODO better doc
-/// Get a radom SU(2) matrix close the origine.
+/// Get a radom SU(2) matrix close the 1 or -1.
 ///
 /// Note that it diverges from SU(2) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
