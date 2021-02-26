@@ -3,7 +3,7 @@ use lattice_qcd_rs::{
     simulation::*,
     ComplexField,
     lattice::{Direction, DirectionList},
-    dim::U4,
+    dim::{U4, U3,DimName},
 };
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use super::{
@@ -11,6 +11,11 @@ use super::{
     data_analysis::*,
 };
 use rayon::prelude::*;
+use na::{
+    DefaultAllocator,
+    VectorN,
+    base::allocator::Allocator,
+};
 
 /// Return the [`indicatif::ProgressBar`] template
 pub const fn get_pb_template() -> &'static str {
@@ -18,7 +23,12 @@ pub const fn get_pb_template() -> &'static str {
 }
 
 /// Generate a hot configuration with the given config
-pub fn generate_state_default(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault<U4> {
+pub fn generate_state_default<D>(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
     LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).expect("Invalide Configuration")
 }
 
@@ -44,15 +54,15 @@ pub fn run_simulation_with_progress_bar_average<Rng>(
 
 pub fn run_simulation_with_progress_bar_volume<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault<U4>,
+    inital_state : LatticeStateDefault<U3>,
     mp : &MultiProgress,
     rng: Rng,
-) -> (AverageData, LatticeStateDefault<U4>, Rng)
+) -> (AverageData, LatticeStateDefault<U3>, Rng)
     where Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         let sum = simulation.lattice().get_points().par_bridge().map(|point| {
-            simulation.link_matrix().get_pij(&point, &Direction::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
+            simulation.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
         }).sum::<Option<f64>>().unwrap();
         let number_of_plaquette = simulation.lattice().get_number_of_points() as f64;
         let c1 = 8_f64 / 3_f64;
@@ -64,14 +74,18 @@ pub fn run_simulation_with_progress_bar_volume<Rng>(
 }
 
 /// Run a simulation with a progress bar
-fn run_simulation_with_progress_bar<Rng>(
+fn run_simulation_with_progress_bar<Rng, D>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault<U4>,
+    inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-    closure: &dyn Fn(&LatticeStateDefault<U4>) -> f64,
-) -> (AverageData, LatticeStateDefault<U4>, Rng)
+    closure: &dyn Fn(&LatticeStateDefault<D>) -> f64,
+) -> (AverageData, LatticeStateDefault<D>, Rng)
     where Rng: rand::Rng,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
 {
     
     let mut mc = get_mc_from_config(config.mc_config(), rng);

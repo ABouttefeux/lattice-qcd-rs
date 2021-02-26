@@ -814,10 +814,9 @@ impl<D> EField<D>
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
-        let sum = lattice.get_points().par_bridge().map(|point| {
+        lattice.get_points().par_bridge().map(|point| {
             self.get_gauss(link_matrix, &point, lattice).map(|el| (su3::GENERATORS.iter().copied().sum::<CMatrix3>() * el).trace().abs())
-        }).sum::<Option<Real>>()?;
-        Some(sum)
+        }).sum::<Option<Real>>()
     }
     
     /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
@@ -836,7 +835,7 @@ impl<D> EField<D>
             if val_dif<= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
                 break;
             }
-            for _ in 0..1 {
+            for _ in 0..4 {
                 return_val = return_val.project_to_gauss_step(link_matrix, lattice);
                 //println!("{}", return_val[0][0][0]);
             }

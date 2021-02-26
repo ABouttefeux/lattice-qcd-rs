@@ -3,7 +3,8 @@
 
 use lattice_qcd_rs::{
     Real,
-    dim::U4,
+    lattice::{Direction, DirectionList},
+    dim::DimName,
 };
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
@@ -13,6 +14,11 @@ use super::config::Config;
 use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
+use na::{
+    DefaultAllocator,
+    VectorN,
+    base::allocator::Allocator,
+};
 
 
 /// Data point for an average
@@ -82,6 +88,8 @@ pub fn write_data_to_file_csv(data: &Vec<(Config, AverageData)>) -> std::io::Res
     Ok(())
 }
 
+/// Write result to csv "result.csv"
+#[allow(clippy::ptr_arg)]
 pub fn write_data_to_file_csv_with_n(data: &Vec<(Config, AverageData)>) -> std::io::Result<()> {
     let file = File::create("result.csv")?;
     let mut wtr = csv::Writer::from_writer(file);
@@ -161,9 +169,26 @@ pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn st
 }
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
-pub fn save_data(cfg: &Config, state: &LatticeStateDefault<U4>) -> std::io::Result<()> {
+pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
+    where D: DimName + Serialize,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta()))?;
+    file.write_all(&encoded)?;
+    Ok(())
+}
+
+pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
+    where D: DimName + Serialize,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
+    let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
+    let mut file = File::create(format!("sim_b_{}_n_{}.bin", cfg.lattice_config().lattice_beta(), cfg.lattice_config().lattice_number_of_points()))?;
     file.write_all(&encoded)?;
     Ok(())
 }

@@ -565,7 +565,7 @@ impl LatticeHamiltonianSimulationStateSync {
             let handel = s.spawn(move |_| {
                 EField::new_random(&lattice_clone, d)
             });
-            let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_points - 1)
+            let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)
                 .map_err(SimulationError::ThreadingError)?;
             
             let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;

@@ -1,4 +1,6 @@
 
+//! module for dimension
+
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {
         $(

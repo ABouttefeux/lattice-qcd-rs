@@ -1,4 +1,4 @@
-//! # ![Lattice QCD rs](logo.svg)
+//! # ![Lattice QCD rs](https://raw.githubusercontent.com/ABouttefeux/lattice-qcd-rs/develop/logo.svg)
 //!
 //! ![](https://img.shields.io/badge/language-Rust-orange)
 //! [![](https://img.shields.io/badge/doc-Read_Me-blue)](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/index.html)
@@ -50,7 +50,7 @@
 //! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let number_of_rand = 1;
-//! let spread_parameter = 0.1;
+//! let spread_parameter = 0.1_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
 //!
 //! for _ in 0..100 {
@@ -208,7 +208,7 @@
 //! ```
 
 #![allow(clippy::needless_return)]
-#![warn(clippy::as_conversions)]
+//#![warn(clippy::as_conversions)]
 #![warn(clippy::cast_lossless)]
 //#![warn(clippy::cast_precision_loss)]
 #![warn(clippy::cast_sign_loss)]
@@ -268,6 +268,7 @@ pub mod utils;
 pub mod simulation;
 pub mod dim;
 pub mod prelude;
+pub mod statistics;
 
 #[cfg(test)]
 mod test;

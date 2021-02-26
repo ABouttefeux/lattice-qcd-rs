@@ -9,6 +9,7 @@ use lattice_qcd_rs::{
     integrator::*,
     simulation::*,
     Complex,
+    dim::U4,
 };
 use std::{
     f64,
@@ -155,7 +156,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for n in array_size.iter() {
         groupe_gauss_proj.bench_with_input(BenchmarkId::new("size", n), n,
             |b,i| b.iter(|| {
-                let state = LatticeStateDefault::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
+                let state = LatticeStateDefault::<U4>::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
                 let d = rand_distr::Normal::new(0.0, 0.5_f64).unwrap();
                 let e_field = EField::new_deterministe(state.lattice(), &mut rng, &d);
                 e_field.project_to_gauss(state.link_matrix(), state.lattice());
