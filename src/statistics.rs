@@ -107,7 +107,7 @@ pub fn mean_and_variance<'a, T>(data: &'a [T]) -> [T; 2]
 }
 
 /// compute the mean the statistocal error on this value a slice
-pub fn mean_with_error<It: IndexedParallelIterator<Item = f64> + Clone>(data: &[f64]) -> [f64; 2]
+pub fn mean_with_error(data: &[f64]) -> [f64; 2]
 {
     let len = data.len();
     let [mean, variance] = mean_and_variance(data);

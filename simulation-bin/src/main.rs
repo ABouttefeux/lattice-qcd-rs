@@ -322,25 +322,31 @@ fn sim_dmh_hmc() {
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
-    let spread_parameter = 0.05;
+    let spread_parameter = 0.1;
     let number_of_rand = 1;
     let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
     let number_of_sims = 10_000;
     let sub_block = 1_000;
     
+    let initial_data = simulation.lattice().get_points().par_bridge().map(|point| {
+        simulation.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+    }).collect::<Vec<f64>>();
+    
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim: &LatticeStateDefault<_>, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+        &|sim: &LatticeStateDefault<_>, _mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             //let average = sim.average_trace_plaquette().unwrap().real();
-            let sum = sim.lattice().get_points().par_bridge().map(|point| {
-                sim.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
-            }).sum::<Option<f64>>().unwrap();
+            let vec = sim.lattice().get_points().par_bridge().map(|point| {
+                sim.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+            }).collect::<Vec<f64>>();
+            
+            let sum = vec.iter().sum::<f64>();
             let number_of_plaquette = sim.lattice().get_number_of_points() as f64;
             let c1 = 8_f64 / 3_f64;
             let c2 = 1.951315_f64;
             let c3 = 6.8612_f64;
             let c4 = 2.92942132_f64;
             let a = sim.beta().powi(4) * ((sum / number_of_plaquette) - c1 / sim.beta() - c2 / sim.beta().powi(2) - c3 / sim.beta().powi(3) - c4 * sim.beta().ln() / sim.beta().powi(4));
-            format!("A {:.6},P {:.2}", a, mc.prob_replace_last())
+            format!("A {:.6},  {}", a, lattice_qcd_rs::statistics::auto_correlation(&initial_data, &vec).unwrap().abs())
         }
     );
     

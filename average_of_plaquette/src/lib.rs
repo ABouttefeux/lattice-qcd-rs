@@ -16,5 +16,6 @@ pub mod sim;
 pub mod config_scan;
 pub mod data_analysis;
 pub mod rng;
+pub mod observable;
 #[cfg(test)]
 mod test;

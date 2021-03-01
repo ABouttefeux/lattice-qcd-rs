@@ -3,6 +3,7 @@ use average_of_plaquette::{
     config_scan::*,
     data_analysis::*,
     rng::*,
+    observable,
  };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -23,7 +24,8 @@ fn main_cross_check_volume() {
     let mut therm_setp = vec![];
     
     for i in 0..number_of_data {
-        let n: usize = (beta / get_values(0.5, 2.5, i, number_of_data)).round() as usize;
+        //0.5, 2.5
+        let n: usize = (beta / get_values(1_f64, 2_f64, i, number_of_data)).round() as usize;
         vec_dim.push(n);
         therm_setp.push( n.pow(4) * 1_000);
     }
@@ -70,16 +72,22 @@ fn main_cross_check_volume() {
             rng.jump();
         }
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
-        let (av, sim_final, _) = run_simulation_with_progress_bar_volume(cfg.sim_config(), sim_init, &multi_pb, rng);
-        let _ = save_data_n(cfg, &sim_final);
+        let mut mc = get_mc_from_config(cfg.sim_config().mc_config(), rng);
+        let (sim_th, t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs).unwrap();
+        //let rng = mc.rng_owned();
+        //let (av, sim_final, _) = run_simulation_with_progress_bar_volume(cfg.sim_config(), sim_th, &multi_pb, rng);
+        //let _ = save_data_n(cfg, &sim_final);
         pb.inc(1);
-        (*cfg, av)
-    }).collect();
+        //println!("{}", observable::volume_obs_mean(&sim_th));
+        (*cfg /*, av */, observable::volume_obs_mean(&sim_th), t_exp)
+    }).collect::<Vec<_>>();
     
     pb.finish();
     
-    let _ = write_data_to_file_csv_with_n(&result);
-    let _ = plot_data_volume(&result);
+    //let _ = write_data_to_file_csv_with_n(&result);
+    //let _ = plot_data_volume(&result);
     let _ = h.join();
+    
+    println!("{:?}", result.iter().map(|(cfg, a, t_exp)| (cfg.lattice_config().lattice_number_of_points(), a, t_exp) ).collect::<Vec<_>>());
     
 }

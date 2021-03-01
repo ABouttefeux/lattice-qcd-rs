@@ -737,6 +737,17 @@ impl From<f64> for Sign {
     }
 }
 
+impl Neg for Sign {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        match self {
+            Sign::Positive => Sign::Negative,
+            Sign::Zero => Sign::Zero,
+            Sign::Negative => Sign::Positive,
+        }
+    }
+}
+
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
