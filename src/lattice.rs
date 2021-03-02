@@ -773,7 +773,6 @@ impl<D> Direction<D>
     /// List of all positives directions.
     /// This is very slow use [`DirectionList::get_all_positive_directions`] instead
     pub fn positives_vec() -> Vec<Self> {
-        //TODO improve
         let mut x = Vec::with_capacity(D::dim());
         for i in 0..D::dim() {
             x.push(Self::new(i, true).unwrap());
@@ -784,7 +783,6 @@ impl<D> Direction<D>
     /// List all directions.
     /// This is very slow use [`DirectionList::get_all_directions`] instead
     pub fn directions_vec() -> Vec<Self> {
-        //TODO improve
         let mut x = Vec::with_capacity(2 * D::dim());
         for i in 0..D::dim() {
             x.push(Self::new(i, true).unwrap());

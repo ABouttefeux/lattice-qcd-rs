@@ -72,14 +72,14 @@ fn main_cross_check_volume() {
             rng.jump();
         }
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
-        let mut mc = get_mc_from_config(cfg.sim_config().mc_config(), rng);
+        let mut mc = get_mc_from_config_sweep(cfg.sim_config().mc_config(), rng);
         let (sim_th, t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs).unwrap();
-        //let rng = mc.rng_owned();
         //let (av, sim_final, _) = run_simulation_with_progress_bar_volume(cfg.sim_config(), sim_th, &multi_pb, rng);
-        //let _ = save_data_n(cfg, &sim_final);
+        let _ = save_data_n(cfg, &sim_th, &"_th");
+        //let(sim_final, _result) = simulation_gather_measurement(sim_th, &mut mc, &multi_pb, &observable::volume_obs, t_exp, 10_f64, cfg.sim_config().number_of_averages()).unwrap();
+        //let _ = save_data_n(cfg, &sim_final, &"");
         pb.inc(1);
-        //println!("{}", observable::volume_obs_mean(&sim_th));
-        (*cfg /*, av */, observable::volume_obs_mean(&sim_th), t_exp)
+        (*cfg, observable::volume_obs_mean(&sim_th), t_exp)
     }).collect::<Vec<_>>();
     
     pb.finish();

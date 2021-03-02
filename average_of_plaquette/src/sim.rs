@@ -5,6 +5,7 @@ use lattice_qcd_rs::{
     lattice::{Direction, DirectionList, LatticePoint, Sign},
     dim::{U4, U3,DimName},
     statistics,
+    Real,
 };
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use super::{
@@ -39,6 +40,13 @@ pub fn get_mc_from_config<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHa
     where Rng: rand::Rng,
 {
     MetropolisHastingsDeltaDiagnostic::new(cfg.number_of_rand(), cfg.spread(), rng).expect("Invalide Configuration")
+}
+
+/// Generate a [`MetropolisHastingsSweep`] from a config
+pub fn get_mc_from_config_sweep<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsSweep<Rng>
+    where Rng: rand::Rng,
+{
+    MetropolisHastingsSweep::new(cfg.number_of_rand(), cfg.spread(), rng).expect("Invalide Configuration")
 }
 
 pub fn run_simulation_with_progress_bar_average<Rng>(
@@ -138,13 +146,14 @@ impl From<SimulationError> for ThermalisationSimumlationError {
     }
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn thermalize_state<D, MC, F>(
     //config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
     mc: &mut MC,
     mp : &MultiProgress,
     observable: F ,
-) -> Result<(LatticeStateDefault<D>, usize), ThermalisationSimumlationError>
+) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -153,7 +162,7 @@ pub fn thermalize_state<D, MC, F>(
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
 {
     const NUMBER_OF_MEASURE_COMPUTE: usize = 1_000;
-    const NUMBER_OF_PASS: usize = 10_000;
+    const NUMBER_OF_PASS: usize = 1;
     const NUMBER_OF_PASS_AUTO_CORR: usize = 1_000;
     
     let pb_th = mp.add(ProgressBar::new(NUMBER_OF_MEASURE_COMPUTE as u64 + 1));
@@ -197,7 +206,7 @@ pub fn thermalize_state<D, MC, F>(
         }
         
         let mean = statistics::mean(&vec);
-        pb_th.set_message(&format!("{:6}", mean));
+        pb_th.set_message(&format!("{:.6}", mean));
         if Sign::sign(mean) != sign {
             break;
         }
@@ -228,12 +237,59 @@ pub fn thermalize_state<D, MC, F>(
             let last_auto_corr = statistics::auto_correlation(&init_vec, &vec).unwrap().abs();
             t_exp += last_auto_corr / init_auto_corr;
             pb_th.inc(1);
-            pb_th.set_message(&format!("{:2}, {:6}", t_exp, last_auto_corr / init_auto_corr));
+            pb_th.set_message(&format!("{:.2}, {:.6}", t_exp, last_auto_corr / init_auto_corr));
             vec_corr[j] = last_auto_corr / init_auto_corr;
         }
         last_auto_corr_mean = statistics::mean(&vec_corr);
         auto_corr_limiter += 0.1_f64;
     }
-    pb_th.finish();
-    Ok((state, t_exp.ceil() as usize))
+    pb_th.finish_and_clear();
+    Ok((state, t_exp))
+}
+
+pub fn simulation_gather_measurement<D, MC, F>(
+    //config: &SimConfig,
+    inital_state : LatticeStateDefault<D>,
+    mc: &mut MC,
+    mp : &MultiProgress,
+    observable: F,
+    t_exp : f64,
+    factor_t_exp: f64,
+    number_of_measurement: usize,
+) -> Result<(LatticeStateDefault<D>, Vec<Vec<Real>>), ThermalisationSimumlationError>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    MC: MonteCarlo<LatticeStateDefault<D>, D>,
+    F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
+{
+    const NUMBER_OF_PASS: usize = 1;
+    const NUMBER_OF_PASS_MIN: usize = 100;
+    let number_of_discard = NUMBER_OF_PASS_MIN.max((factor_t_exp * t_exp).ceil() as usize);
+    
+    let pb = mp.add(ProgressBar::new((number_of_measurement * number_of_discard) as u64));
+    pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
+        get_pb_template()
+    ));
+    pb.set_prefix(&format!("sim - {}", inital_state.lattice().dim()));
+    
+    let mut state = inital_state;
+    let mut vec = Vec::with_capacity(number_of_measurement);
+    let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
+    
+    for _ in 0..number_of_measurement {
+        for _ in 0..number_of_discard {
+            for _ in 0..NUMBER_OF_PASS {
+                state = state.monte_carlo_step(mc)?;
+            }
+            state.normalize_link_matrices();
+            pb.inc(1);
+        }
+        let vec_data = points.par_iter()
+            .map(|el| observable(el, &state))
+            .collect::<Vec<f64>>();
+        vec.push(vec_data);
+    }
+    Ok((state, vec))
 }

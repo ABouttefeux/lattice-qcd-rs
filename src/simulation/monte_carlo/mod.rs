@@ -4,13 +4,19 @@
 use super::{
     super::{
         Real,
+        Complex,
         lattice::{
             Direction,
             DirectionList,
-        }
+            LatticeCyclique,
+            LatticeLinkCanonical,
+            LatticeLink,
+        },
+        field::LinkMatrix,
     },
     state::{
         LatticeState,
+        LatticeStateDefault,
     },
     SimulationError,
 };
@@ -21,13 +27,16 @@ use na::{
     DefaultAllocator,
     VectorN,
     base::allocator::Allocator,
+    ComplexField,
 };
 
 pub mod hybride_monte_carlo;
 pub mod metropolis_hastings;
+pub mod metropolis_hastings_sweep;
 
 pub use hybride_monte_carlo::*;
 pub use metropolis_hastings::*;
+pub use metropolis_hastings_sweep::*;
 
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
@@ -132,4 +141,34 @@ impl<T, State, D, Rng> MonteCarlo<State, D> for MCWrapper<T, State, D, Rng>
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError> {
         self.mcd.get_next_element_default(state, &mut self.rng)
     }
+}
+
+#[inline]
+fn get_delta_s_old_new_cmp<D>(
+    link_matrix: &LinkMatrix,
+    lattice: &LatticeCyclique<D>,
+    link: &LatticeLinkCanonical<D>,
+    new_link: &na::Matrix3<Complex>,
+    beta : Real,
+    old_matrix: &na::Matrix3<Complex>,
+) -> Real
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
+{
+    let dir_j = link.dir();
+    let a: na::Matrix3<na::Complex<Real>> = Direction::<D>::get_all_positive_directions().iter()
+    .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
+        let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
+        let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
+        let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
+        let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_j);
+        let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
+        let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_i);
+        let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
+        el_1 + u1 * u2 * u3
+    }).sum();
+    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
 }

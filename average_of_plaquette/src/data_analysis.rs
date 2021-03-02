@@ -181,14 +181,14 @@ pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Re
     Ok(())
 }
 
-pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
+pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()>
     where D: DimName + Serialize,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
-    let mut file = File::create(format!("sim_b_{}_n_{}.bin", cfg.lattice_config().lattice_beta(), cfg.lattice_config().lattice_number_of_points()))?;
+    let mut file = File::create(format!("sim_b_{}_n_{}{}.bin", cfg.lattice_config().lattice_beta(), cfg.lattice_config().lattice_number_of_points(), sufix))?;
     file.write_all(&encoded)?;
     Ok(())
 }

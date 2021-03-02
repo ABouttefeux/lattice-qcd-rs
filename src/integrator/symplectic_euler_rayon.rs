@@ -128,10 +128,8 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     }
     
     fn integrate_leap_sync(&self, l: &SimulationStateLeap<State, D>, delta_t: Real) -> Result<State, SimulationError>{
-        // TODO correct
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t));
         // we advace the counter by one
-        // I do not like the clone of e_field :(.
         let e_field = EField::new(get_e_field_integrate::<State, D>(&link_matrix, l.e_field(), l.lattice(), delta_t / 2_f64));
         State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
     }

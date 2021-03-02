@@ -2,6 +2,7 @@
 use super::{
     MonteCarlo,
     MonteCarloDefault,
+    get_delta_s_old_new_cmp,
     super::{
         super::{
             Real,
@@ -30,8 +31,6 @@ use super::{
 };
 use std::marker::PhantomData;
 use rand_distr::Distribution;
-use na::ComplexField;
-use rayon::prelude::*;
 use na::{
     DimName,
     DefaultAllocator,
@@ -178,36 +177,6 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
     }
 }
 
-#[inline]
-fn get_delta_s_old_new_cmp<D>(
-    link_matrix: &LinkMatrix,
-    lattice: &LatticeCyclique<D>,
-    link: &LatticeLinkCanonical<D>,
-    new_link: &na::Matrix3<Complex>,
-    beta : Real,
-    old_matrix: &na::Matrix3<Complex>,
-) -> Real
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
-{
-    let dir_j = link.dir();
-    let a: na::Matrix3<na::Complex<Real>> = Direction::<D>::get_all_positive_directions().par_iter()
-    .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
-        let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
-        let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
-        let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
-        let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_j);
-        let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
-        let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_i);
-        let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
-        el_1 + u1 * u2 * u3
-    }).sum();
-    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
-}
-
 /// Metropolis Hastings algorithm with diagnostics.
 pub struct MetropolisHastingsDeltaDiagnostic<Rng>
     where Rng: rand::Rng,
@@ -273,6 +242,7 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
         na::VectorN<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
+        // TODO corect error straple
         let old_matrix_opt = previous_modification.iter().filter(|(link_m, _)| link_m == link ).last();
         let old_matrix;
         match old_matrix_opt {
