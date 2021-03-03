@@ -12,6 +12,7 @@ use super::{
     config::*,
     data_analysis::*,
     observable,
+    data_analysis,
 };
 use rayon::prelude::*;
 use na::{
@@ -152,7 +153,7 @@ pub fn thermalize_state<D, MC, F>(
     inital_state : LatticeStateDefault<D>,
     mc: &mut MC,
     mp : &MultiProgress,
-    observable: F ,
+    observable: F,
 ) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -219,6 +220,9 @@ pub fn thermalize_state<D, MC, F>(
     let init_auto_corr = statistics::variance(&init_vec).abs();
     let mut last_auto_corr_mean = 1_f64;
     
+    // TODO remove
+    let mut vec_corr_plot = Vec::with_capacity(NUMBER_OF_PASS_AUTO_CORR);
+    
     let mut auto_corr_limiter = 0_f64;
     loop {
         if last_auto_corr_mean < auto_corr_limiter {
@@ -240,9 +244,12 @@ pub fn thermalize_state<D, MC, F>(
             pb_th.set_message(&format!("{:.2}, {:.6}", t_exp, last_auto_corr / init_auto_corr));
             vec_corr[j] = last_auto_corr / init_auto_corr;
         }
+        vec_corr_plot.extend_from_slice(&vec_corr);
         last_auto_corr_mean = statistics::mean(&vec_corr);
         auto_corr_limiter += 0.1_f64;
     }
+    let _ = data_analysis::plot_data_auto_corr(&vec_corr_plot, state.lattice().dim());
+    let _ = write_vec_to_file_csv(&[vec_corr_plot], &format!("raw_auto_corr_{}.csv", state.lattice().dim()));
     pb_th.finish_and_clear();
     Ok((state, t_exp))
 }
@@ -253,8 +260,7 @@ pub fn simulation_gather_measurement<D, MC, F>(
     mc: &mut MC,
     mp : &MultiProgress,
     observable: F,
-    t_exp : f64,
-    factor_t_exp: f64,
+    number_of_discard: usize,
     number_of_measurement: usize,
 ) -> Result<(LatticeStateDefault<D>, Vec<Vec<Real>>), ThermalisationSimumlationError>
     where D: DimName,
@@ -265,9 +271,6 @@ pub fn simulation_gather_measurement<D, MC, F>(
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
 {
     const NUMBER_OF_PASS: usize = 1;
-    const NUMBER_OF_PASS_MIN: usize = 100;
-    let number_of_discard = NUMBER_OF_PASS_MIN.max((factor_t_exp * t_exp).ceil() as usize);
-    
     let pb = mp.add(ProgressBar::new((number_of_measurement * number_of_discard) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         get_pb_template()

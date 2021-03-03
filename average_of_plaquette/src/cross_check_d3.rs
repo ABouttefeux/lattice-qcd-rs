@@ -20,18 +20,18 @@ fn main_cross_check_volume() {
     
     let beta = 24_f64;
     let mut vec_dim = vec![];
-    let number_of_data = 8;
-    let mut therm_setp = vec![];
+    let number_of_data = 16;
     
     for i in 0..number_of_data {
         //0.5, 2.5
-        let n: usize = (beta / get_values(1_f64, 2_f64, i, number_of_data)).round() as usize;
-        vec_dim.push(n);
-        therm_setp.push( n.pow(4) * 1_000);
+        let n: usize = (beta / get_values(0.25_f64, 2.5_f64, i, number_of_data)).round() as usize;
+        if !vec_dim.iter().any(|el|* el == n) {
+            vec_dim.push(n);
+        }
     }
     
     let cfg_l = LatticeConfigScan::new(
-        ScanPossibility::Default(1000_f64),
+        ScanPossibility::Default(1000_f64), //size
         ScanPossibility::Vector(vec_dim), // dim
         ScanPossibility::Default(beta), // Beta
     ).unwrap();
@@ -41,10 +41,10 @@ fn main_cross_check_volume() {
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Vector(therm_setp), //th setps
-        ScanPossibility::Default(1_000), // renormn
-        ScanPossibility::Default(250), // number_of_averages
-        ScanPossibility::Default(1_000) //between av
+        ScanPossibility::Default(10_000), //th setps (unused)
+        ScanPossibility::Default(1), // renormn (unused)
+        ScanPossibility::Default(1_000), // number_of_averages
+        ScanPossibility::Default(200) //between av
     ).unwrap();
     let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
     //println!("{:}", serde_json::to_string_pretty( &config).unwrap());
@@ -66,7 +66,7 @@ fn main_cross_check_volume() {
     });
     pb.tick();
     
-    let result = array_config.par_iter().enumerate().map(|(index, cfg)| {
+    let _result_all_sim = array_config.par_iter().enumerate().map(|(index, cfg)| {
         let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
         for _ in 0..index{
             rng.jump();
@@ -76,10 +76,12 @@ fn main_cross_check_volume() {
         let (sim_th, t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs).unwrap();
         //let (av, sim_final, _) = run_simulation_with_progress_bar_volume(cfg.sim_config(), sim_th, &multi_pb, rng);
         let _ = save_data_n(cfg, &sim_th, &"_th");
-        //let(sim_final, _result) = simulation_gather_measurement(sim_th, &mut mc, &multi_pb, &observable::volume_obs, t_exp, 10_f64, cfg.sim_config().number_of_averages()).unwrap();
-        //let _ = save_data_n(cfg, &sim_final, &"");
+        
+        let(sim_final, result) = simulation_gather_measurement(sim_th, &mut mc, &multi_pb, &observable::volume_obs, cfg.sim_config().number_of_steps_between_average(), cfg.sim_config().number_of_averages()).unwrap();
+        let _ = write_vec_to_file_csv(&result, &format!("raw_measures_{}.csv", cfg.lattice_config().lattice_number_of_points() ));
+        let _ = save_data_n(cfg, &sim_final, &"");
         pb.inc(1);
-        (*cfg, observable::volume_obs_mean(&sim_th), t_exp)
+        (*cfg, t_exp)
     }).collect::<Vec<_>>();
     
     pb.finish();
@@ -87,7 +89,5 @@ fn main_cross_check_volume() {
     //let _ = write_data_to_file_csv_with_n(&result);
     //let _ = plot_data_volume(&result);
     let _ = h.join();
-    
-    println!("{:?}", result.iter().map(|(cfg, a, t_exp)| (cfg.lattice_config().lattice_number_of_points(), a, t_exp) ).collect::<Vec<_>>());
     
 }

@@ -107,6 +107,16 @@ pub fn write_data_to_file_csv_with_n(data: &Vec<(Config, AverageData)>) -> std::
     Ok(())
 }
 
+pub fn write_vec_to_file_csv(data: &[Vec<f64>], name: &str) -> std::io::Result<()> {
+    let file = File::create(name)?;
+    let mut wtr = csv::Writer::from_writer(file);
+    for data_el in data {
+        wtr.serialize(data_el)?;
+    }
+    wtr.flush()?;
+    Ok(())
+}
+
 /// Plot data to "plot_beta.svg"
 pub fn plot_data_average(data: &[(Config, AverageData)]) -> Result<(), Box<dyn std::error::Error>> {
     
@@ -167,6 +177,32 @@ pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn st
     }))?;
     Ok(())
 }
+
+pub fn plot_data_auto_corr(auto_corr: &[f64], n: usize) -> Result<(), Box<dyn std::error::Error>> {
+    let name = format!("plot_auto_corr_{}.svg", n);
+    let root = SVGBackend::new(&name, (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+    
+    let mut chart = ChartBuilder::on(&root)
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(60)
+        .build_cartesian_2d(
+            0_f64..auto_corr.len() as f64,
+            *auto_corr.iter().min_by(|i, j| i.partial_cmp(j).unwrap()).unwrap()..*auto_corr.iter().max_by(|i, j| i.partial_cmp(j).unwrap()).unwrap()
+        )?;
+    
+    chart.configure_mesh()
+        .y_desc("Auto Correlation")
+        .x_desc("steps")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+    chart.draw_series(auto_corr.iter().enumerate().map(|(x, y)| {
+        Circle::new((x as f64, *y), 2, BLACK.filled())
+    }))?;
+    Ok(())
+}
+
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
 pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>

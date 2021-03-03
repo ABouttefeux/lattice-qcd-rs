@@ -9,14 +9,14 @@ use lattice_qcd_rs::{
     integrator::*,
     simulation::*,
     Complex,
-    dim::U4,
+    dim::{U4, U3},
 };
 use std::{
     f64,
     collections::HashMap,
     vec::Vec,
 };
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput, BatchSize};
 use rayon::prelude::*;
 
 #[allow(deprecated)]
@@ -148,6 +148,22 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });
     groupe_sim.finish();
+    
+    let mut groupe_mc = c.benchmark_group("Monte Carlo");
+    groupe_mc.sample_size(10);
+    
+    let mut mc = MetropolisHastingsSweep::new(1, 0.1_f64, rand::thread_rng()).unwrap();
+    
+    groupe_mc.bench_function("simulate 20 U3 Metropolis Hastings Sweep", |b| {
+        b.iter_batched(|| LatticeStateDefault::<U3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mc), BatchSize::LargeInput)
+    });
+    
+    let mut mch = HybridMonteCarloDiagnostic::new(0.01, 100, SymplecticEulerRayon::new(), rand::thread_rng());
+    
+    groupe_mc.bench_function("simulate 20 U3 hybrid monteCarlo 100", |b| {
+        b.iter_batched(|| LatticeStateDefault::<U3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mch), BatchSize::LargeInput)
+    });
+    groupe_mc.finish();
     
     let mut groupe_gauss_proj = c.benchmark_group("Gauss Projection");
     groupe_gauss_proj.sample_size(10);
