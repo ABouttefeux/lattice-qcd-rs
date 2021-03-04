@@ -5,6 +5,10 @@ use std::ops::{Sub, Div, Mul};
 use rayon::prelude::*;
 use num_traits::Zero;
 
+pub mod distribution;
+
+pub use distribution::*;
+
 /// Compute the mean from a [rayon::iter::IndexedParallelIterator].
 pub fn mean_par_iter<'a ,It , T>(data: It) -> T
     where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send +'a ,
@@ -61,8 +65,9 @@ pub fn mean_with_error_par_iter<'a, It: IndexedParallelIterator<Item = &'a f64> 
 }
 
 
-/// compute the auto correlaction from a [rayon::iter::IndexedParallelIterator]
-pub fn auto_correlation_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
+/// compute the covariance between two [rayon::iter::IndexedParallelIterator]
+/// Return `None` if the par iters are not of the same length
+pub fn covariance_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
     where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It1::Item> + Send + Sync + Mul<T, Output = T> + 'a + Sub<T, Output = T>,
     It1: IndexedParallelIterator<Item = &'a T> + Clone,
     It2: IndexedParallelIterator<Item = &'a T> + Clone,
@@ -114,8 +119,9 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2]
     [mean, (variance / len as f64).sqrt()]
 }
 
-/// compute the auto correlaction from a slice
-pub fn auto_correlation<'a, T>(data_1: &'a [T],data_2: &'a [T]) -> Option<T>
+/// compute the covariance between two slices.
+/// Return `None` if the slices are not of the same length
+pub fn covariance<'a, T>(data_1: &'a [T],data_2: &'a [T]) -> Option<T>
     where T: Div<f64, Output = T> + std::iter::Sum<&'a T> + std::iter::Sum<T> + Mul<T, Output = T> + Clone + Sub<T, Output = T>,
 {
     if data_1.len() == data_2.len() {
@@ -153,7 +159,7 @@ mod test {
             }
             assert!( (mean_and_variance(&vec)[0] - mean_and_variance_par_iter(vec.par_iter())[0]).abs() < 0.00000001 );
             assert!( (mean_and_variance(&vec)[1] - mean_and_variance_par_iter(vec.par_iter())[1]).abs() < 0.00000001 );
-            assert!((auto_correlation(&vec, &vec2).unwrap() - auto_correlation_par_iter(vec.par_iter(), vec2.par_iter()).unwrap()).abs() < 0.00000001);
+            assert!((covariance(&vec, &vec2).unwrap() - covariance_par_iter(vec.par_iter(), vec2.par_iter()).unwrap()).abs() < 0.00000001);
         }
     }
 }

@@ -220,7 +220,9 @@ fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution
 /// Note that it diverges from SU(3) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this boud it will not panic but can have unexpected results.
-pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix3 {
+pub fn get_random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
+    where R: rand::Rng + ?Sized,
+{
     let r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
     let s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
     let t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
@@ -233,7 +235,7 @@ pub fn get_random_su3_close_to_unity(spread_parameter: Real, rng: &mut impl rand
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the last row and column be the sane as identity.
-fn get_r (m: CMatrix2) -> CMatrix3 {
+pub fn get_r (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0,0)], m[(0,1)], ZERO,
         m[(1,0)], m[(1,1)], ZERO,
@@ -242,8 +244,7 @@ fn get_r (m: CMatrix2) -> CMatrix3 {
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the second row and column be the sane as identity.
-
-fn get_s (m: CMatrix2) -> CMatrix3 {
+pub fn get_s (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0,0)], ZERO, m[(0,1)],
         ZERO, ONE, ZERO,
@@ -252,11 +253,35 @@ fn get_s (m: CMatrix2) -> CMatrix3 {
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the first row and column be the sane as identity.
-fn get_t (m: CMatrix2) -> CMatrix3 {
+pub fn get_t (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         ONE, ZERO, ZERO,
         ZERO, m[(0,0)], m[(0,1)],
         ZERO, m[(1,0)], m[(1,1)],
+    )
+}
+
+/// get the [`CMatrix2`] sub block corresponing to [`get_r`]
+pub fn get_sub_block_r (m: CMatrix3) -> CMatrix2 {
+    CMatrix2::new(
+        m[(0,0)], m[(0,1)],
+        m[(1,0)], m[(1,1)],
+    )
+}
+
+/// get the [`CMatrix2`] sub block corresponing to [`get_s`]
+pub fn get_sub_block_s (m: CMatrix3) -> CMatrix2 {
+    CMatrix2::new(
+        m[(0,0)], m[(0,2)],
+        m[(2,0)], m[(2,2)],
+    )
+}
+
+/// get the [`CMatrix2`] sub block corresponing to [`get_t`]
+pub fn get_sub_block_t (m: CMatrix3) -> CMatrix2 {
+    CMatrix2::new(
+        m[(1,1)], m[(1,2)],
+        m[(2,1)], m[(2,2)],
     )
 }
 

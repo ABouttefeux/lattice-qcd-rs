@@ -56,7 +56,9 @@ pub static PAULI_MATRICES: Lazy<[&CMatrix2; 3]> = Lazy::new(||
 /// Note that it diverges from SU(2) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this bound it will not panic but can have unexpected results.
-pub fn get_random_su2_close_to_unity(spread_parameter: Real, rng: &mut impl rand::Rng) -> CMatrix2 {
+pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix2
+    where R: rand::Rng + ?Sized,
+{
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
@@ -70,7 +72,12 @@ pub fn get_random_su2_close_to_unity(spread_parameter: Real, rng: &mut impl rand
     else{
         x0 = - x0_unsigned;
     }
-    // x0 1 + i el * \sigma
+    
+    get_complex_matrix_from_vec(x0, x)
+}
+
+/// return x0 1 + i x_i * \sigma_i
+pub fn get_complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0) +
         x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::new(0_f64, *el)).sum::<CMatrix2>()
 }

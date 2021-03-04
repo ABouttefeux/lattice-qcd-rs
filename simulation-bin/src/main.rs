@@ -346,7 +346,7 @@ fn sim_dmh_hmc() {
             let c3 = 6.8612_f64;
             let c4 = 2.92942132_f64;
             let a = sim.beta().powi(4) * ((sum / number_of_plaquette) - c1 / sim.beta() - c2 / sim.beta().powi(2) - c3 / sim.beta().powi(3) - c4 * sim.beta().ln() / sim.beta().powi(4));
-            format!("A {:.6},  {}", a, lattice_qcd_rs::statistics::auto_correlation(&initial_data, &vec).unwrap().abs())
+            format!("A {:.6},  {}", a, lattice_qcd_rs::statistics::covariance(&initial_data, &vec).unwrap().abs())
         }
     );
     

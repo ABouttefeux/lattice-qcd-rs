@@ -81,7 +81,7 @@ pub trait LatticeState<D>
     
     /// Do one monte carlo step with the given
     fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, SimulationError>
-        where M: MonteCarlo<Self, D>,
+        where M: MonteCarlo<Self, D> + ?Sized,
     {
         m.get_next_element(self)
     }

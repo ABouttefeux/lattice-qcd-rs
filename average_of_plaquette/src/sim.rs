@@ -238,7 +238,7 @@ pub fn thermalize_state<D, MC, F>(
             let vec = points.par_iter()
                 .map(|el| observable(el, &state))
                 .collect::<Vec<f64>>();
-            let last_auto_corr = statistics::auto_correlation(&init_vec, &vec).unwrap().abs();
+            let last_auto_corr = statistics::covariance(&init_vec, &vec).unwrap().abs();
             t_exp += last_auto_corr / init_auto_corr;
             pb_th.inc(1);
             pb_th.set_message(&format!("{:.2}, {:.6}", t_exp, last_auto_corr / init_auto_corr));

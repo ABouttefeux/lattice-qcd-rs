@@ -33,10 +33,16 @@ use na::{
 pub mod hybride_monte_carlo;
 pub mod metropolis_hastings;
 pub mod metropolis_hastings_sweep;
+pub mod heat_bath;
+pub mod overrelaxation;
+pub mod hybride;
 
 pub use hybride_monte_carlo::*;
 pub use metropolis_hastings::*;
 pub use metropolis_hastings_sweep::*;
+pub use heat_bath::*;
+pub use overrelaxation::*;
+pub use hybride::*;
 
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
@@ -158,17 +164,32 @@ fn get_delta_s_old_new_cmp<D>(
     Direction<D>: DirectionList,
     DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
 {
-    let dir_j = link.dir();
-    let a: na::Matrix3<na::Complex<Real>> = Direction::<D>::get_all_positive_directions().iter()
-    .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
-        let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
-        let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
-        let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
-        let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_j);
-        let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
-        let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_i);
-        let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
-        el_1 + u1 * u2 * u3
-    }).sum();
+    let a = get_straple(link_matrix, lattice, link);
     -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+}
+
+
+fn get_straple<D>(
+    link_matrix: &LinkMatrix,
+    lattice: &LatticeCyclique<D>,
+    link: &LatticeLinkCanonical<D>,
+) -> na::Matrix3<Complex>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    na::VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
+{
+    let dir_j = link.dir();
+    Direction::<D>::get_all_positive_directions().iter()
+        .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
+            let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
+            let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);
+            let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
+            let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_j);
+            let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
+            let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &- dir_i), *dir_i);
+            let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
+            el_1 + u1 * u2 * u3
+        }).sum()
 }
