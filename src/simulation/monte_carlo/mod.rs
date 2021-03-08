@@ -54,6 +54,10 @@ pub trait MonteCarlo<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    /// Do one Monte Carlo simulation step.
+    ///
+    /// # Errors
+    /// Return an error if the simulation failed
     fn get_next_element(&mut self, state: State) -> Result<State, SimulationError>;
 }
 
@@ -69,6 +73,9 @@ pub trait MonteCarloDefault<State, D>
 {
     
     /// Generate a radom element from the previous element ( like a Markov chain).
+    ///
+    /// # Errors
+    /// Gives an error if a potential next ellement cannot be generated.
     fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError>;
     
     /// probability of the next element to replace the current one.
@@ -81,6 +88,9 @@ pub trait MonteCarloDefault<State, D>
     }
     
     /// Get the next element in the chain either the old state or a new one replacing it.
+    ///
+    /// # Errors
+    /// Gives an error if a potential next ellement cannot be generated.
     fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
@@ -159,26 +169,24 @@ fn get_delta_s_old_new_cmp<D>(
     old_matrix: &na::Matrix3<Complex>,
 ) -> Real
     where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
+    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
-    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
 {
-    let a = get_straple(link_matrix, lattice, link);
+    let a = get_staple(link_matrix, lattice, link);
     -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
 }
 
-
-fn get_straple<D>(
+// TODO move in state
+fn get_staple<D>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
 ) -> na::Matrix3<Complex>
     where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
+    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
-    DefaultAllocator: Allocator<na::Complex<Real>, na::U3, na::U3>,
 {
     let dir_j = link.dir();
     Direction::<D>::get_all_positive_directions().iter()

@@ -62,7 +62,7 @@ pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> 
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
-    let d_sign = rand::distributions::Bernoulli::new(0.5).unwrap();
+    let d_sign = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     // we could have use the spread_parameter but it is safer to use the norm of x
     let x0_unsigned = (1_f64 - x.norm_squared()).sqrt();
     let x0;

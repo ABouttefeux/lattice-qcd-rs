@@ -46,6 +46,10 @@ pub enum ThreadError {
 /// otherwise return [`ThreadError::ThreadNumberIncorect`].
 /// `capacity` is used to determine the capacity of the [`HashMap`] upon initisation (see [`HashMap::with_capacity`])
 ///
+/// # Errors
+/// Returns [`ThreadError::ThreadNumberIncorect`] is the number of threads is 0.
+/// Returns [`ThreadError::Panic`] if a thread panicked. Containt the panick message.
+///
 /// # Example
 /// let us computes the value of `i^2 * c` for i in [2,9999] with 4 threads
 /// ```
@@ -89,13 +93,12 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
     CommonData: Sync,
     Key: Eq + Hash + Send + Clone + Sync,
     Data: Send,
-    F: Fn(&Key, &CommonData) -> Data,
-    F: Sync + Clone,
+    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
 {
     run_pool_parallel_with_initialisation_mutable(
         iter,
         common_data,
-        &|_, key, common| { closure(key, common)},
+        &|_, key, common| closure(key, common),
         &|| (),
         number_of_thread,
         capacity,
@@ -106,6 +109,10 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 ///
 /// see [`run_pool_parallel`]. Moreover let some data to be initialize per thread.
 /// closure_init is run once per thread and store inside a mutable data which closure can modify.
+///
+/// # Errors
+/// Returns [`ThreadError::ThreadNumberIncorect`] is the number of threads is 0.
+/// Returns [`ThreadError::Panic`] if a thread panicked. Containt the panick message.
 ///
 /// # Examples
 /// Let us create some value but we will greet the user from the threads
@@ -163,10 +170,8 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
     CommonData: Sync,
     Key: Eq + Hash + Send + Clone + Sync,
     Data: Send,
-    F: Fn(&mut InitData, &Key, &CommonData) -> Data,
-    F: Sync + Clone,
-    FInit: FnOnce() -> InitData,
-    FInit: Send + Clone,
+    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Send + Clone + FnOnce() -> InitData,
 {
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);
@@ -224,6 +229,11 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// While computing because the thread can operate out of order, fill the data not yet computed by `default_data`
 /// `capacity` is used to determine the capacity of the [`std::vec::Vec`] upon initiation
 /// (see [`std::vec::Vec::with_capacity`]).
+///
+/// # Errors
+/// Returns [`ThreadError::ThreadNumberIncorect`] is the number of threads is 0.
+/// Returns [`ThreadError::Panic`] if a thread panicked. Containt the panick message.
+///
 /// # Example
 /// ```
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec;
@@ -257,8 +267,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
     where CommonData: Sync,
     Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
     Data: Send + Clone,
-    F: Fn(&Key, &CommonData) -> Data,
-    F: Sync + Clone,
+    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     na::VectorN<usize, D>: Copy + Send + Sync,
@@ -279,6 +288,10 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 // TODO convert closure for conversion key -> usize
 
 /// run jobs in parallel. Similar to [`run_pool_parallel_vec`] but with initiation.
+///
+/// # Errors
+/// Returns [`ThreadError::ThreadNumberIncorect`] is the number of threads is 0.
+/// Returns [`ThreadError::Panic`] if a thread panicked. Containt the panick message.
 ///
 /// # Examples
 /// Let us create some value but we will greet the user from the threads
@@ -346,10 +359,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     where CommonData: Sync,
     Key: Eq + Send + Clone + Sync,
     Data: Send + Clone,
-    F: Fn(&mut InitData, &Key, &CommonData) -> Data,
-    F: Sync + Clone,
-    FInit: FnOnce() -> InitData,
-    FInit: Send + Clone,
+    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Send + Clone + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -465,8 +476,7 @@ pub fn run_pool_parallel_rayon<Key, Data, CommonData, F>(
     where CommonData: Sync,
     Key: Eq + Send,
     Data: Send,
-    F: Fn(&Key, &CommonData) -> Data,
-    F: Sync,
+    F: Sync + Fn(&Key, &CommonData) -> Data,
 {
     iter.collect::<Vec<Key>>().into_par_iter().map(|el| closure(&el, common_data)).collect()
 }

@@ -20,7 +20,10 @@ use std::marker::PhantomData;
 use std::convert::{TryInto};
 use lattice_qcd_rs_procedural_macro::implement_direction_list;
 
-/// a cyclique lattice in space. Does not store point and links but is used to generate them.
+/// A cyclique lattice in space. Does not store point and links but is used to generate them.
+///
+/// This contain very few data and can be cloned at almost no cost even though
+/// it does not implement [`Copy`].
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeCyclique<D>
@@ -249,7 +252,32 @@ impl<'a, D> Iterator for IteratorLatticeLinkCanonical<'a, D>
         }
         previous_el
     }
+    
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.element {
+            None => (0, Some(0)),
+            Some(element) => {
+                let val = self.lattice.get_number_of_canonical_links_space() - element.to_index(self.lattice);
+                (val, Some(val))
+            }
+        }
+    }
 }
+
+impl<'a, D> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{}
+
+impl<'a, D> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{}
+
 
 /// Iterator over [`LatticePoint`]
 #[derive(Clone, Debug)]
@@ -309,7 +337,7 @@ impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
                             self.element = None;
                             return previous_el;
                         }
-                        el[i] -= self.lattice.dim()
+                        el[i] -= self.lattice.dim();
                     }
                 }
             },
@@ -317,11 +345,33 @@ impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
         }
         previous_el
     }
+    
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.element {
+            None => (0, Some(0)),
+            Some(element) => {
+                let val = self.lattice.get_number_of_points() - element.to_index(self.lattice);
+                (val, Some(val))
+            }
+        }
+    }
 }
 
+impl<'a, D> std::iter::FusedIterator for IteratorLatticePoint<'a, D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{}
+
+impl<'a, D> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{}
+
 /// Represents point on a (any) lattice.
-///
-/// We use the representation `[x, y, z]`.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint<D>
@@ -331,6 +381,64 @@ pub struct LatticePoint<D>
 {
     #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
     data: na::VectorN<usize, D>
+}
+
+impl<D> LatticePoint<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy,
+{
+    /// Create a new lattice point.
+    ///
+    ///(It can be outside a lattice).
+    pub fn new(data: VectorN<usize, D>) -> Self {
+        Self {data}
+    }
+    
+    /// Create a point at the origin
+    pub fn new_zero() -> Self{
+        Self {data: VectorN::zeros()}
+    }
+    
+    /// Create a point using the closure generate elements with the index as input.
+    ///
+    /// See [`nalgebra::base::MatrixMN::from_fn`].
+    pub fn from_fn<F>(mut f: F) -> Self
+        where F: FnMut(usize) -> usize
+    {
+        Self::new(VectorN::from_fn(|index, _| f(index) ))
+    }
+    
+    /// Number of elements in [`LatticePoint`].
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+    
+    /// Return if LatticePoint contain no data. True when the dimension is 0, false otherwise.
+    #[allow(clippy::unused_self)]
+    pub fn is_empty(&self) -> bool {
+        D::dim() == 0
+    }
+    
+    /// Get an iterator on the data.
+    pub fn iter(&self) -> impl Iterator<Item = &usize> {
+        self.data.iter()
+    }
+    
+    /// Get an iterator on the data as mutable.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut usize> {
+        self.data.iter_mut()
+    }
+}
+
+impl<D> Default for LatticePoint<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy,
+{
+    fn default() -> Self {
+        Self::new_zero()
+    }
 }
 
 impl<'a, D> IntoIterator for &'a LatticePoint<D>
@@ -346,37 +454,16 @@ impl<'a, D> IntoIterator for &'a LatticePoint<D>
     }
 }
 
-impl<D> LatticePoint<D>
+impl<'a, D> IntoIterator for &'a mut LatticePoint<D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
+    VectorN<usize, D> : Copy,
 {
+    type Item = &'a mut usize;
+    type IntoIter = <&'a mut VectorN<usize, D> as IntoIterator>::IntoIter;
     
-    pub fn new(data: VectorN<usize, D>) -> Self {
-        Self {data}
-    }
-    
-    pub fn new_zero() -> Self{
-        Self {data: VectorN::zeros()}
-    }
-    
-    pub fn from_fn<F>(mut f: F) -> Self
-    where F: FnMut(usize) -> usize {
-        Self::new(VectorN::from_fn(|index, _| f(index) ))
-    }
-    
-    /// Number of elements in [`LatticePoint`].
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-    
-    #[allow(clippy::unused_self)]
-    pub fn is_empty(&self) -> bool {
-        D::dim() == 0
-    }
-    
-    pub fn iter(&self) -> impl Iterator<Item = &usize> {
-        self.data.iter()
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter_mut()
     }
 }
 
@@ -551,11 +638,12 @@ impl<D> LatticeLinkCanonical<D>
         Some(Self {from, dir})
     }
     
-    /// position of the link
+    /// Position of the link.
     pub fn pos(&self) -> &LatticePoint<D>{
         &self.from
     }
     
+    /// Get a mutable reference on the position of the link.
     pub fn pos_mut(&mut self) -> &mut LatticePoint<D>{
         &mut self.from
     }
@@ -695,7 +783,12 @@ impl PartialEq<LatticeLinkCanonical> for LatticeLink{
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Sign {
-    Negative, Positive, Zero
+    /// Stricly negative number (non zero)
+    Negative,
+    /// Stricly positive number ( non zero)
+    Positive,
+    /// Zero (or very close to zero)
+    Zero
 }
 
 impl Sign {
@@ -763,6 +856,7 @@ pub struct Direction<D>
 impl<D> Direction<D>
     where D: DimName
 {
+    /// New direction from a direction as an idex and wether it is in the positive direction.
     pub fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
         if index_dir >= D::dim() {
             return None;
@@ -838,6 +932,7 @@ impl<D> Direction<D>
         self.to_unit_vector() * a
     }
     
+    /// Returns the dimension
     pub fn dim() -> usize {
         D::dim()
     }
@@ -985,7 +1080,22 @@ impl From<&DirectionEnum> for Direction<na::U4> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum DirectionEnum {
-    XPos, XNeg, YPos, YNeg, ZPos, ZNeg, TPos, TNeg,
+    /// Positive x direction.
+    XPos,
+    /// Negative x direction.
+    XNeg,
+    /// Positive y direction.
+    YPos,
+    /// Negative y direction.
+    YNeg,
+    /// Positive z direction.
+    ZPos,
+    /// Negative z direction.
+    ZNeg,
+    /// Positive t direction.
+    TPos,
+    /// Negative t direction.
+    TNeg,
 }
 
 impl DirectionEnum {

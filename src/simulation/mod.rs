@@ -24,6 +24,15 @@ pub enum SimulationError {
     ZeroStep,
     /// What ever you did it wasn't valide.
     NotValide,
+    /// The parameter given are incorrect.
+    InvalideParameterDistribution(rand_distr::NormalError), // TODO improve
+}
+
+/// Returns [`SimulationError::InvalideParameterDistribution`](err).
+impl From<rand_distr::NormalError> for SimulationError {
+    fn from(err: rand_distr::NormalError) -> Self{
+        SimulationError::InvalideParameterDistribution(err)
+    }
 }
 
 /// Conversion from [`ThreadError`] to [`SimulationError::ThreadingError`].

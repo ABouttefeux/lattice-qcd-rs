@@ -13,25 +13,25 @@ fn main() {
 
 fn main_scan_beta() {
     let mut vec = vec![];
-    let mut therm_setp = vec![];
+    let mut therm_step = vec![];
     for i in 0..81 {
         let beta = i as f64 / 10_f64;
         vec.push(beta);
         let r = beta.floor() + 1_f64;
         if r < 2_f64 {
-            therm_setp.push(1_000_000)
+            therm_step.push(1_000_000)
         }
         else if r < 4_f64 {
-            therm_setp.push(4_000_000)
+            therm_step.push(4_000_000)
         }
         else if r < 5_f64 {
-            therm_setp.push(10_000_000)
+            therm_step.push(10_000_000)
         }
         else if r < 6_f64 {
-            therm_setp.push(25_000_000)
+            therm_step.push(25_000_000)
         }
         else {
-            therm_setp.push(50_000_000)
+            therm_step.push(50_000_000)
         }
     }
     
@@ -46,7 +46,7 @@ fn main_scan_beta() {
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Default(10_000), //th setps
+        ScanPossibility::Vector(therm_step), //th steps
         ScanPossibility::Default(500), // renormn
         ScanPossibility::Default(250), // number_of_averages
         ScanPossibility::Default(5_000) //between av

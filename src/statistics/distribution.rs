@@ -1,4 +1,6 @@
 
+//! Some statistical distribution used by other part of the library
+
 use super::{
     super::{
         Real,

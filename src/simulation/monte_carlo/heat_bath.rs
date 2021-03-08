@@ -1,7 +1,9 @@
 
+//! Pseudo heat bath methods
+
 use super::{
     MonteCarlo,
-    get_straple,
+    get_staple,
     super::{
         super::{
             Complex,
@@ -39,24 +41,26 @@ pub struct HeatBathSweep<Rng>
 impl<Rng> HeatBathSweep<Rng>
     where Rng: rand::Rng,
 {
-    
+    /// Create a new Self form a rng.
     pub fn new(rng: Rng) -> Self {
         Self {rng}
     }
     
+    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
     
+    /// Get a mutable reference to the rng.
     pub fn rng(&mut self) -> &mut Rng {
         &mut self.rng
     }
     
     #[inline]
-    fn get_heat_bath_su2(&mut self, straple: CMatrix2, beta: f64) -> CMatrix2 {
-        let straple_coeef = straple.determinant().real().sqrt();
-        let v_r: CMatrix2 = straple.adjoint() / Complex::from(straple_coeef);
-        let d_heat_bath_r = HeatBathDistribution::new(beta * straple_coeef).unwrap();
+    fn get_heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
+        let staple_coeef = staple.determinant().real().sqrt();
+        let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coeef);
+        let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coeef).unwrap();
         let rand_m_r: CMatrix2 = self.rng.sample(d_heat_bath_r);
         rand_m_r * v_r
     }
@@ -69,7 +73,7 @@ impl<Rng> HeatBathSweep<Rng>
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
-        let a = get_straple(state.link_matrix(), state.lattice(), link);
+        let a = get_staple(state.link_matrix(), state.lattice(), link);
         
         let r = su3::get_r(self.get_heat_bath_su2(su3::get_sub_block_r(link_matrix * a), state.beta()));
         let s = su3::get_s(self.get_heat_bath_su2(su3::get_sub_block_s(r * link_matrix * a), state.beta()));

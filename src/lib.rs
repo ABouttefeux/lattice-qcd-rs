@@ -236,8 +236,8 @@
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
 
-//#![warn(clippy::missing_errors_doc)]
-//#![warn(missing_docs)]
+#![warn(clippy::missing_errors_doc)]
+#![warn(missing_docs)]
 
 
 extern crate nalgebra as na;

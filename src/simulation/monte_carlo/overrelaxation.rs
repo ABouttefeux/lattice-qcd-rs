@@ -1,7 +1,12 @@
 
+//! Overrelaxation methode
+//!
+//! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
+//! You can look at [`super::HybrideMethode`].
+
 use super::{
     MonteCarlo,
-    get_straple,
+    get_staple,
     super::{
         super::{
             Complex,
@@ -38,6 +43,9 @@ use na::{
 };
 
 /// Pseudo heat bath algorithm
+///
+/// Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
+/// You can look at [`super::HybrideMethode`].
 pub struct OverrelaxationSweep<Rng>
     where Rng: rand::Rng,
 {
@@ -48,14 +56,17 @@ impl<Rng> OverrelaxationSweep<Rng>
     where Rng: rand::Rng,
 {
     
+    /// Create a new Self with an given RNG
     pub fn new(rng: Rng) -> Self {
         Self {rng}
     }
     
+    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
     
+    /// Get a mutable reference to the rng.
     pub fn rng(&mut self) -> &mut Rng {
         &mut self.rng
     }
@@ -68,7 +79,7 @@ impl<Rng> OverrelaxationSweep<Rng>
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
-        let a = get_straple(state.link_matrix(), state.lattice(), link);
+        let a = get_staple(state.link_matrix(), state.lattice(), link);
         
         todo!()
     }

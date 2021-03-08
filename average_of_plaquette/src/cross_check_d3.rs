@@ -41,7 +41,7 @@ fn main_cross_check_volume() {
     ).unwrap();
     let sim_cfg = SimConfigScan::new(
         mc_cfg,
-        ScanPossibility::Default(10_000), //th setps (unused)
+        ScanPossibility::Default(10_000), //th steps (unused)
         ScanPossibility::Default(1), // renormn (unused)
         ScanPossibility::Default(1_000), // number_of_averages
         ScanPossibility::Default(200) //between av

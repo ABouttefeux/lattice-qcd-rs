@@ -210,7 +210,7 @@ impl<'a> IntoIterator for &'a mut Su3Adjoint {
 
 impl AddAssign for Su3Adjoint {
     fn add_assign(&mut self, other: Self) {
-        self.data += other.data()
+        self.data += other.data();
     }
 }
 
@@ -349,7 +349,7 @@ impl Div<&Real> for &Su3Adjoint {
 
 impl SubAssign for Su3Adjoint {
     fn sub_assign(&mut self, other: Self) {
-        self.data -= other.data()
+        self.data -= other.data();
     }
 }
 
@@ -525,16 +525,17 @@ impl LinkMatrix {
     
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
+    ///
+    /// # Errors
+    /// Returns [`ThreadError::ThreadNumberIncorect`] if `number_of_thread` is 0.
     pub fn new_random_threaded<D>(
         l: &LatticeCyclique<D>,
         number_of_thread: usize,
     ) -> Result<Self, ThreadError>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
+        where D: DimName + Eq,
+        DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<f64>, na::U3, na::U3>,
         VectorN<usize, D>: Copy + Send + Sync,
-        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
         Direction<D>: DirectionList,
-        D: Eq,
     {
         if number_of_thread == 0 {
             return Err(ThreadError::ThreadNumberIncorect);
@@ -556,11 +557,11 @@ impl LinkMatrix {
         Ok(Self {data})
     }
     
+    /// Create a cold configuration ( where the link matrices is set to 1).
     pub fn new_cold<D>(l: &LatticeCyclique<D>) -> Self
         where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
+        DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<f64>, na::U3, na::U3>,
         VectorN<usize, D>: Copy + Send + Sync,
-        DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>,
         Direction<D>: DirectionList,
     {
         Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
@@ -642,6 +643,7 @@ impl LinkMatrix {
         self.data.len()
     }
     
+    /// Returns wether the there is no data.
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
@@ -653,10 +655,12 @@ impl LinkMatrix {
         });
     }
     
+    /// Iter on the data
     pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
         self.data.iter()
     }
     
+    /// Iter mutably on the data
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
         self.data.iter_mut()
     }
@@ -774,17 +778,19 @@ impl<D> EField<D>
         EField::new_deterministe(l, &mut rng, d)
     }
     
-    
+    /// Create a new cold configuration for the electriccal field, i.e. all E ar set to 0.
     pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
         Self {data: vec![VectorN::<Su3Adjoint, D>::from_element(p1); l.get_number_of_points()]}
     }
+    
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
     pub fn get_e_vec(&self, point: &LatticePoint<D>, l: &LatticeCyclique<D>) -> Option<&VectorN<Su3Adjoint, D>> {
         self.data.get(point.to_index(l))
     }
     
-    /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e. `E_{-dir}(point) = E_{dir}(point)`.
+    /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e.
+    /// `E_{-dir}(point) = E_{dir}(point)`.
     pub fn get_e_field(&self, point: &LatticePoint<D>, dir: &Direction<D>, l: &LatticeCyclique<D>) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
@@ -793,10 +799,12 @@ impl<D> EField<D>
         }
     }
     
+    /// Returns wether there is no data
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
     
+    /// Return the Gauss parameter `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None
@@ -810,7 +818,8 @@ impl<D> EField<D>
         }).sum::<Option<CMatrix3>>()
     }
     
-    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
+    /// Get the deviation from the Gauss law
+    fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
@@ -835,7 +844,7 @@ impl<D> EField<D>
             if val_dif<= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
                 break;
             }
-            for _ in 0..4 {
+            for _ in 0_usize..4_usize {
                 return_val = return_val.project_to_gauss_step(link_matrix, lattice);
                 //println!("{}", return_val[0][0][0]);
             }

@@ -1,4 +1,6 @@
 
+//! Metropolis Hastings methode
+
 use super::{
     MonteCarlo,
     get_delta_s_old_new_cmp,
@@ -34,7 +36,7 @@ use na::{
     VectorN,
 };
 
-
+/// Metropolis Hastings methode by doing a pass on all points
 pub struct MetropolisHastingsSweep<Rng>
     where Rng: rand::Rng,
 {
@@ -67,14 +69,17 @@ impl<Rng> MetropolisHastingsSweep<Rng>
         })
     }
     
+    /// Get the mean of last probably of acceptance of the random change.
     pub fn prob_replace_mean(&self) -> Real {
         self.prob_replace_mean
     }
     
+    /// Number of accepted chnage during last sweep
     pub fn number_replace_last(&self) -> usize {
         self.number_replace_last
     }
     
+    /// Get the last probably of acceptance of the random change.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }

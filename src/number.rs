@@ -23,7 +23,7 @@ impl<T, V> Rng<T,V>
 }
 */
 
-//! Fix point number.
+/// Fix point number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
@@ -38,15 +38,18 @@ impl<I, D> FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
+    /// Get tje integer part of the number
     pub fn integer(&self) -> I {
         self.integer
     }
     
+    /// Get the decimal part of the number as it is stored (as raw data)
     pub fn decimal(&self) -> D {
         self.decimal
     }
 }
 
+/// Fixe point number representewd by i32 for the integer part and 128 bits (16 bytes) as the decimal part
 pub type I32U128 = FixedPointNumber<i32, u128>;
 
 /*

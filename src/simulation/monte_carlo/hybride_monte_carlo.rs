@@ -1,4 +1,6 @@
 
+//! Hybrid Monte Carlo methode
+
 use super::{
     MonteCarlo,
     MonteCarloDefault,
@@ -84,6 +86,7 @@ impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
         }
     }
     
+    /// Get a mutlable reference to the rng.
     pub fn get_rng(&mut self) -> &mut Rng{
         &mut self.rng
     }
@@ -227,14 +230,17 @@ impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
         }
     }
     
+    /// Get a mutlable reference to the rng.
     pub fn get_rng(&mut self) -> &mut Rng{
         &mut self.rng
     }
     
+    /// Get the last probably of acceptance of the random change.
     pub fn prob_replace_last(&self) -> Real {
         self.internal.prob_replace_last()
     }
     
+    /// Get if last step has accepted the replacement.
     pub fn has_replace_last(&self) -> bool {
         self.internal.has_replace_last()
     }
@@ -304,10 +310,12 @@ impl<State, I, D> HybridMonteCarloInternalDiagnostics<State, I, D>
         }
     }
     
+    /// Get the last probably of acceptance of the random change.
     pub fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
     
+    /// Get if last step has accepted the replacement.
     pub fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }

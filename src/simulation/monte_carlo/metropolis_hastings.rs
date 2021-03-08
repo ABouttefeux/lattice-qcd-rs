@@ -1,4 +1,6 @@
 
+//! Metropolis Hastings methode
+
 use super::{
     MonteCarlo,
     MonteCarloDefault,
@@ -135,10 +137,12 @@ impl<State, D> MetropolisHastingsDiagnostic<State, D>
         })
     }
     
+    /// Get the last probably of acceptance of the random change.
     pub fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
     
+    /// Get if last step has accepted the replacement.
     pub fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
@@ -212,18 +216,22 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
         })
     }
     
+    /// Get the last probably of acceptance of the random change.
     pub fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
     
+    /// Get if last step has accepted the replacement.
     pub fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
     
+    /// Get the last step delta of energy.
     pub fn delta_s(&self) -> Real {
         self.delta_s
     }
     
+    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -242,7 +250,7 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
         na::VectorN<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
-        // TODO corect error straple
+        // TODO corect error staple
         let old_matrix_opt = previous_modification.iter().filter(|(link_m, _)| link_m == link ).last();
         let old_matrix;
         match old_matrix_opt {
@@ -378,9 +386,16 @@ impl<Rng> MetropolisHastingsDeltaOneDiagnostic<Rng>
         })
     }
     
-    getter_copy!(prob_replace_last, Real);
-    getter_copy!(has_replace_last, bool);
+    getter_copy!(
+        /// Get the last probably of acceptance of the random change.
+        prob_replace_last, Real
+    );
+    getter_copy!(
+        /// Get if last step has accepted the replacement.
+        has_replace_last, bool
+    );
     
+    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }

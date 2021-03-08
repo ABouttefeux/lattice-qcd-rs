@@ -131,6 +131,7 @@ pub static GENERATORS: Lazy<[&CMatrix3; 8]> = Lazy::new(||
 ///
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
 pub trait MatrixExp<T> {
+    /// Return the exponential of the matrix
     fn exp(&self) -> T;
 }
 
@@ -226,7 +227,7 @@ pub fn get_random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> 
     let r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
     let s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
     let t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let distribution = rand::distributions::Bernoulli::new(0.5).unwrap();
+    let distribution = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     let mut x = r * s * t;
     if distribution.sample(rng) {
         x = x.adjoint();
