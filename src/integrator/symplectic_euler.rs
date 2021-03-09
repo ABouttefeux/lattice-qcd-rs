@@ -41,6 +41,8 @@ use super::{
     integrate_efield,
 };
 use std::vec::Vec;
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
 
 fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, number_of_thread: usize, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
     where State: LatticeHamiltonianSimulationState<D>,
@@ -88,7 +90,8 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
 ///
 /// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
 /// but use less memory
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEuler
 {
     number_of_thread: usize,

@@ -28,7 +28,7 @@ pub enum SimulationError {
     InvalideParameterDistribution(rand_distr::NormalError), // TODO improve
 }
 
-/// Returns [`SimulationError::InvalideParameterDistribution`](err).
+/// Returns [`SimulationError::InvalideParameterDistribution`] (err).
 impl From<rand_distr::NormalError> for SimulationError {
     fn from(err: rand_distr::NormalError) -> Self{
         SimulationError::InvalideParameterDistribution(err)

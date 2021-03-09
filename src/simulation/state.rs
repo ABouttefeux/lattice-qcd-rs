@@ -193,7 +193,7 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
-    /// Gives an [`SimulationError::InvalideParameter`]  if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0) or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
+    /// Gives an [`SimulationError::InvalideParameterDistribution`]  if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0) or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
     fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, SimulationError>
     {
         // TODO verify

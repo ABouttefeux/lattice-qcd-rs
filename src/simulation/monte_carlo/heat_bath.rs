@@ -30,8 +30,13 @@ use na::{
     VectorN,
     ComplexField,
 };
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
+
 
 /// Pseudo heat bath algorithm
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathSweep<Rng>
     where Rng: rand::Rng,
 {
@@ -66,7 +71,7 @@ impl<Rng> HeatBathSweep<Rng>
     }
     
     #[inline]
-    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+    fn get_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         na::VectorN<usize, D>: Copy + Send + Sync,
@@ -91,7 +96,7 @@ impl<Rng> HeatBathSweep<Rng>
     {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
-            let potential_modif = self.get_potential_modif(&state, &link);
+            let potential_modif = self.get_modif(&state, &link);
             *state.get_link_mut(&link).unwrap() = potential_modif;
         });
         state

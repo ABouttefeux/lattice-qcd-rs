@@ -402,7 +402,7 @@ impl<D> LatticePoint<D>
     
     /// Create a point using the closure generate elements with the index as input.
     ///
-    /// See [`nalgebra::base::MatrixMN::from_fn`].
+    /// See [`nalgebra::base::Matrix::from_fn`].
     pub fn from_fn<F>(mut f: F) -> Self
         where F: FnMut(usize) -> usize
     {

@@ -35,8 +35,12 @@ use na::{
     base::allocator::Allocator,
     VectorN,
 };
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
 
 /// Metropolis Hastings methode by doing a pass on all points
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsSweep<Rng>
     where Rng: rand::Rng,
 {

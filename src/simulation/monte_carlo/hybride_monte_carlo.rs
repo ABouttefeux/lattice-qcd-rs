@@ -32,6 +32,9 @@ use na::{
     base::allocator::Allocator,
 };
 
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
+
 /// Hybrid Monte Carlo algorithm ( HCM for short).
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
@@ -41,6 +44,7 @@ use na::{
 /// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
 /// Which means that the methode has a high acceptance rate.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarlo<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
     LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
@@ -112,6 +116,7 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, 
 
 /// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, D>
     where State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
@@ -125,6 +130,7 @@ struct HybridMonteCarloInternal<State, I, D>
     delta_t: Real,
     number_of_steps: usize,
     integrator: I,
+    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
     _phantom: PhantomData<(State, D)>,
 }
 
@@ -185,6 +191,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State
 /// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
 /// Which means that the methode has a high acceptance rate.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarloDiagnostic<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
     LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
@@ -266,6 +273,7 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State
 
 /// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, D>
     where State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
@@ -281,6 +289,7 @@ struct HybridMonteCarloInternalDiagnostics<State, I, D>
     integrator: I,
     has_replace_last: bool,
     prob_replace_last: Real,
+    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
     _phantom: PhantomData<(State, D)>,
 }
 

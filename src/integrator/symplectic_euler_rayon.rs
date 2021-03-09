@@ -41,6 +41,8 @@ use na::{
     base::allocator::Allocator,
     VectorN,
 };
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
 
 fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
     where State: LatticeHamiltonianSimulationState<D>,
@@ -79,7 +81,8 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
 /// Basic symplectic Euler integrator using Rayon.
 ///
 /// It is slightly faster than [`super::SymplecticEuler`] but use slightly more memory.
-#[derive(Debug, PartialEq, Clone, Copy, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEulerRayon {}
 
 impl SymplecticEulerRayon {

@@ -10,20 +10,10 @@ use super::{
     super::{
         super::{
             Complex,
-            CMatrix2,
-            CMatrix3,
-            statistics::HeatBathDistribution,
-            field::{
-                LinkMatrix,
-            },
             su3,
             lattice::{
-                LatticePoint,
                 LatticeLinkCanonical,
                 Direction,
-                LatticeElementToIndex,
-                LatticeLink,
-                LatticeCyclique,
                 DirectionList,
             }
         },
@@ -39,53 +29,44 @@ use na::{
     DefaultAllocator,
     base::allocator::Allocator,
     VectorN,
-    ComplexField,
 };
 
-/// Pseudo heat bath algorithm
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
+
+/// Pseudo heat bath algorithm using rotation methode.
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
 /// You can look at [`super::HybrideMethode`].
-pub struct OverrelaxationSweep<Rng>
-    where Rng: rand::Rng,
-{
-    rng: Rng
-}
+///
+/// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub struct OverrelaxationSweepRotation {}
 
-impl<Rng> OverrelaxationSweep<Rng>
-    where Rng: rand::Rng,
-{
+impl OverrelaxationSweepRotation {
     
     /// Create a new Self with an given RNG
-    pub fn new(rng: Rng) -> Self {
-        Self {rng}
-    }
-    
-    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
-    pub fn rng_owned(self) -> Rng {
-        self.rng
-    }
-    
-    /// Get a mutable reference to the rng.
-    pub fn rng(&mut self) -> &mut Rng {
-        &mut self.rng
+    pub const fn new() -> Self {
+        Self {}
     }
     
     #[inline]
-    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+    fn get_modif<D>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
         where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
         na::VectorN<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
-        let a = get_staple(state.link_matrix(), state.lattice(), link);
-        
-        todo!()
+        let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
+        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
+        let rot = svd.u.unwrap() * svd.v_t.unwrap();
+        rot * link_matrix.adjoint() * rot
     }
     
     #[inline]
-    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+    fn get_next_element_default<D>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         na::VectorN<usize, D>: Copy + Send + Sync,
@@ -93,22 +74,128 @@ impl<Rng> OverrelaxationSweep<Rng>
     {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
-            let potential_modif = self.get_potential_modif(&state, &link);
+            let potential_modif = Self::get_modif(&state, &link);
             *state.get_link_mut(&link).unwrap() = potential_modif;
         });
         state
     }
 }
 
-impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweep<Rng>
-    where Rng: rand::Rng,
-    D: DimName,
+impl Default for OverrelaxationSweepRotation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
+    where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     #[inline]
     fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
-        Ok(self.get_next_element_default(state))
+        Ok(Self::get_next_element_default(state))
+    }
+}
+
+// Pseudo heat bath algorithm using the reverse methode.
+///
+/// Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
+/// You can look at [`super::HybrideMethode`].
+///
+/// see (https://doi.org/10.1016/0370-2693(90)90032-2)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub struct OverrelaxationSweepReverse {}
+
+impl OverrelaxationSweepReverse {
+    
+    /// Create a new Self with an given RNG
+    pub const fn new() -> Self {
+        Self {}
+    }
+    
+    #[inline]
+    fn get_modif<D>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
+        let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
+        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
+        svd.u.unwrap() * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint()) * svd.v_t.unwrap()
+    }
+    
+    #[inline]
+    fn get_next_element_default<D>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        na::VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        let lattice = state.lattice().clone();
+        lattice.get_links().for_each(|link| {
+            let potential_modif = Self::get_modif(&state, &link);
+            *state.get_link_mut(&link).unwrap() = potential_modif;
+        });
+        state
+    }
+}
+
+impl Default for OverrelaxationSweepReverse {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+{
+    #[inline]
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+        Ok(Self::get_next_element_default(state))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use super::super::MonteCarlo;
+    use super::super::super::state::{LatticeState, LatticeStateDefault};
+    use rand::SeedableRng;
+    
+    #[test]
+    fn same_energy_reverse() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
+        let mut overrelax = OverrelaxationSweepReverse::new();
+        for _ in 0..10 {
+            let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
+            let h = state.get_hamiltonian_links();
+            let state2 = overrelax.get_next_element(state).unwrap();
+            let h2 = state2.get_hamiltonian_links();
+            println!("h1 {}, h2 {}", h, h2);
+            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3));
+        }
+        
+    }
+    
+    #[test]
+    fn same_energy_rotation() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
+        let mut overrelax = OverrelaxationSweepRotation::new();
+        for _ in 0..10 {
+            let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
+            let h = state.get_hamiltonian_links();
+            let state2 = overrelax.get_next_element(state).unwrap();
+            let h2 = state2.get_hamiltonian_links();
+            println!("h1 {}, h2 {}", h, h2);
+            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3));
+        }
     }
 }

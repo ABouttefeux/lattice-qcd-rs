@@ -286,6 +286,39 @@ pub fn get_sub_block_t (m: CMatrix3) -> CMatrix2 {
     )
 }
 
+/// Return the matrix
+/// ```textrust
+/// U'_{ij} =| -U_{ij} if i not equal to j
+///          | U_{ii}  if i = j
+/// ```
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, su3::reverse, Complex};
+/// assert_eq!(CMatrix3::identity(), reverse(CMatrix3::identity()));
+/// let m1 = CMatrix3::new(
+///     Complex::from(1_f64), Complex::from(2_f64), Complex::from(3_f64),
+///     Complex::from(4_f64), Complex::from(5_f64), Complex::from(6_f64),
+///     Complex::from(7_f64), Complex::from(8_f64), Complex::from(9_f64),
+/// );
+/// let m2 = CMatrix3::new(
+///     Complex::from(1_f64), - Complex::from(2_f64), - Complex::from(3_f64),
+///     - Complex::from(4_f64), Complex::from(5_f64), - Complex::from(6_f64),
+///     - Complex::from(7_f64), - Complex::from(8_f64), Complex::from(9_f64),
+/// );
+/// assert_eq!(m2, reverse(m1));
+/// assert_eq!(m1, reverse(m2));
+/// ```
+pub fn reverse(input: CMatrix3) -> CMatrix3 {
+    input.map_with_location(|i, j, el| {
+        if i == j {
+            el
+        }
+        else {
+            - el
+        }
+    })
+}
+
 // u64 is just not enough.
 type FactorialNumber = u128;
 
