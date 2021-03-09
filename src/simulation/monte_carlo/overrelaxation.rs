@@ -36,7 +36,8 @@ use serde::{Serialize, Deserialize};
 
 /// Pseudo heat bath algorithm using rotation methode.
 ///
-/// Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
+/// Alone it can't advance the simulation as it preserved the hamiltonian.
+/// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethode`].
 ///
 /// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
@@ -101,7 +102,8 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
 
 // Pseudo heat bath algorithm using the reverse methode.
 ///
-/// Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
+/// Alone it can't advance the simulation as it preserved the hamiltonian.
+/// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethode`].
 ///
 /// see (https://doi.org/10.1016/0370-2693(90)90032-2)
@@ -170,9 +172,11 @@ mod test {
     use super::super::super::state::{LatticeState, LatticeStateDefault};
     use rand::SeedableRng;
     
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
+    
     #[test]
     fn same_energy_reverse() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepReverse::new();
         for _ in 0..10 {
             let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
@@ -180,14 +184,15 @@ mod test {
             let state2 = overrelax.get_next_element(state).unwrap();
             let h2 = state2.get_hamiltonian_links();
             println!("h1 {}, h2 {}", h, h2);
-            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3));
+            // Relative assert : we need to multi by the mean value of h
+            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
         }
         
     }
     
     #[test]
     fn same_energy_rotation() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepRotation::new();
         for _ in 0..10 {
             let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
@@ -195,7 +200,8 @@ mod test {
             let state2 = overrelax.get_next_element(state).unwrap();
             let h2 = state2.get_hamiltonian_links();
             println!("h1 {}, h2 {}", h, h2);
-            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3));
+            // Relative assert : we need to multi by the mean value of h
+            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
         }
     }
 }

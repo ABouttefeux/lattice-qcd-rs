@@ -99,10 +99,10 @@ impl<T> Distribution<T> for HeatBathDistribution<T>
         where R: rand::Rng + ?Sized,
     {
         let two = T::one() + T::one();
-        let r = rng.sample(Uniform::new(T::zero(), T::one()));
         // the unwrap is OK because we verify that the param is not zero at creation.
         let distributions = ModifiedNormal::new(self.param_exp()).unwrap();
         loop {
+            let r = rng.sample(Uniform::new(T::zero(), T::one()));
             let lambda = rng.sample(distributions);
             if r.powi(2) <= T::one() - lambda.powi(2) {
                 return T::one() - two * lambda.powi(2);

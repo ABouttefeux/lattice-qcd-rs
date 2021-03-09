@@ -138,6 +138,7 @@ pub fn covariance<'a, T>(data_1: &'a [T],data_2: &'a [T]) -> Option<T>
 mod test {
     use super::*;
     use rand_distr::Distribution;
+    use rand::SeedableRng;
     #[test]
     fn mean_var() {
         let a = [1_f64; 100];
@@ -146,7 +147,7 @@ mod test {
         let a = [0_f64, 1_f64, 0_f64, 1_f64];
         assert_eq!(mean_and_variance_par_iter(a.par_iter()), [0.5_f64, 1_f64 / 3_f64]);
         assert_eq!(mean_and_variance(&a), [0.5_f64, 1_f64 / 3_f64]);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
         let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
         for _ in 0..100 {
             let mut vec = vec![];

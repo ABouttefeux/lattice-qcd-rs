@@ -22,9 +22,12 @@ use std::{
 use rand_distr::Distribution;
 use approx::*;
 use na::ComplexField;
+use rand::SeedableRng;
 
 /// Defines a small value to compare f64.
 const EPSILON: f64 = 0.000000001_f64;
+
+const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
 /// test the size of iterators
 fn test_itrerator(points: usize){
@@ -113,7 +116,7 @@ fn test_exp_basic(){
 #[test]
 /// test equivalence of [`su3_exp_i`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_i(){
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for i in 0..8 {
         let mut vec = Vector8::zeros();
@@ -134,7 +137,7 @@ fn equivalece_exp_i(){
 #[test]
 /// test equivalence of [`su3_exp_r`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_r(){
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for i in 0..8 {
         let mut vec = Vector8::zeros();
@@ -156,7 +159,7 @@ fn equivalece_exp_r(){
 #[test]
 /// test creation of sim ( single threaded)
 fn create_sim() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let _simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng, &distribution).unwrap();
 }
@@ -199,7 +202,7 @@ fn test_generators() {
 #[test]
 /// test the SU(3) properties of [`Su3Adjoint::to_su3`]
 fn su3_property(){
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for _ in 0..100 {
         let m = Su3Adjoint::random(&mut rng, &distribution).to_su3();
@@ -239,7 +242,7 @@ fn test_thread_vec() {
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
@@ -253,7 +256,7 @@ fn test_sim_hamiltonian() {
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate_sync(0.000001, &SymplecticEuler::new(8)).unwrap();
@@ -273,7 +276,7 @@ fn test_gauss_law() {
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian_rayon() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
@@ -287,7 +290,7 @@ fn test_sim_hamiltonian_rayon() {
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law_rayon() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate_sync(0.000001, &SymplecticEulerRayon::new()).unwrap();
@@ -372,7 +375,7 @@ fn othonomralization(){
     );
     assert_eq!(orthonormalize_matrix(&m), mc);
     
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-10_f64..10_f64);
     for _ in 0..100 {
         let m = CMatrix3::from_fn(|_,_| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
@@ -388,7 +391,7 @@ fn othonomralization(){
 
 #[test]
 fn random_su3(){
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     for _ in 0..100 {
         test_matrix_is_su3(&get_random_su3(&mut rng));
     }

@@ -805,9 +805,10 @@ impl<D> EField<D>
     }
     
     /// Return the Gauss parameter `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
+    #[inline]
     pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
-            return None
+            return None;
         }
         Direction::get_all_positive_directions().iter().map(|dir| {
             let e_i = self.get_e_field(point, dir, lattice)?;
@@ -819,6 +820,7 @@ impl<D> EField<D>
     }
     
     /// Get the deviation from the Gauss law
+    #[inline]
     fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
@@ -830,6 +832,7 @@ impl<D> EField<D>
     
     /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
     #[allow(clippy::as_conversions)] // no try into for f64
+    #[inline]
     pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
@@ -841,7 +844,7 @@ impl<D> EField<D>
             if val_dif.is_nan() {
                 return None;
             }
-            if val_dif<= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
+            if val_dif <= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
                 break;
             }
             for _ in 0_usize..4_usize {
@@ -855,10 +858,11 @@ impl<D> EField<D>
     /// Done one step to project to gauss law
     /// # Panic
     /// panics if the link matric and lattice is not of the correct size.
+    #[inline]
     fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Self {
         /// see https://arxiv.org/pdf/1512.02374.pdf
         // TODO verify
-        const K: na::Complex<f64> = na::Complex::new(-0.12_f64, 0_f64);
+        const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
         let data = lattice.get_points().collect::<Vec<LatticePoint<D>>>().par_iter().map(|point| {
             let e = self.get_e_vec(&point, lattice).unwrap();
             VectorN::<_, D>::from_fn(|index_dir, _| {
@@ -867,7 +871,7 @@ impl<D> EField<D>
                 let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
                 let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, &dir), lattice).unwrap();
                 Su3Adjoint::new(Vector8::from_fn( |index, _| {
-                    2_f64 * ( su3::GENERATORS[index] * (( u * gauss * u.adjoint() * gauss_p - gauss) * K - su3::GENERATORS[index] * na::Complex::from(e[dir.to_index()][index]) )).trace().real()
+                    2_f64 * ( su3::GENERATORS[index] * (( u * gauss * u.adjoint() * gauss_p - gauss) * K + su3::GENERATORS[index] * na::Complex::from(e[dir.to_index()][index]) )).trace().real()
                 }))
             })
         }).collect();

@@ -329,7 +329,8 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDi
 #[cfg(test)]
 #[test]
 fn test_mh_delta(){
-    let mut rng = rand::thread_rng();
+    use rand::SeedableRng;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
     
     let size = 1_000_f64;
     let number_of_pts = 4;
