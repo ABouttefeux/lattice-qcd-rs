@@ -26,6 +26,10 @@ use super::{
         Vector8,
         Complex,
         su3,
+        error::{
+            MultiIntegrationError,
+            ImplementationError,
+        },
     },
     monte_carlo::MonteCarlo,
     SimulationError,
@@ -85,7 +89,7 @@ pub trait LatticeState<D>
     ///
     /// # Errors
     /// Get an error if the simulation could not be advantaced
-    fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, SimulationError>
+    fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, M::Error>
         where M: MonteCarlo<Self, D> + ?Sized,
     {
         m.get_next_element(self)
@@ -229,7 +233,7 @@ pub trait SimulationStateSynchrone<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
+    fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, I::Error>
         where State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
@@ -247,18 +251,38 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
         integrator: &I,
-    ) -> Result<Self, SimulationError>
+    ) -> Result<Self, MultiIntegrationError<I::Error, State>>
         where State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
         if number_of_steps == 0 {
-            return Err(SimulationError::ZeroStep);
+            return Err(MultiIntegrationError::ZeroIntegration);
         }
-        let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator)?;
+        let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator)
+            .map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
         if number_of_steps > 1 {
-            state_leap = state_leap.simulate_leap_n(delta_t, integrator, number_of_steps -1)?;
+            let result = state_leap.simulate_leap_n(delta_t, integrator, number_of_steps -1);
+            match result {
+                Ok(state) => state_leap = state,
+                Err(error) => {
+                    match error {
+                        MultiIntegrationError::IntegrationError(0, error, _) => {
+                            return Err( MultiIntegrationError::IntegrationError(1, error, Some(state_leap)))
+                        },
+                        MultiIntegrationError::IntegrationError(i, error, Some(state)) => {
+                            return Err(MultiIntegrationError::IntegrationError(i + 1, error, Some(state)))
+                        },
+                        _ => {
+                            return Err(MultiIntegrationError::ImplementationError(ImplementationError::Unreachable))
+                        },
+                    }
+                },
+            }
         }
-        let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator)?;
+        let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator)
+            .map_err(|error| {
+                MultiIntegrationError::IntegrationError(number_of_steps, error, Some(state_leap))
+            })?;
         Ok(state_sync)
     }
     
@@ -272,7 +296,7 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
         integrator: &I,
-    ) -> Result<Self, SimulationError>
+    ) -> Result<Self, MultiIntegrationError<I::Error, SimulationStateLeap<Self, D>>>
         where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
         self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
@@ -282,7 +306,7 @@ pub trait SimulationStateSynchrone<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+    fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, I::Error>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
@@ -294,16 +318,16 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error, Self>>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
-            return Err(SimulationError::ZeroStep);
+            return Err(MultiIntegrationError::ZeroIntegration);
         }
-        let mut state = self.simulate_sync(delta_t, integrator)?;
-        for _ in 0..(numbers_of_times - 1) {
-            state = state.simulate_sync(delta_t, integrator)?;
+        let mut state = self.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
+        for i in 1..numbers_of_times {
+            state = state.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error, Some(state)))?;
         }
         Ok(state)
     }
@@ -326,7 +350,7 @@ pub trait SimulationStateLeapFrog<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
+    fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, I::Error>
         where State: SimulationStateSynchrone<D>,
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
@@ -337,7 +361,7 @@ pub trait SimulationStateLeapFrog<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+    fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, I::Error>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
@@ -349,16 +373,16 @@ pub trait SimulationStateLeapFrog<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error, Self>>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         if numbers_of_times == 0 {
-            return Err(SimulationError::ZeroStep);
+            return Err(MultiIntegrationError::ZeroIntegration);
         }
-        let mut state = self.simulate_leap(delta_t, integrator)?;
-        for _ in 0..(numbers_of_times - 1) {
-            state = state.simulate_leap(delta_t, integrator)?;
+        let mut state = self.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
+        for i in 1..(numbers_of_times) {
+            state = state.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error, Some(state)))?;
         }
         Ok(state)
     }
@@ -822,8 +846,8 @@ impl<State, D> SimulationStateLeap<State, D>
     ///
     /// # Errors
     /// Returns an error if the intregration failed.
-    pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<State, Self, D>
+    pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, I::Error>
+        where I: SymplecticIntegrator<State, Self, D> + ?Sized
     {
         s.simulate_to_leapfrog(delta_t, integrator)
     }

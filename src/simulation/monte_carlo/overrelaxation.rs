@@ -15,13 +15,13 @@ use super::{
                 LatticeLinkCanonical,
                 Direction,
                 DirectionList,
-            }
+            },
+            error::Never,
         },
         state::{
             LatticeState,
             LatticeStateDefault,
         },
-        SimulationError,
     },
 };
 use na::{
@@ -94,8 +94,10 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    // TODO better error handelings
+    type Error = Never;
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
         Ok(Self::get_next_element_default(state))
     }
 }
@@ -159,8 +161,11 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    // TODO better error handelings
+    type Error = Never;
+    
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
         Ok(Self::get_next_element_default(state))
     }
 }
@@ -169,39 +174,45 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
 mod test {
     use super::*;
     use super::super::MonteCarlo;
-    use super::super::super::state::{LatticeState, LatticeStateDefault};
+    use super::super::super::{
+        state::{LatticeState, LatticeStateDefault},
+    };
     use rand::SeedableRng;
     
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
+    fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng)
+        where MC: MonteCarlo<LatticeStateDefault<na::U3>, na::U3>,
+        MC::Error: core::fmt::Debug,
+    {
+        let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
+        let h = state.get_hamiltonian_links();
+        let state2 = mc.get_next_element(state).unwrap();
+        let h2 = state2.get_hamiltonian_links();
+        println!("h1 {}, h2 {}", h, h2);
+        // Relative assert : we need to multi by the mean value of h
+        // TODO use crate approx ?
+        assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
+    }
+    
+    /// Here we test that OverrelaxationSweepReverse conserve the energy.
     #[test]
     fn same_energy_reverse() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepReverse::new();
         for _ in 0..10 {
-            let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
-            let h = state.get_hamiltonian_links();
-            let state2 = overrelax.get_next_element(state).unwrap();
-            let h2 = state2.get_hamiltonian_links();
-            println!("h1 {}, h2 {}", h, h2);
-            // Relative assert : we need to multi by the mean value of h
-            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
+            test_same_energy(&mut overrelax, &mut rng);
         }
         
     }
     
+    /// Here we test that OverrelaxationSweepRotation conserve the energy.
     #[test]
     fn same_energy_rotation() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepRotation::new();
         for _ in 0..10 {
-            let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, &mut rng).unwrap();
-            let h = state.get_hamiltonian_links();
-            let state2 = overrelax.get_next_element(state).unwrap();
-            let h2 = state2.get_hamiltonian_links();
-            println!("h1 {}, h2 {}", h, h2);
-            // Relative assert : we need to multi by the mean value of h
-            assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
+            test_same_energy(&mut overrelax, &mut rng);
         }
     }
 }

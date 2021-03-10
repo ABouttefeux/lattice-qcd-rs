@@ -122,6 +122,9 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     D: Eq,
     Direction<D>: DirectionList,
 {
+    // TODO err
+    type Error = SimulationError;
+    
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
         let number_of_thread = self.number_of_thread;
         let link_matrix = get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), number_of_thread, delta_t)?;

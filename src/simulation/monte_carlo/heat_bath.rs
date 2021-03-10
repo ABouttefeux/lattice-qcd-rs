@@ -15,12 +15,12 @@ use super::{
                 Direction,
                 DirectionList,
             },
+            error::Never,
         },
         state::{
             LatticeState,
             LatticeStateDefault,
         },
-        SimulationError,
     },
 };
 use na::{
@@ -88,6 +88,7 @@ impl<Rng> HeatBathSweep<Rng>
     }
     
     #[inline]
+    // TODO improve error handeling
     fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
         where D: DimName,
         DefaultAllocator: Allocator<usize, D>,
@@ -110,8 +111,10 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for HeatBathSweep<Rng>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    type Error = Never;
+    
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error> {
         Ok(self.get_next_element_default(state))
     }
 }

@@ -142,7 +142,10 @@ fn generate_state_with_logs<D>(rng: &mut impl rand::Rng) -> LatticeStateDefault<
 }
 
 #[allow(dead_code)]
-fn simulate_with_log_subblock(mut simulation: LatticeStateDefault<U4>, mc: &mut impl MonteCarlo<LatticeStateDefault<U4>, U4> , number_of_sims: u64) -> LatticeStateDefault<U4> {
+fn simulate_with_log_subblock<MC>(mut simulation: LatticeStateDefault<U4>, mc: &mut MC, number_of_sims: u64) -> LatticeStateDefault<U4>
+    where MC: MonteCarlo<LatticeStateDefault<U4>, U4>,
+    MC::Error: core::fmt::Debug,
+{
     let pb = ProgressBar::new(number_of_sims);
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         "{prefix:10} [{elapsed_precise}] [{bar:40.white/cyan}] {pos:>4}/{len:4} [ETA {eta_precise}] {msg}"
@@ -178,6 +181,7 @@ fn simulate_loop_with_input<MC, D>(
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
+    MC::Error: core::fmt::Debug,
 {
     
     println!();

@@ -55,7 +55,6 @@
 
 use super::{
     simulation::{
-        SimulationError,
         LatticeHamiltonianSimulationState,
         SimulationStateLeapFrog,
         SimulationStateSynchrone,
@@ -118,32 +117,33 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    //TODO error
+    /// Type of error returned by the Integrator.
+    type Error;
     
     /// Integrate a sync state to a sync state.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError>;
+    fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error>;
     
     /// Integrate a leap state to a leap state using leap frog algorithm.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) -> Result<StateLeap, SimulationError>;
+    fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) -> Result<StateLeap, Self::Error>;
     
     /// Integrate a sync state to a leap state by doing a half step for the conjugate momenta.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) -> Result<StateLeap, SimulationError>;
+    fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) -> Result<StateLeap, Self::Error>;
     
     /// Integrate a leap state to a sync state by finishing doing a step for the position and finishing
     /// the half step for the conjugate momenta.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, SimulationError>;
+    fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
 }
 
 /// function for link intregration
