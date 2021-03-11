@@ -1,6 +1,11 @@
 
 //! Defines lattices and lattice component.
 
+use super::field::{
+    LinkMatrix,
+    EField,
+    Su3Adjoint,
+};
 use na::{
     Vector4,
     VectorN,
@@ -12,6 +17,7 @@ use approx::*;
 use super::{
     Real,
     dim::*,
+    error::LatticeInitializationError,
 };
 use std::ops::{Index, IndexMut, Neg};
 #[cfg(feature = "serde-serialize")]
@@ -126,16 +132,16 @@ impl<D> LatticeCyclique<D>
     
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
     /// points in each spatial dimension.
-    ///
-    /// Size should be greater than 0 and dime greater or equal to 2.
-    pub fn new(size: Real, dim: usize) -> Option<Self>{
+    /// # Errors
+    /// Size should be greater than 0 and dime greater or equal to 2, otherwise return an error.
+    pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError>{
         if size < 0_f64 {
-            return None;
+            return Err(LatticeInitializationError::NonPositiveSize);
         }
         if dim < 2 {
-            return None;
+            return Err(LatticeInitializationError::DimTooSmall);
         }
-        Some(Self {size, dim, _phantom: PhantomData})
+        Ok(Self {size, dim, _phantom: PhantomData})
     }
     
     /// Total number of canonical links oriented in space for a set time.
@@ -180,6 +186,32 @@ impl<D> LatticeCyclique<D>
             }
         }
         point
+    }
+    
+    /// Retuns wheather the number of canonical link is the same as the length of `links`
+    pub fn has_compatible_lenght_links(&self, links: &LinkMatrix) -> bool {
+        self.get_number_of_canonical_links_space() == links.len()
+    }
+    
+}
+
+impl<D> LatticeCyclique<D>
+    where D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+{
+    /// Retuns wether the number of point is the same as the length of `e_field`
+    pub fn has_compatible_lenght_e_field(&self, e_field: &EField<D>) -> bool {
+        self.get_number_of_points() == e_field.len()
+    }
+    
+    /// Retuns the length is compatible for both `links` and `e_field`.
+    /// See [`has_compatible_lenght_links`] and [`has_compatible_lenght_e_field`].
+    pub fn has_compatible_lenght(&self, links: &LinkMatrix, e_field: &EField<D>) -> bool {
+        self.has_compatible_lenght_links(links) && self.has_compatible_lenght_e_field(e_field)
     }
 }
 

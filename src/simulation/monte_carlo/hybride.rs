@@ -9,6 +9,7 @@ use super::{
                 Direction,
                 DirectionList,
             },
+            error::GetOwnedValue,
         },
         state::{
             LatticeState,
@@ -24,8 +25,13 @@ use na::{
 use std::vec::Vec;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+use std::error::Error;
+use core::fmt::{Display, Debug};
+
 
 /// Error given by [`HybrideMethode`]
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub enum HybrideMethodeError<Error, State> {
     /// An Error comming from one of the method.
     ///
@@ -34,6 +40,48 @@ pub enum HybrideMethodeError<Error, State> {
     /// No method founds, give back the ownership of the state.
     NoMethod(State),
 }
+
+impl<Error, State> HybrideMethodeError<Error, State> {
+    /// Return the state if the error is [`HybrideMethodeError::NoMethod`].
+    /// # Errors
+    /// Return the error of [`HybrideMethodeError::Error`] otherwise.
+    #[allow(clippy::missing_const_for_fn)] // false positive
+    pub fn get_state(self) -> Result<State, Error>{
+        match self {
+            Self::Error(_, error) => Err(error),
+            Self::NoMethod(state) => Ok(state),
+        }
+    }
+}
+
+impl<Error: Display, State> Display for HybrideMethodeError<Error, State> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            HybrideMethodeError::NoMethod(_) => write!(f, "error: no Monte Carlo method"),
+            HybrideMethodeError::Error(index, error) => write!(f, "error during intgration step {}: {}",index, error),
+        }
+    }
+}
+
+
+impl<E: Display + Debug + Error + 'static, State: Debug> Error for HybrideMethodeError<E, State> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            HybrideMethodeError::NoMethod(_) => None,
+            HybrideMethodeError::Error(_, error) => Some(error),
+        }
+    }
+}
+
+impl<Error: GetOwnedValue<State>, State> GetOwnedValue<State> for HybrideMethodeError<Error, State> {
+    fn get_owned_value(self) -> Option<State> {
+        match self {
+            HybrideMethodeError::NoMethod(state) => Some(state),
+            HybrideMethodeError::Error(_, error) => error.get_owned_value(),
+        }
+    }
+}
+
 
 /// Adaptator used to convert the error to another type. It is intented to use with [`HybrideMethode`].
 #[derive(PartialEq, Eq, Debug)]

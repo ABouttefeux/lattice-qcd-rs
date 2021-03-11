@@ -39,6 +39,42 @@ pub enum ThreadError {
     Panic(Box<dyn Any + Send + 'static>),
 }
 
+
+impl core::fmt::Display for ThreadError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::ThreadNumberIncorect => write!(f, "Number of thread is incorrect"),
+            Self::Panic(any) => write!(f, "a thread panicked with message {:?}", any),
+        }
+    }
+}
+
+macro_rules! implement_dyn_downcast{
+    ($any:ident, $to:ident $(, $t:ty)*) => {
+        $(
+            let downcast_r = $any.downcast_ref::<$t>().map(|el| el as &dyn $to);
+            if downcast_r.is_some() {
+                return downcast_r;
+            }
+        )*
+        return None;
+    }
+}
+
+impl std::error::Error for ThreadError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        use std::error::Error;
+        use super::error::{ImplementationError, Never, StateInitializationError, StateInitializationErrorThreaded};
+        match self {
+            Self::ThreadNumberIncorect => None,
+            Self::Panic(any) => {
+                implement_dyn_downcast!(any, Error, Never, ImplementationError, StateInitializationError, StateInitializationErrorThreaded);
+            },
+        }
+    }
+}
+
+
 /// run jobs in parallel.
 ///
 /// The pool of job is given by `iter`. the job is given by `closure` that have the form `|key,common_data| -> Data`.

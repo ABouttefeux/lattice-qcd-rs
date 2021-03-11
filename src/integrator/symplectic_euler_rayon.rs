@@ -16,7 +16,6 @@ use super::{
         },
         Real,
         simulation::{
-            SimulationError,
             LatticeHamiltonianSimulationState,
             SimulationStateSynchrone,
             LatticeHamiltonianSimulationStateNew,
@@ -44,6 +43,11 @@ use na::{
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
+/// Get all the intregrated links
+/// # Panics
+/// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
+/// In debug panic if the lattice has not the same number link as link_matrix
+/// or not the same number of point as e_field.
 fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
@@ -54,6 +58,7 @@ fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EFie
     D: Eq,
     Direction<D>: DirectionList,
 {
+    debug_assert!(lattice.has_compatible_lenght(link_matrix, e_field));
     run_pool_parallel_rayon(
         lattice.get_links(),
         &(link_matrix, e_field, lattice),
@@ -61,6 +66,11 @@ fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EFie
     )
 }
 
+/// Get all the intregrated e field
+// # Panics
+/// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
+/// In debug panic if the lattice has not the same number link as link_matrix
+/// or not the same number of point as e_field.
 fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<VectorN<Su3Adjoint, D>>
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
@@ -71,6 +81,7 @@ fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D
     D: Eq,
     Direction<D>: DirectionList,
 {
+    debug_assert!(lattice.has_compatible_lenght(link_matrix, e_field));
     run_pool_parallel_rayon(
         lattice.get_points(),
         &(link_matrix, e_field, lattice),
@@ -110,33 +121,33 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     Direction<D>: DirectionList,
 {
     // TODO err
-    type Error = SimulationError;
+    type Error = State::Error;
     
-    fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
+    fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
         let link_matrix = get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t);
         let e_field = get_e_field_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t);
         
-        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), EField::new(e_field), LinkMatrix::new(link_matrix), l.t() + 1).map_err(|err| err.error_owned())
     }
     
-    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State, D>, delta_t: Real) -> Result<SimulationStateLeap<State, D>, SimulationError> {
+    fn integrate_leap_leap(&self, l: &SimulationStateLeap<State, D>, delta_t: Real) -> Result<SimulationStateLeap<State, D>, Self::Error> {
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t));
         
         let e_field = EField::new(get_e_field_integrate::<State, D>(&link_matrix, l.e_field(), l.lattice(), delta_t));
-        SimulationStateLeap::<State, D>::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
+        SimulationStateLeap::<State, D>::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1).map_err(|err| err.error_owned())
     }
     
-    fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State, D>, SimulationError> {
+    fn integrate_sync_leap(&self, l: &State, delta_t: Real) -> Result<SimulationStateLeap<State, D>, Self::Error> {
         let e_field = get_e_field_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t / 2_f64);
         
         // we do not advace the time counter
-        SimulationStateLeap::<State, D>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t())
+        SimulationStateLeap::<State, D>::new(l.lattice().clone(), l.beta(), EField::new(e_field), l.link_matrix().clone(), l.t()).map_err(|err| err.error_owned())
     }
     
-    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State, D>, delta_t: Real) -> Result<State, SimulationError>{
+    fn integrate_leap_sync(&self, l: &SimulationStateLeap<State, D>, delta_t: Real) -> Result<State, Self::Error>{
         let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t));
         // we advace the counter by one
         let e_field = EField::new(get_e_field_integrate::<State, D>(&link_matrix, l.e_field(), l.lattice(), delta_t / 2_f64));
-        State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
+        State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1).map_err(|err| err.error_owned())
     }
 }

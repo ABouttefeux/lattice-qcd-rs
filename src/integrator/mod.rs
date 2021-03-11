@@ -146,7 +146,11 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
 }
 
-/// function for link intregration
+/// function for link intregration.
+/// This must suceed as it is use while doing parallel computation. Returning a Option is undesirable.
+/// As it can panic if a out of bound link is passed it needs to stay private.
+/// # Panic
+/// It panics if a out of bound link is passed.
 fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
@@ -161,7 +165,10 @@ fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMa
     initial_value + State::get_derivative_u(link, link_matrix, e_field, lattice).expect("Derivative not found") * Complex::from(delta_t)
 }
 
-/// function for "Electrical" field intregration
+/// function for "Electrical" field intregration.
+/// Like [`integrate_link`] this must suceed.
+/// # Panics
+/// It panics if a out of bound link is passed.
 fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> VectorN<Su3Adjoint, D>
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
