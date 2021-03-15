@@ -19,6 +19,8 @@ plotters = "0.3"
 rayon = "1.5.0"
 serde_json = "*"
 rand_xoshiro = { version = "0.6", features = ["serde1"] }
+crossbeam = "0.8.0"
+
 
 [[bin]]
 name = "cross_check_d4"
@@ -27,3 +29,11 @@ path = "src/cross_check_d4.rs"
 [[bin]]
 name = "cross_check_d3"
 path = "src/cross_check_d3.rs"
+
+[[bin]]
+name = "cross_check_e"
+path = "src/cross_check_e.rs"
+
+[[bin]]
+name = "cross_check_3d_analysis"
+path = "src/cross_check_3d_analysis.rs"

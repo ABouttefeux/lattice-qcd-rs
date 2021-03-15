@@ -24,7 +24,7 @@ pub fn volume_obs_mean(state: &LatticeStateDefault<U3>) -> f64 {
 }
 
 #[allow(clippy::suboptimal_flops)] // readability
-fn parameter_volume (value: f64, beta: f64) -> f64 {
+pub fn parameter_volume (value: f64, beta: f64) -> f64 {
     let c1: f64 = 8_f64 / 3_f64;
     const C2: f64 = 1.951_315_f64;
     const C3: f64 = 6.861_2_f64;

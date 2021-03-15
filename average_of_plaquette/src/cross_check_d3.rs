@@ -12,23 +12,34 @@ fn main() {
     main_cross_check_volume();
 }
 
-fn get_values(min: f64, max: f64, pos: usize, number_of_pts: usize) -> f64 {
+pub fn get_values(min: f64, max: f64, pos: usize, number_of_pts: usize) -> f64 {
     min + (pos as f64) / (number_of_pts as f64 - 1_f64) * (max - min)
 }
 
-fn main_cross_check_volume() {
-    
-    let beta = 24_f64;
+pub fn get_vect_dim(number_of_data: usize, beta: f64, low_pt: f64, high_pt: f64) -> Vec<usize> {
     let mut vec_dim = vec![];
-    let number_of_data = 16;
-    
     for i in 0..number_of_data {
         //0.5, 2.5
-        let n: usize = (beta / get_values(0.25_f64, 2.5_f64, i, number_of_data)).round() as usize;
+        let n: usize = (beta / get_values(low_pt, high_pt, i, number_of_data)).round() as usize;
         if !vec_dim.iter().any(|el|* el == n) {
             vec_dim.push(n);
         }
     }
+    vec_dim
+}
+
+const BETA: f64 = 24_f64;
+const NUMBER_OF_DATA: usize = 16;
+const LOW_PT: f64 = 0.25_f64;
+const HIGH_PT: f64 = 2.5_f64;
+
+fn main_cross_check_volume() {
+    
+    let beta = BETA;
+    let number_of_data = NUMBER_OF_DATA;
+    
+    let vec_dim = get_vect_dim(number_of_data, beta, LOW_PT, HIGH_PT);
+
     
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1000_f64), //size
