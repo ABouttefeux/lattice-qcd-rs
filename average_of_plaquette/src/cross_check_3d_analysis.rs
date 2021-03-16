@@ -20,7 +20,9 @@ const BETA: f64 = 24_f64;
 const N_ARRAY: [usize; 15] = [10, 11, 12, 13, 14, 15, 17, 18, 21, 24, 28, 34, 44, 60, 96];
 //const N_ARRAY: [usize; 10] = [10, 11, 12, 13, 14, 15, 17, 18, 21, 24];
 
-const BOOSTRAP_NUMBER_OF_TIMES: usize = 10_000;
+const BOOSTRAP_NUMBER_OF_TIMES: usize = 1_000;
+
+type DataComputed = (usize, [f64; 2], [f64; 2], [f64; 2]);
 
 fn main() {
     let pb = ProgressBar::new(N_ARRAY.len() as u64);
@@ -56,7 +58,7 @@ fn main() {
         }).unwrap();
         pb.inc(1);
         (*n_size, mean_and_err_block, mean_and_err_individual, mean_and_err_mean)
-    }).collect::<Vec<(usize, [f64; 2], [f64; 2], [f64; 2])>>();
+    }).collect::<Vec<DataComputed>>();
     pb.finish();
     
     let data_b = data.iter()
@@ -73,6 +75,17 @@ fn main() {
         .map( |(n_size, _, _, mean_and_err_mean)| (*n_size, *mean_and_err_mean) )
         .collect::<Vec<(usize, [f64; 2])>>();
     plot_data(&data_m, BETA, "plot_volume_data_mean.svg").unwrap();
+    write_to_file_csv(&data, "data_raw_bootstrap.csv").unwrap();
+}
+
+fn write_to_file_csv(data : &[DataComputed], name: &str) -> std::io::Result<()> {
+    let file = File::create(name)?;
+    let mut wtr = csv::Writer::from_writer(file);
+    for data_el in data {
+        wtr.serialize(data_el)?;
+    }
+    wtr.flush()?;
+    Ok(())
 }
 
 
@@ -106,7 +119,9 @@ fn statistical_boot_strap_method_block(data: &[Vec<f64>], beta: f64, number_of_t
         mean_vec.push(mean);
     }
     
-    statistics::mean_with_error(&mean_vec)
+    let [mean, var] = statistics::mean_and_variance(&mean_vec);
+    let err = (var * (mean_vec.len() as f64 - 1_f64) / (mean_vec.len() as f64)).sqrt();
+    [mean, err]
 }
 
 
@@ -126,7 +141,9 @@ fn statistical_boot_strap_method_individual(data: &[Vec<f64>], beta: f64, number
         mean_vec.push(mean);
     }
     
-    statistics::mean_with_error(&mean_vec)
+    let [mean, var] = statistics::mean_and_variance(&mean_vec);
+    let err = (var * (mean_vec.len() as f64 - 1_f64) / (mean_vec.len() as f64)).sqrt();
+    [mean, err]
 }
 
 fn statistical_boot_strap_mean(data: &[f64], number_of_times: usize, rng: &mut impl Rng ) -> [f64; 2] {
@@ -144,7 +161,9 @@ fn statistical_boot_strap_mean(data: &[f64], number_of_times: usize, rng: &mut i
         mean_vec.push(mean);
     }
     
-    statistics::mean_with_error(&mean_vec)
+    let [mean, var] = statistics::mean_and_variance(&mean_vec);
+    let err = (var * (mean_vec.len() as f64 - 1_f64) / (mean_vec.len() as f64)).sqrt();
+    [mean, err]
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
