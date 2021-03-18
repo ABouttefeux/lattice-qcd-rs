@@ -294,5 +294,6 @@ pub fn simulation_gather_measurement<D, MC, F>(
             .collect::<Vec<f64>>();
         vec.push(vec_data);
     }
+    pb.finish_and_clear();
     Ok((state, vec))
 }

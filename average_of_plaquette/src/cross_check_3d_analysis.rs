@@ -19,8 +19,9 @@ use crossbeam::thread;
 const BETA: f64 = 24_f64;
 const N_ARRAY: [usize; 15] = [10, 11, 12, 13, 14, 15, 17, 18, 21, 24, 28, 34, 44, 60, 96];
 //const N_ARRAY: [usize; 10] = [10, 11, 12, 13, 14, 15, 17, 18, 21, 24];
-
 const BOOSTRAP_NUMBER_OF_TIMES: usize = 1_000;
+
+const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
 
 type DataComputed = (usize, [f64; 2], [f64; 2], [f64; 2]);
 
@@ -36,12 +37,12 @@ fn main() {
         let result = read_file(&file_name, 1_000).unwrap();
         let (mean_and_err_block, mean_and_err_individual, mean_and_err_mean) = thread::scope(|s| {
             let handle_block = s.spawn(|_| {
-                let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
+                let mut rng = get_rand_from_seed(SEED);
                 rng.jump();
                 statistical_boot_strap_method_block(&result, BETA, BOOSTRAP_NUMBER_OF_TIMES, &mut rng)
             });
             let handle_individual = s.spawn(|_| {
-                let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
+                let mut rng = get_rand_from_seed(SEED);
                 rng.jump();
                 rng.jump();
                 statistical_boot_strap_method_individual(&result, BETA, BOOSTRAP_NUMBER_OF_TIMES, &mut rng)
@@ -49,7 +50,7 @@ fn main() {
             
             let result_mean = result.iter()
                 .map(|vec| observable::parameter_volume(statistics::mean(vec), BETA)).collect::<Vec<f64>>();
-            let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
+            let mut rng = get_rand_from_seed(SEED);
             let mean_and_err_mean = statistical_boot_strap_mean(&result_mean, BOOSTRAP_NUMBER_OF_TIMES, &mut rng);
             
             let mean_and_err_block = handle_block.join().unwrap();

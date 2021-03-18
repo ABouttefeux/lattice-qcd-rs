@@ -31,3 +31,16 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
     const C4: f64 = 2.929_421_32_f64;
     beta.powi(4) * ( value - c1 / beta - C2 / beta.powi(2) - C3 / beta.powi(3) - C4 * beta.ln() / beta.powi(4))
 }
+
+type LeapFrogState<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
+
+pub fn e_correletor(state: &LeapFrogState<U3>, state_new: &LeapFrogState<U3>, pt: &LatticePoint<U3>) -> f64 {
+    state_new.e_field().get_e_vec(pt, state.lattice()).unwrap()
+        .map(|el| el.to_matrix())
+        .dot(
+            &state_new.e_field().get_e_vec(pt, state.lattice()).unwrap()
+                .map(|el| el.to_matrix())
+        )
+        .trace()
+        .real() / (-3_f64)
+}

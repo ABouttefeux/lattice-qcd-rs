@@ -228,3 +228,12 @@ pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str)
     file.write_all(&encoded)?;
     Ok(())
 }
+
+pub fn save_data_any<T>(state: &T, file_name: &str) -> std::io::Result<()>
+    where T: Serialize,
+{
+    let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
+    let mut file = File::create(file_name)?;
+    file.write_all(&encoded)?;
+    Ok(())
+}

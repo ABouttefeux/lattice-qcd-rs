@@ -39,7 +39,7 @@ fn main_cross_check_volume() {
     let number_of_data = NUMBER_OF_DATA;
     
     let vec_dim = get_vect_dim(number_of_data, beta, LOW_PT, HIGH_PT);
-
+    
     
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1000_f64), //size
