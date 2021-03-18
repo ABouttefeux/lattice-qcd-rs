@@ -809,7 +809,13 @@ impl<State, D> SimulationStateLeap<State, D>
     Direction<D>: DirectionList,
 {
     getter!(/// get a reference to the state
-        state, State);
+        state, State
+    );
+    
+    /// get a mutable reference to the state
+    pub fn state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
     
     /// Create a leap state from a sync one by integrating by half a setp the e_field.
     ///
@@ -932,6 +938,7 @@ impl<State, D> LatticeHamiltonianSimulationState<D> for SimulationStateLeap<Stat
 ///
 /// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeHamiltonianSimulationStateSyncDefault<State, D>
     where State: LatticeState<D>,
     D: DimName,
@@ -942,48 +949,9 @@ pub struct LatticeHamiltonianSimulationStateSyncDefault<State, D>
     Direction<D>: DirectionList,
 {
     lattice_state: State,
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<Su3Adjoint, D>: Serialize", deserialize = "VectorN<Su3Adjoint, D>: Deserialize<'de>")) )]
     e_field: EField<D>,
     t: usize,
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<State, D> serde::Serialize for LatticeHamiltonianSimulationStateSyncDefault<State, D>
-    where State: LatticeState<D>,
-    D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Sync + Send,
-    na::DefaultAllocator: na::base::allocator::Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    EField<D>: Serialize,
-    State: Serialize + Clone,
-    Direction<D>: DirectionList,
-{
-    fn serialize<T>(&self, serializer: T) -> Result<T::Ok, T::Error>
-        where T: serde::Serializer,
-    {
-        (self.lattice_state.clone(), self.e_field.clone(), self.t).serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde-serialize")]
-impl<'de, State, D> serde::Deserialize<'de> for LatticeHamiltonianSimulationStateSyncDefault<State, D>
-    where State: LatticeState<D>,
-    D: na::DimName,
-    na::DefaultAllocator: na::base::allocator::Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Sync + Send,
-    na::DefaultAllocator: na::base::allocator::Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    EField<D>: Deserialize<'de>,
-    State: Deserialize<'de>,
-    Direction<D>: DirectionList,
-{
-    fn deserialize<T>(deserializer: T) -> Result<Self, T::Error>
-        where T: serde::Deserializer<'de>,
-    {
-        serde::Deserialize::deserialize(deserializer).map(|(lattice_state, e_field, t)| {
-            Self {lattice_state, e_field, t}
-        })
-    }
 }
 
 
@@ -1005,6 +973,11 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// Get a reference to the state.
     pub fn lattice_state(&self) -> &State {
         &self.lattice_state
+    }
+    
+    /// Get a mutlable reference to the state.
+    pub fn lattice_state_mut(&mut self) -> &mut State {
+        &mut self.lattice_state
     }
     
     /// # Panic

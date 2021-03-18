@@ -47,8 +47,8 @@ fn main() {
 fn main_cross_with_e() {
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1_f64), //size
-        ScanPossibility::Default(4), // dim
-        ScanPossibility::Default(6_f64), // Beta
+        ScanPossibility::Default(8), // dim
+        ScanPossibility::Default(4_f64), // Beta
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
         ScanPossibility::Default(1),
@@ -101,12 +101,12 @@ fn main_cross_with_e() {
         let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", index));
         
         
-        const NUMBER_OF_MEASUREMENT: usize = 300;
+        const NUMBER_OF_MEASUREMENT: usize = 1_000_000;
         let (state, measure) = measure(state, NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
         
         let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", index));
         let _ = write_vec_to_file_csv(&measure, &format!("raw_measures_{}.csv", index));
-        let _ = plot_data(&measure, DT, &format!("e_corr_{}.csv", index));
+        let _ = plot_data(&measure, DT, &format!("e_corr_{}.svg", index));
         pb.inc(1);
         (*cfg, measure)
     }).collect::<Vec<_>>();
@@ -117,7 +117,7 @@ fn main_cross_with_e() {
 
 type LeapFrogState<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
 
-const DT: f64 = 0.1_f64;
+const DT: f64 = 0.00001_f64;
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 
 #[allow(clippy::useless_format)]
@@ -146,8 +146,10 @@ fn thermalize_with_e_field<D, Rng>(
     let mut hmc = HybridMonteCarloDiagnostic::new(DT, STEPS, INTEGRATOR, rng);
     
     let mut state = inital_state;
-    for _ in 0..CYCLE{
+    for _ in 0..CYCLE {
         state = state.monte_carlo_step(&mut hmc)?;
+        state.normalize_link_matrices();
+        pb.set_message(&format!("{:.6}   ", hmc.prob_replace_last()));
         pb.inc(1);
     }
     
@@ -172,8 +174,11 @@ fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &
     let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
     let mut vec = Vec::with_capacity(number_of_measurement);
     
-    for _ in 0..number_of_measurement {
-        let state_new = state.simulate_leap(DT, &INTEGRATOR)?;
+    for i in 0..number_of_measurement {
+        let mut state_new = state.simulate_leap(DT, &INTEGRATOR)?;
+        if i % 20 == 0 {
+            state_new.state_mut().lattice_state_mut().normalize_link_matrices();
+        }
         let vec_data = points.par_iter()
             .map(|pt| {
                 observable::e_correletor(&state, &state_new, pt)
@@ -217,7 +222,7 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
         .x_desc("t")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
-    chart.draw_series(data_mean.iter().enumerate().map(|(index, el)| {
+    chart.draw_series(data_mean.iter().enumerate().step_by(100).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , *el), 2, BLACK.filled())
     }))?;
     Ok(())

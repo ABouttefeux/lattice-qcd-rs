@@ -834,21 +834,24 @@ impl<D> EField<D>
     #[allow(clippy::as_conversions)] // no try into for f64
     #[inline]
     pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
-        // TODO correct
+        // TODO improve
+        
+        const NUMBER_FOR_LOOP: usize = 4;
+        
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
         let mut return_val = self.project_to_gauss_step(link_matrix, lattice);
         loop {
             let val_dif = return_val.get_gauss_sum_div(link_matrix, lattice)?;
-            //println!("{}", val_dif);
+            //println!("diff : {}", val_dif);
             if val_dif.is_nan() {
                 return None;
             }
             if val_dif <= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
                 break;
             }
-            for _ in 0_usize..4_usize {
+            for _ in 0_usize..NUMBER_FOR_LOOP {
                 return_val = return_val.project_to_gauss_step(link_matrix, lattice);
                 //println!("{}", return_val[0][0][0]);
             }
