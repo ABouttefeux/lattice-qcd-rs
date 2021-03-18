@@ -454,6 +454,11 @@ impl<D> LatticeStateDefault<D>
             None
         }
     }
+    
+    /// Absorbe self anf return the link_matrix as owned
+    pub fn link_matrix_owned(self) -> LinkMatrix {
+        self.link_matrix
+    }
 }
 
 impl<D> LatticeStateNew<D> for LatticeStateDefault<D>

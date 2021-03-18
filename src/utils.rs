@@ -10,11 +10,20 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 
 /// return n!.
 ///
+/// # Panic
+/// It overflows if `n >= 35` and panics in debug.
+///
 /// # Example
 /// ```
 /// # use lattice_qcd_rs::utils::factorial;
+/// assert_eq!(factorial(0), 1);
 /// assert_eq!(factorial(4), 24);
 /// assert_eq!(factorial(6), 720);
+/// assert_eq!(factorial(34), 295232799039604140847618609643520000000);
+/// ```
+/// ```should_panic
+/// # use lattice_qcd_rs::utils::factorial;
+/// factorial(35);
 /// ```
 #[allow(clippy::as_conversions)] // constant function cant use try into
 pub const fn factorial(n: usize) -> FactorialNumber {

@@ -41,11 +41,13 @@ extern crate proc_macro2;
 use quote::quote;
 use proc_macro::TokenStream;
 
+const MAX_DIM: usize = 127;
+
 /// Implement `DirectionList` for `Direction` of `U1` to `U127`
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
     let mut implem = vec![];
-    for i in 1_usize..=127_usize {
+    for i in 1_usize..=MAX_DIM {
         let mut array_direction = vec![];
         let mut array_direction_positives = vec![];
         for j in 0..i {
@@ -80,6 +82,72 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         };
         implem.push(s);
     }
+    let final_stream = quote!{
+        #(#implem)*
+    };
+    final_stream.into()
+}
+
+const MAX_DIM_FROM_IMPLEM: usize = 10;
+
+
+/// Implement trait From for directions
+#[proc_macro]
+pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
+    let mut implem = vec![quote!{
+        use std::convert::TryFrom;
+        
+        /// Error return by try from for Directions
+        #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        pub enum ErrorDirectionConversion{
+            /// the index is out of bound
+            IndexOutOfBound,
+        }
+        
+        impl core::fmt::Display for ErrorDirectionConversion{
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "the index is out of bound")
+            }
+        }
+        
+        impl std::error::Error for ErrorDirectionConversion {}
+    }];
+    for i in 1_usize..MAX_DIM_FROM_IMPLEM {
+        for j in i+1..=MAX_DIM_FROM_IMPLEM {
+            let u_ident_from = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
+            let u_ident_to = syn::Ident::new(&format!("U{}", j), proc_macro2::Span::call_site());
+            implem.push(quote!{
+                impl From<Direction<#u_ident_from>> for Direction<#u_ident_to> {
+                    fn from(from: Direction<#u_ident_from>) -> Self {
+                        Self::new(from.to_index(), from.is_positive()).unwrap()
+                    }
+                }
+                
+                impl From<&Direction<#u_ident_from>> for Direction<#u_ident_to> {
+                    fn from(from: &Direction<#u_ident_from>) -> Self {
+                        Self::new(from.to_index(), from.is_positive()).unwrap()
+                    }
+                }
+                
+                impl TryFrom<Direction<#u_ident_to>> for Direction<#u_ident_from> {
+                    type Error = ErrorDirectionConversion;
+                    fn try_from(from: Direction<#u_ident_to>) -> Result<Self, Self::Error> {
+                        Self::new(from.to_index(), from.is_positive())
+                            .ok_or(ErrorDirectionConversion::IndexOutOfBound)
+                    }
+                }
+                
+                impl TryFrom<&Direction<#u_ident_to>> for Direction<#u_ident_from> {
+                    type Error = ErrorDirectionConversion;
+                    fn try_from(from: &Direction<#u_ident_to>) -> Result<Self, Self::Error> {
+                        Self::new(from.to_index(), from.is_positive())
+                            .ok_or(ErrorDirectionConversion::IndexOutOfBound)
+                    }
+                }
+            });
+        }
+    }
+    
     let final_stream = quote!{
         #(#implem)*
     };

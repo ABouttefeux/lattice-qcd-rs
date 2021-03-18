@@ -18,7 +18,10 @@ use std::ops::{Index, IndexMut, Neg};
 use serde::{Serialize, Deserialize};
 use std::marker::PhantomData;
 use std::convert::{TryInto};
-use lattice_qcd_rs_procedural_macro::implement_direction_list;
+use lattice_qcd_rs_procedural_macro::{
+    implement_direction_list,
+    implement_direction_from,
+};
 
 /// A cyclique lattice in space. Does not store point and links but is used to generate them.
 ///
@@ -805,6 +808,7 @@ impl Sign {
     ///
     /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
     pub fn sign(f: f64) -> Self {
+        // TODO manage NaN
         if relative_eq!(f, 0_f64) {
             return Sign::Zero;
         }
@@ -991,6 +995,8 @@ pub trait DirectionList: Sized {
 
 implement_direction_list!();
 
+implement_direction_from!();
+
 impl<D: DimName> Neg for Direction<D> {
     type Output = Self;
     
@@ -1166,7 +1172,6 @@ impl DirectionEnum {
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
-        // TODO try fold ?
         for i in 0..DirectionEnum::POSITIVES.len() {
             let scalar_prod = v.dot(&DirectionEnum::POSITIVES[i].to_vector(1_f64));
             if scalar_prod.abs() > max {
@@ -1253,6 +1258,17 @@ impl DirectionEnum {
             DirectionEnum::ZPos | DirectionEnum::ZNeg => 2,
             DirectionEnum::TPos | DirectionEnum::TNeg => 3,
         }
+    }
+}
+
+impl DirectionList for DirectionEnum {
+    
+    fn get_all_directions()->& 'static [Self] {
+        &Self::DIRECTIONS
+    }
+    
+    fn get_all_positive_directions()->& 'static [Self] {
+        &Self::POSITIVES
     }
 }
 

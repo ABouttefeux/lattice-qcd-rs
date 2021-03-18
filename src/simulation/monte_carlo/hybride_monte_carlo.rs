@@ -94,6 +94,11 @@ impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
     pub fn get_rng(&mut self) -> &mut Rng{
         &mut self.rng
     }
+    
+    /// Get the last probably of acceptance of the random change.
+    pub fn rng_owned(self) -> Rng {
+        self.rng
+    }
 }
 
 impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
@@ -250,6 +255,11 @@ impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
     /// Get if last step has accepted the replacement.
     pub fn has_replace_last(&self) -> bool {
         self.internal.has_replace_last()
+    }
+    
+    /// Get the last probably of acceptance of the random change.
+    pub fn rng_owned(self) -> Rng {
+        self.rng
     }
 }
 

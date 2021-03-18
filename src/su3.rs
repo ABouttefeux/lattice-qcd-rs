@@ -154,7 +154,7 @@ impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
         let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
         let (q, _) = decomposition.unpack();
         // q is always invertible
-        return q.clone() * new_matrix * q.try_inverse().unwrap();
+        q.clone() * new_matrix * q.try_inverse().unwrap()
     }
     
 }
@@ -169,7 +169,6 @@ fn create_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex
 
 /// get an orthonormalize matrix from two vector.
 fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
-    // TODO clean up
     let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
@@ -178,7 +177,6 @@ fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Comp
 
 /// Try orthonormalize the given matrix.
 pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
-    // TODO clean up
     let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
     let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
     get_ortho_matrix_from_2_vector(v1, v2)
@@ -235,7 +233,7 @@ pub fn get_random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> 
     x
 }
 
-/// Embed a Matrix2 inside Matrix3 leaving the last row and column be the sane as identity.
+/// Embed a Matrix2 inside Matrix3 leaving the last row and column be the same as identity.
 pub fn get_r (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0,0)], m[(0,1)], ZERO,
@@ -244,7 +242,7 @@ pub fn get_r (m: CMatrix2) -> CMatrix3 {
     )
 }
 
-/// Embed a Matrix2 inside Matrix3 leaving the second row and column be the sane as identity.
+/// Embed a Matrix2 inside Matrix3 leaving the second row and column be the same as identity.
 pub fn get_s (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0,0)], ZERO, m[(0,1)],
@@ -253,7 +251,7 @@ pub fn get_s (m: CMatrix2) -> CMatrix3 {
     )
 }
 
-/// Embed a Matrix2 inside Matrix3 leaving the first row and column be the sane as identity.
+/// Embed a Matrix2 inside Matrix3 leaving the first row and column be the same as identity.
 pub fn get_t (m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         ONE, ZERO, ZERO,
@@ -357,42 +355,15 @@ impl FactorialStorageStatic {
     #[allow(clippy::as_conversions)] // constant function cant use try into
     pub const fn new() -> Self {
         let mut data : [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] = [1; FACTORIAL_STORAGE_STAT_SIZE];
-        // cant do for in constant function :(
-        set_factorial_storage!(data, 0);
-        set_factorial_storage!(data, 1);
-        set_factorial_storage!(data, 2);
-        set_factorial_storage!(data, 3);
-        set_factorial_storage!(data, 4);
-        set_factorial_storage!(data, 5);
-        set_factorial_storage!(data, 6);
-        set_factorial_storage!(data, 7);
-        set_factorial_storage!(data, 8);
-        set_factorial_storage!(data, 9);
-        set_factorial_storage!(data, 10);
-        set_factorial_storage!(data, 11);
-        set_factorial_storage!(data, 12);
-        set_factorial_storage!(data, 13);
-        set_factorial_storage!(data, 14);
-        set_factorial_storage!(data, 15);
-        set_factorial_storage!(data, 16);
-        set_factorial_storage!(data, 17);
-        set_factorial_storage!(data, 18);
-        set_factorial_storage!(data, 19);
-        set_factorial_storage!(data, 20);
-        set_factorial_storage!(data, 21);
-        set_factorial_storage!(data, 22);
-        set_factorial_storage!(data, 23);
-        set_factorial_storage!(data, 24);
-        set_factorial_storage!(data, 25);
-        set_factorial_storage!(data, 26);
-        set_factorial_storage!(data, 27);
-        set_factorial_storage!(data, 28);
-        set_factorial_storage!(data, 29);
-        set_factorial_storage!(data, 30);
-        set_factorial_storage!(data, 31);
-        set_factorial_storage!(data, 32);
-        set_factorial_storage!(data, 33);
-        set_factorial_storage!(data, 34);
+        let mut i = 1;
+        loop {
+            // still not for loop in const fn
+            set_factorial_storage!(data, i);
+            i += 1;
+            if i > 34 {
+                break;
+            }
+        }
         Self {data}
     }
     
@@ -441,6 +412,52 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
 }
 
+/// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
+///
+/// The algorithm use is much more efficient the diagonalization method.
+/// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
+/// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
+/// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
+/// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
+/// exp(i X).
+///
+/// # Safety
+/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
+/// otherwise the ouptut gives unexpected values.
+/// ```should_panic
+/// use lattice_qcd_rs::su3::{matrix_su3_exp_i, MatrixExp};
+/// use nalgebra::{Complex, Matrix3};
+/// let i = Complex::new(0_f64, 1_f64);
+/// let matrix = Matrix3::identity(); // this is NOT an su(3)
+/// let output = unsafe {
+///     matrix_su3_exp_i(matrix)
+/// };
+/// assert!( (output - (matrix* i).exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// ```
+/// This function is memory safe and won't cause any
+/// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
+#[inline]
+#[allow(clippy::as_conversions)] // no try into for f64
+pub unsafe fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
+    let n = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    let mut q1: Complex = Complex::from(0_f64);
+    let mut q2: Complex = Complex::from(0_f64);
+    let d: Complex = matrix.determinant() * I;
+    let t: Complex = - na::Complex::from(0.5_f64) * (matrix * matrix).trace();
+    for i in (0..n).rev() {
+        let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
+        let q1_n = I * (q0 - t * q2);
+        let q2_n = I * q1;
+        
+        q0 = q0_n;
+        q1 = q1_n;
+        q2 = q2_n;
+    }
+    
+    CMatrix3::from_diagonal_element(q0) + matrix * q1 + matrix * matrix * q2
+}
+
 /// gives the value `exp(v^a T^a )`
 ///
 /// The algorithm use is much more efficient the diagonalization method.
@@ -468,6 +485,50 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     
     let m = su3_adj.to_matrix();
     CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
+}
+
+/// gives the value `exp(v^a T^a )`
+///
+/// The algorithm use is much more efficient the diagonalization method.
+/// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
+/// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
+/// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
+///
+/// # Safety
+/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
+/// otherwise the ouptut gives unexpected value.
+/// ```should_panic
+/// use lattice_qcd_rs::su3::{matrix_su3_exp_r, MatrixExp};
+/// use nalgebra::{Complex, Matrix3};
+/// let i = Complex::new(0_f64, 1_f64);
+/// let matrix = Matrix3::identity(); // this is NOT an su(3)
+/// let output = unsafe {
+///     matrix_su3_exp_r(matrix)
+/// };
+/// assert!( (output - matrix.exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// ```
+/// This function is memory safe and won't cause any
+/// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
+#[inline]
+#[allow(clippy::as_conversions)] // no try into for f64
+pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
+    let n = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    let mut q1: Complex = Complex::from(0_f64);
+    let mut q2: Complex = Complex::from(0_f64);
+    let d: Complex = matrix.determinant() * I;
+    let t: Complex = - na::Complex::from(0.5_f64) * (matrix * matrix).trace();
+    for i in (0..n).rev() {
+        let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
+        let q1_n = q0 - t * q2;
+        let q2_n = q1;
+        
+        q0 = q0_n;
+        q1 = q1_n;
+        q2 = q2_n;
+    }
+    
+    CMatrix3::from_diagonal_element(q0) + matrix * q1 + matrix * matrix * q2
 }
 
 #[cfg(test)]

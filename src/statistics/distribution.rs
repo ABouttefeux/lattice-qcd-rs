@@ -17,7 +17,7 @@ use rand::distributions::Uniform;
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
-/// Distribution given by x^2 e^{- 2 a x^2}, where `x` is the random variable and `a` a parameter of the distribution
+/// Distribution given by `x^2 e^{- 2 a x^2`},`x >= 0` where `x` is the random variable and `a` a parameter of the distribution
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ModifiedNormal<T>
@@ -41,7 +41,8 @@ impl<T> ModifiedNormal<T>
     
     getter_copy!(
         /// return the parameter `a`.
-        param_exp, T);
+        param_exp, T
+    );
 }
 
 impl<T> Distribution<T> for ModifiedNormal<T>

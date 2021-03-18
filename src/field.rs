@@ -103,7 +103,7 @@ impl Su3Adjoint {
     /// assert_eq!(su3.to_su3().determinant(), nalgebra::Complex::from(1_f64));
     /// ```
     pub fn to_su3(self) -> Matrix3<na::Complex<Real>> {
-        // TODO should it consume ? the user can manually clone and there is use because
+        // NOTE: should it consume ? the user can manually clone and there is use because
         // where the value is not necessary anymore.
         su3::su3_exp_i(self)
     }
@@ -834,6 +834,7 @@ impl<D> EField<D>
     #[allow(clippy::as_conversions)] // no try into for f64
     #[inline]
     pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
+        // TODO correct
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
