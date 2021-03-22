@@ -36,9 +36,11 @@ use nalgebra::{
     VectorN,
     base::allocator::Allocator,
     DimName,
+    Complex,
+    ComplexField,
 };
 use plotters::prelude::*;
-
+use rustfft::FftPlanner;
 
 fn main() {
     main_cross_with_e();
@@ -48,7 +50,7 @@ fn main_cross_with_e() {
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1_f64), //size
         ScanPossibility::Default(8), // dim
-        ScanPossibility::Default(4_f64), // Beta
+        ScanPossibility::Default(40_f64), // Beta
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
         ScanPossibility::Default(1),
@@ -107,6 +109,14 @@ fn main_cross_with_e() {
         let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", index));
         let _ = write_vec_to_file_csv(&measure, &format!("raw_measures_{}.csv", index));
         let _ = plot_data(&measure, DT, &format!("e_corr_{}.svg", index));
+        
+        let mut measure_fft = measure.iter().map(|el| statistics::mean(el).into()).collect::<Vec<Complex<f64>>>();
+        
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(measure_fft.len());
+        
+        fft.process(&mut measure_fft);
+        let _ = plot_data_fft(&measure_fft, DT, &format!("e_corr_{}_fft.svg", index));
         pb.inc(1);
         (*cfg, measure)
     }).collect::<Vec<_>>();
@@ -117,7 +127,8 @@ fn main_cross_with_e() {
 
 type LeapFrogState<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
 
-const DT: f64 = 0.00001_f64;
+//const DT: f64 = 0.00001_f64;
+const DT: f64 = 0.000005_f64;
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 
 #[allow(clippy::useless_format)]
@@ -168,9 +179,9 @@ fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         get_pb_template()
     ));
-    pb.set_prefix(&format!("sim"));
+    pb.set_prefix(&format!("simulating"));
     
-    let mut state = state_initial;
+    let mut state = state_initial.clone();
     let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
     let mut vec = Vec::with_capacity(number_of_measurement);
     
@@ -181,7 +192,7 @@ fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &
         }
         let vec_data = points.par_iter()
             .map(|pt| {
-                observable::e_correletor(&state, &state_new, pt)
+                observable::e_correletor(&state_initial, &state_new, pt)
             })
             .collect::<Vec<f64>>();
         vec.push(vec_data);
@@ -224,6 +235,37 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
         .draw()?;
     chart.draw_series(data_mean.iter().enumerate().step_by(100).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , *el), 2, BLACK.filled())
+    }))?;
+    Ok(())
+}
+
+fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut y_min = data[0].modulus() / (data.len() as f64).sqrt();
+    let mut y_max = data[0].modulus() / (data.len() as f64).sqrt();
+    for el in data {
+        y_min = y_min.min(el.modulus() / (data.len() as f64).sqrt());
+        y_max = y_max.max(el.modulus() / (data.len() as f64).sqrt());
+    }
+    
+    let root = SVGBackend::new(file_name, (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+    
+    let mut chart = ChartBuilder::on(&root)
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(60)
+        .build_cartesian_2d(
+            0_f64..data.len() as f64 * delta_t,
+            (y_min..y_max * 1.1_f64).log_scale(),
+        )?;
+    
+    chart.configure_mesh()
+        .y_desc("Correlation E")
+        .x_desc("w")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+    chart.draw_series(data.iter().enumerate().step_by(100).map(|(index, el)| {
+        Circle::new((index as f64 * delta_t , el.modulus() / (data.len() as f64).sqrt() ), 2, BLACK.filled())
     }))?;
     Ok(())
 }

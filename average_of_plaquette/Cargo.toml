@@ -20,6 +20,7 @@ rayon = "1.5.0"
 serde_json = "*"
 rand_xoshiro = { version = "0.6", features = ["serde1"] }
 crossbeam = "0.8.0"
+rustfft = "5.0"
 
 
 [[bin]]
