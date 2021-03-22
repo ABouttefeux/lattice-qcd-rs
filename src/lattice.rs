@@ -810,13 +810,13 @@ impl Sign {
     pub fn sign(f: f64) -> Self {
         // TODO manage NaN
         if relative_eq!(f, 0_f64) {
-            return Sign::Zero;
+            Sign::Zero
         }
-        else if f > 0_f64{
-            return Sign::Positive;
+        else if f > 0_f64 {
+            Sign::Positive
         }
         else {
-            return Sign::Negative;
+            Sign::Negative
         }
     }
     
@@ -1168,6 +1168,7 @@ impl DirectionEnum {
     /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), DirectionEnum::YNeg);
     /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), DirectionEnum::TPos);
     /// ```
+    #[allow(clippy::needless_return)] // for lisibiliy
     pub fn from_vector(v: &Vector4<Real>) -> Self {
         let mut max = 0_f64;
         let mut index_max: usize = 0;

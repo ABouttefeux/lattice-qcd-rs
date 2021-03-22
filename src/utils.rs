@@ -5,7 +5,7 @@ use std::convert::TryInto;
 
 type FactorialNumber = u128;
 
-/// Smallest number sur that (n+1)! overflow u128.
+/// Smallest number such that (n+1)! overflow u128.
 pub const MAX_NUMBER_FACTORIAL: usize = 34;
 
 /// return n!.
@@ -28,10 +28,10 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 #[allow(clippy::as_conversions)] // constant function cant use try into
 pub const fn factorial(n: usize) -> FactorialNumber {
     if n == 0 {
-        return 1;
+        1
     }
-    else{
-        return n as FactorialNumber * factorial(n - 1);
+    else {
+        n as FactorialNumber * factorial(n - 1)
     }
 }
 

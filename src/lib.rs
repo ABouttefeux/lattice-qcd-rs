@@ -207,10 +207,7 @@
 //! simulation.normalize_link_matrices();
 //! ```
 
-#![allow(clippy::needless_return)]
 //#![warn(clippy::as_conversions)]
-#![warn(clippy::cast_lossless)]
-//#![warn(clippy::cast_precision_loss)]
 #![warn(clippy::cast_sign_loss)]
 #![warn(clippy::cast_possible_truncation)]
 #![warn(clippy::cast_possible_wrap)]

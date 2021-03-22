@@ -116,7 +116,7 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
     fn sample<R>(&self, rng: &mut R) -> CMatrix2
         where R: rand::Rng + ?Sized,
     {
-        // TODO make a functrion to reduce copy of code with su2::get_random_su2_close_to_unity
+        // TODO make a function to reduce copy of code with su2::get_random_su2_close_to_unity
         let x0: f64 = rng.sample(&self);
         let uniform = Uniform::new(-1_f64, 1_f64);
         let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));

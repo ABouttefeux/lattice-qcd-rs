@@ -11,21 +11,7 @@ use lattice_qcd_rs::{
     field::{
         Su3Adjoint,
     },
-    simulation::{
-        //HeatBathSweep,
-        //OverrelaxationSweepReverse,
-        //HybrideMethode,
-        LatticeStateDefault,
-        LatticeState,
-        HybridMonteCarloDiagnostic,
-        SimulationError,
-        LatticeHamiltonianSimulationStateSyncDefault,
-        LatticeHamiltonianSimulationStateNew,
-        //LatticeHamiltonianSimulationState,
-        SimulationStateLeapFrog,
-        SimulationStateSynchrone,
-        SimulationStateLeap,
-    },
+    simulation::*,
     lattice::{Direction, DirectionList, LatticePoint},
     integrator::SymplecticEulerRayon,
     dim::U3,
@@ -49,7 +35,7 @@ fn main() {
 fn main_cross_with_e() {
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1_f64), //size
-        ScanPossibility::Default(8), // dim
+        ScanPossibility::Default(5), // dim
         ScanPossibility::Default(40_f64), // Beta
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
@@ -60,8 +46,8 @@ fn main_cross_with_e() {
         mc_cfg,
         ScanPossibility::Default(10_000), //th steps (unused)
         ScanPossibility::Default(1), // renormn (unused)
-        ScanPossibility::Default(1_000), // number_of_averages
-        ScanPossibility::Default(200) //between av
+        ScanPossibility::Default(1_000), // number_of_averages (unused)
+        ScanPossibility::Default(200) //between av (unused)
     ).unwrap();
     let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
     let array_config = config.get_all_config();
@@ -82,8 +68,9 @@ fn main_cross_with_e() {
     });
     pb.tick();
     
+    const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
     let _result_all_sim = array_config.par_iter().enumerate().map(|(index, cfg)| {
-        let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
+        let mut rng = get_rand_from_seed(SEED);
         for _ in 0..index{
             rng.jump();
         }
@@ -102,8 +89,7 @@ fn main_cross_with_e() {
         let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
         let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", index));
         
-        
-        const NUMBER_OF_MEASUREMENT: usize = 1_000_000;
+        const NUMBER_OF_MEASUREMENT: usize = 500_000;
         let (state, measure) = measure(state, NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
         
         let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", index));
@@ -125,10 +111,13 @@ fn main_cross_with_e() {
     let _ = h.join();
 }
 
-type LeapFrogState<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
 
-//const DT: f64 = 0.00001_f64;
-const DT: f64 = 0.000005_f64;
+//const DT: f64 = 0.000_01_f64; // to big
+//const DT: f64 = 0.000_000_1_f64; // OK ?
+//const DT: f64 = 0.000_000_000_1_f64; // too small
+const DT: f64 = 0.000_002_5_f64; // OK ?
+
+
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 
 #[allow(clippy::useless_format)]
@@ -136,7 +125,7 @@ fn thermalize_with_e_field<D, Rng>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-) -> Result<(LeapFrogState<D>, Rng), SimulationError>
+) -> Result<(LeapFrogStateDefault<D>, Rng), SimulationError>
     where D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -173,7 +162,7 @@ fn thermalize_with_e_field<D, Rng>(
 }
 
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LeapFrogState<U3>, Vec<Vec<f64>>), SimulationError> {
+fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LeapFrogStateDefault<U3>, Vec<Vec<f64>>), SimulationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -187,12 +176,17 @@ fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &
     
     for i in 0..number_of_measurement {
         let mut state_new = state.simulate_leap(DT, &INTEGRATOR)?;
-        if i % 20 == 0 {
+        if i % 200 == 0 {
             state_new.state_mut().lattice_state_mut().normalize_link_matrices();
+            let new_e = state_new.e_field().project_to_gauss(state_new.link_matrix(), state_new.lattice())
+                .ok_or(SimulationError::NotValide)?;
+            // let statement because of mutable_borrow_reservation_conflict
+            // (https://github.com/rust-lang/rust/issues/59159)
+            state_new.set_e_field(new_e);
         }
         let vec_data = points.par_iter()
             .map(|pt| {
-                observable::e_correletor(&state_initial, &state_new, pt)
+                observable::e_correletor(&state_initial, &state_new, pt).unwrap()
             })
             .collect::<Vec<f64>>();
         vec.push(vec_data);
@@ -205,6 +199,8 @@ fn measure(state_initial: LeapFrogState<U3>, number_of_measurement: usize, mp: &
 }
 
 
+const STEP_BY: usize = 1_000;
+
 fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     
     let data_mean = data.iter().map(|el| statistics::mean(el)).collect::<Vec<f64>>();
@@ -216,16 +212,16 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
         y_max = y_max.max(*el);
     }
     
+    
     let root = SVGBackend::new(file_name, (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
-    
     let mut chart = ChartBuilder::on(&root)
         .margin(5)
         .x_label_area_size(30)
         .y_label_area_size(60)
         .build_cartesian_2d(
             0_f64..data_mean.len() as f64 * delta_t,
-            (y_min).min(0_f64)..y_max * 1.1_f64,
+            (y_min).min(0_f64)..y_max,
         )?;
     
     chart.configure_mesh()
@@ -233,7 +229,9 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
         .x_desc("t")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
-    chart.draw_series(data_mean.iter().enumerate().step_by(100).map(|(index, el)| {
+    
+    
+    chart.draw_series(data_mean.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , *el), 2, BLACK.filled())
     }))?;
     Ok(())
@@ -264,7 +262,8 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
         .x_desc("w")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
-    chart.draw_series(data.iter().enumerate().step_by(100).map(|(index, el)| {
+    
+    chart.draw_series(data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , el.modulus() / (data.len() as f64).sqrt() ), 2, BLACK.filled())
     }))?;
     Ok(())

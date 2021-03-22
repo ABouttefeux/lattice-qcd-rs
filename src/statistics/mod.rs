@@ -78,7 +78,7 @@ pub fn covariance_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<
         let r = data_1.zip(data_2)
             .map(|(el_1, el_2)| (el_1.clone(), el_2.clone(), el_1.clone() * el_2.clone()))
             .reduce(|| (T::zero(), T::zero(), T::zero()) , |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2));
-        Some( (r.2 - r.0 * r.1 / len) / len)
+        Some((r.2 - r.0 * r.1 / len) / len)
     }
     else {
         None

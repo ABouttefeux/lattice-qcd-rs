@@ -172,11 +172,11 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
         if d.sample(rng) {
             self.has_replace_last = true;
-            return Ok(potential_next);
+            Ok(potential_next)
         }
         else{
             self.has_replace_last = false;
-            return Ok(state);
+            Ok(state)
         }
     }
 }

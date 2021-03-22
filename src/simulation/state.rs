@@ -47,6 +47,8 @@ use std::marker::PhantomData;
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
+/// Default leap frog simulation state
+pub type LeapFrogStateDefault<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
 
 /// trait to represent a pure gauge lattice state.
 ///
@@ -229,7 +231,7 @@ pub trait SimulationStateSynchrone<D>
     /// Return an error if the integration could not be done.
     fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateLeapFrog<D>,
-        I: SymplecticIntegrator<Self, State, D>
+        I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
         integrator.integrate_sync_leap(&self, delta_t)
     }
@@ -247,7 +249,7 @@ pub trait SimulationStateSynchrone<D>
         integrator: &I,
     ) -> Result<Self, SimulationError>
         where State: SimulationStateLeapFrog<D>,
-        I: SymplecticIntegrator<Self, State, D>,
+        I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
         if number_of_steps == 0 {
             return Err(SimulationError::ZeroStep);
@@ -271,7 +273,7 @@ pub trait SimulationStateSynchrone<D>
         number_of_steps: usize,
         integrator: &I,
     ) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D>,
+        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
         self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
     }
@@ -281,7 +283,7 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<Self, T, D>,
+        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         integrator.integrate_sync_sync(&self, delta_t)
@@ -293,7 +295,7 @@ pub trait SimulationStateSynchrone<D>
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
     fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<Self, T, D>,
+        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
@@ -326,7 +328,7 @@ pub trait SimulationStateLeapFrog<D>
     /// Return an error if the integration could not be done.
     fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
         where State: SimulationStateSynchrone<D>,
-        I: SymplecticIntegrator<State, Self, D>
+        I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
         integrator.integrate_leap_sync(&self, delta_t)
     }
@@ -336,7 +338,7 @@ pub trait SimulationStateLeapFrog<D>
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<T, Self, D>,
+        where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         integrator.integrate_leap_leap(&self, delta_t)
@@ -348,7 +350,7 @@ pub trait SimulationStateLeapFrog<D>
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
     fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
-        where I: SymplecticIntegrator<T, Self, D>,
+        where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         if numbers_of_times == 0 {
@@ -626,7 +628,7 @@ impl LatticeHamiltonianSimulationStateSync {
             return Self::new_deterministe(size, beta, number_of_points, &mut rng, d);
         }
         let lattice = LatticeCyclique::new(size, number_of_points).ok_or(SimulationError::InitialisationError)?;
-        let result = thread::scope(|s| {
+        thread::scope(|s| {
             let lattice_clone = lattice.clone();
             let handel = s.spawn(move |_| {
                 EField::new_random(&lattice_clone, d)
@@ -637,8 +639,7 @@ impl LatticeHamiltonianSimulationStateSync {
             let e_field = handel.join().map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
             // TODO not very clean: imporve
             Self::new(lattice, beta, e_field, link_matrix, 0)
-        }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?;
-        return result;
+        }).map_err(|err| SimulationError::ThreadingError(ThreadError::Panic(err)))?
     }
     
     /// Generate a new cold state.
@@ -753,7 +754,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
         let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
         let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
-        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()));
+        Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
@@ -1123,7 +1124,7 @@ impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationSta
         let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
         let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
         let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
-        return Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()));
+        Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).

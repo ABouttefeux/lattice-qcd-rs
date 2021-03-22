@@ -6,6 +6,7 @@ use lattice_qcd_rs::{
     ComplexField,
     lattice::{Direction, DirectionList, LatticePoint},
     dim::{U3},
+    CMatrix3,
 };
 use rayon::prelude::*;
 
@@ -32,15 +33,14 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
     beta.powi(4) * ( value - c1 / beta - C2 / beta.powi(2) - C3 / beta.powi(3) - C4 * beta.ln() / beta.powi(4))
 }
 
-type LeapFrogState<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
 
-pub fn e_correletor(state: &LeapFrogState<U3>, state_new: &LeapFrogState<U3>, pt: &LatticePoint<U3>) -> f64 {
-    state_new.e_field().get_e_vec(pt, state.lattice()).unwrap()
-        .map(|el| el.to_matrix())
-        .dot(
-            &state_new.e_field().get_e_vec(pt, state.lattice()).unwrap()
-                .map(|el| el.to_matrix())
-        )
-        .trace()
-        .real() / (-3_f64)
+pub fn e_correletor(state: &LeapFrogStateDefault<U3>, state_new: &LeapFrogStateDefault<U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+    Some(
+        state_new.e_field().get_e_vec(pt, state.lattice())?.iter()
+            .zip(state_new.e_field().get_e_vec(pt, state.lattice())?.iter())
+            .map(|(el1, el2)| el1.to_matrix() *  el2.to_matrix())
+            .sum::<CMatrix3>()
+            .trace()
+            .real() / -3_f64
+    )
 }

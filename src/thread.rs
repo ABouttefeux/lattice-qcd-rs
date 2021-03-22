@@ -158,6 +158,7 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 ///     l.get_number_of_canonical_links_space(),
 /// ).unwrap();
 /// ```
+#[allow(clippy::needless_return)] // for lisibiliy
 pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -215,7 +216,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
             for handel in threads {
                 handel.join().map_err(|err| ThreadError::Panic(err) )?;
             }
-            return Ok(hash_map);
+            Ok(hash_map)
         }).map_err(|err| ThreadError::Panic(err))?;
         return result;
     }
@@ -346,6 +347,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// ).unwrap();
 /// ```
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::needless_return)] // for lisibiliy
 pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit, D>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -411,7 +413,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
             for handel in threads {
                 handel.join().map_err(|err| ThreadError::Panic(err) )?;
             }
-            return Ok(vec);
+            Ok(vec)
         }).map_err(|err| ThreadError::Panic(err))?;
         return result;
     }

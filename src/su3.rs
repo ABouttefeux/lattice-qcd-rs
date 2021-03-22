@@ -331,7 +331,7 @@ pub fn get_factorial_size_for_exp() -> usize {
         n += 1;
         factorial_value *= n - 7;
     }
-    return n;
+    n
 }
 
 const FACTORIAL_STORAGE_STAT_SIZE: usize = utils::MAX_NUMBER_FACTORIAL + 1;

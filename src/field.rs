@@ -579,10 +579,10 @@ impl LinkMatrix {
         let matrix = self.data.get(link_c.to_index(l))? ;
         if link.is_dir_negative() {
             // that means the the link was in the negative direction
-            return Some(matrix.adjoint());
+            Some(matrix.adjoint())
         }
         else {
-            return Some(*matrix);
+            Some(*matrix)
         }
     }
     

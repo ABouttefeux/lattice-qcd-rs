@@ -20,13 +20,13 @@
 //! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
-//! use lattice_qcd_rs::dim::U4;
+//! use lattice_qcd_rs::dim::U3;
 //!
 //! let mut rng = rand::thread_rng();
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U4>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! ```
@@ -39,13 +39,13 @@
 //! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! # use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
-//! # use lattice_qcd_rs::dim::U4;
+//! # use lattice_qcd_rs::dim::U3;
 //! #
 //! # let mut rng = rand::thread_rng();
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U4>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
 //! let h = state1.get_hamiltonian_total();
@@ -106,7 +106,7 @@ pub trait Integrator<State, State2>
 /// The integrator evlove the state in time.
 ///
 /// The integrator should be capable of switching between Sync state
-/// (q (ok link matrices) at time T , p(or e_field) at time T )
+/// (q (or link matrices) at time T , p (or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
 pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     where StateSync: SimulationStateSynchrone<D>,

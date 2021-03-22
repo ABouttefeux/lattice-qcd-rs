@@ -14,7 +14,7 @@ use super::{
                 LatticeLinkCanonical,
                 Direction,
                 DirectionList,
-            }
+            },
         },
         state::{
             LatticeState,

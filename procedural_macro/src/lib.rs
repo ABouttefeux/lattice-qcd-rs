@@ -2,9 +2,6 @@
 //! Procedural macro for lattice_qcd_rs
 
 #![allow(clippy::needless_return)]
-//#![warn(clippy::as_conversions)]
-#![warn(clippy::cast_lossless)]
-//#![warn(clippy::cast_precision_loss)]
 #![warn(clippy::cast_sign_loss)]
 #![warn(clippy::cast_possible_truncation)]
 #![warn(clippy::cast_possible_wrap)]
@@ -25,7 +22,7 @@
 #![warn(clippy::suboptimal_flops)]
 #![warn(clippy::todo)]
 #![warn(clippy::trivially_copy_pass_by_ref)]
-//#![warn(clippy::type_repetition_in_bounds)]
+#![warn(clippy::type_repetition_in_bounds)]
 #![warn(clippy::unreadable_literal)]
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
