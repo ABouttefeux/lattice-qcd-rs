@@ -36,9 +36,9 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
 
 pub fn e_correletor(state: &LeapFrogStateDefault<U3>, state_new: &LeapFrogStateDefault<U3>, pt: &LatticePoint<U3>) -> Option<f64> {
     Some(
-        state_new.e_field().get_e_vec(pt, state.lattice())?.iter()
-            .zip(state_new.e_field().get_e_vec(pt, state.lattice())?.iter())
-            .map(|(el1, el2)| el1.to_matrix() *  el2.to_matrix())
+        state_new.e_field().get_e_vec(pt, state_new.lattice())?.iter()
+            .zip(state.e_field().get_e_vec(pt, state.lattice())?.iter())
+            .map(|(el1, el2)| el1.to_matrix() * el2.to_matrix())
             .sum::<CMatrix3>()
             .trace()
             .real() / 3_f64

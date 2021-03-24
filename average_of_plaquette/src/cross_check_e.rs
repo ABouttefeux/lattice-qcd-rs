@@ -11,6 +11,7 @@ use rayon::prelude::*;
 use lattice_qcd_rs::{
     field::{
         Su3Adjoint,
+        EField,
     },
     simulation::*,
     lattice::{Direction, DirectionList, LatticePoint},
@@ -30,14 +31,28 @@ use plotters::prelude::*;
 use rustfft::FftPlanner;
 
 fn main() {
+    //test_fft();
     main_cross_with_e();
+}
+
+fn test_fft() {
+    let mut data = (0..16_384_0).map(|index| {
+        Complex::from(((index as f64) / 500_f64).cos())
+    }).collect::<Vec<_>>();
+    
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(data.len());
+    let _ = plot_data_fft(&data, DT, &"test_data.svg");
+    
+    fft.process(&mut data);
+    let _ = plot_data_fft(&data[0..data.len()/2], DT, &"test_fft.svg");
 }
 
 fn main_cross_with_e() {
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1_f64), //size
-        ScanPossibility::Default(8), // dim
-        ScanPossibility::Default(16_f64), // Beta
+        ScanPossibility::Default(4), // dim
+        ScanPossibility::Default(24_f64), // Beta
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
         ScanPossibility::Default(1),
@@ -90,7 +105,7 @@ fn main_cross_with_e() {
         let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
         let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", index));
         
-        const NUMBER_OF_MEASUREMENT: usize = 500_000;
+        const NUMBER_OF_MEASUREMENT: usize = 3_000_000;
         let (state, measure) = measure(state, NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
         
         let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", index));
@@ -103,7 +118,7 @@ fn main_cross_with_e() {
         let fft = planner.plan_fft_forward(measure_fft.len());
         
         fft.process(&mut measure_fft);
-        let _ = plot_data_fft(&measure_fft, DT, &format!("e_corr_{}_fft.svg", index));
+        let _ = plot_data_fft(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft.svg", index));
         pb.inc(1);
         (*cfg, measure)
     }).collect::<Vec<_>>();
@@ -156,6 +171,7 @@ fn thermalize_with_e_field<D, Rng>(
     
     let mut rng = hmc.rng_owned();
     let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
+    //let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new(state.lattice().clone(), state.beta(), EField::new_cold(state.lattice()), state.link_matrix_owned(), 0)?;
     let leap = state_with_e.simulate_to_leapfrog(DT, &INTEGRATOR)?;
     pb.inc(1);
     pb.finish_and_clear();
@@ -191,9 +207,9 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
         let mut state_new = state.simulate_leap(DT, &INTEGRATOR)?;
         if i % 200 == 0 {
             pb.set_message(&format!(
-                "H {:.6} - G {:.6}",
+                "H {:.6} - G {:.6} ",
                 state_new.get_hamiltonian_total(),
-                state_new.e_field().get_gauss_sum_div(state_new.link_matrix(), state_new.lattice()).unwrap()
+                state_new.e_field().get_gauss_sum_div(state_new.link_matrix(), state_new.lattice()).unwrap(),
             ));
             state_new.state_mut().lattice_state_mut().normalize_link_matrices();
             
@@ -204,6 +220,7 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
             // (https://github.com/rust-lang/rust/issues/59159)
             state_new.set_e_field(new_e);
             */
+            
         }
         let vec_data = points.par_iter()
             .map(|pt| {
@@ -215,6 +232,7 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
         const PLOT_COUNT: usize = 1_000;
         
         if i % PLOT_COUNT == 0 {
+            // TODO clean, move to function
             let last_data = statistics::mean(vec.last().unwrap());
             vec_plot.push(last_data);
             if vec_plot.len() > 1 {
@@ -248,7 +266,6 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
     Ok((state, vec))
 }
 
-
 const STEP_BY: usize = 1_000;
 
 fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -281,9 +298,18 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
         .draw()?;
     
     
+    /*
     chart.draw_series(data_mean.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , *el), 2, BLACK.filled())
     }))?;
+    */
+    
+    chart.draw_series(
+        LineSeries::new(data_mean.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
+            (index as f64 * delta_t , *el)}),
+            BLACK.filled(),
+    ))?;
+    
     Ok(())
 }
 
@@ -304,11 +330,11 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
         .y_label_area_size(60)
         .right_y_label_area_size(60)
         .build_cartesian_2d(
-            -(data.len() as f64) / 2_f64 * delta_t..data.len() as f64 / 2_f64 * delta_t,
-            (y_min..y_max * 1.1_f64).log_scale(),
+            (delta_t..data.len() as f64 * delta_t).log_scale(),
+            (y_min.max(1E-15)..y_max * 1.1_f64).log_scale(),
         )?
         .set_secondary_coord(
-            -(data.len() as f64) / 2_f64 * delta_t..data.len() as f64 / 2_f64 * delta_t,
+            (delta_t..data.len() as f64 * delta_t).log_scale(),
             -std::f64::consts::PI..std::f64::consts::PI
         );
     
@@ -334,8 +360,8 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
     
     chart.draw_series(
         LineSeries::new(
-            data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
-                ((index as f64 - data.len() as f64 / 2_f64) * delta_t, el.modulus() / (data.len() as f64).sqrt())
+            data.iter().enumerate().step_by(1).map(|(index, el)| {
+                (index as f64 * delta_t, el.modulus().max(1E-15) / (data.len() as f64).sqrt())
             }),
             &BLACK,
         )
@@ -343,8 +369,8 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
     
     chart.draw_secondary_series(
         LineSeries::new(
-            data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
-                ((index as f64 - data.len() as f64 / 2_f64) * delta_t, el.argument())
+            data.iter().enumerate().step_by(1).map(|(index, el)| {
+                (index as f64 * delta_t, el.argument())
             }),
             &RED,
         )
