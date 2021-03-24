@@ -4,6 +4,7 @@ use average_of_plaquette::{
     data_analysis::*,
     rng::*,
     observable,
+    plot_console::*,
  };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -35,8 +36,8 @@ fn main() {
 fn main_cross_with_e() {
     let cfg_l = LatticeConfigScan::new(
         ScanPossibility::Default(1_f64), //size
-        ScanPossibility::Default(5), // dim
-        ScanPossibility::Default(40_f64), // Beta
+        ScanPossibility::Default(8), // dim
+        ScanPossibility::Default(16_f64), // Beta
     ).unwrap();
     let mc_cfg = MonteCarloConfigScan::new(
         ScanPossibility::Default(1),
@@ -115,7 +116,7 @@ fn main_cross_with_e() {
 //const DT: f64 = 0.000_01_f64; // to big
 //const DT: f64 = 0.000_000_1_f64; // OK ?
 //const DT: f64 = 0.000_000_000_1_f64; // too small
-const DT: f64 = 0.000_002_5_f64; // OK ?
+const DT: f64 = 0.000_01_f64; // OK ?
 
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -158,7 +159,8 @@ fn thermalize_with_e_field<D, Rng>(
     let leap = state_with_e.simulate_to_leapfrog(DT, &INTEGRATOR)?;
     pb.inc(1);
     pb.finish_and_clear();
-    Ok((leap.simulate_leap_n(DT, &INTEGRATOR, STEPS)?, rng))
+    //Ok((leap.simulate_leap_n(DT, &INTEGRATOR, STEPS)?, rng))
+    Ok((leap, rng))
 }
 
 #[allow(clippy::useless_format)]
@@ -172,17 +174,36 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
     
     let mut state = state_initial.clone();
     let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
-    let mut vec = Vec::with_capacity(number_of_measurement);
+    let mut vec = Vec::with_capacity(number_of_measurement + 1);
+    
+    let vec_data = points.par_iter()
+        .map(|pt| {
+            observable::e_correletor(&state_initial, &state_initial, pt).unwrap()
+        })
+        .collect::<Vec<f64>>();
+    vec.push(vec_data);
+    
+    let mut vec_plot = vec![];
+    let mut y_min = 0_f64;
+    let mut y_max = 0_f64;
     
     for i in 0..number_of_measurement {
         let mut state_new = state.simulate_leap(DT, &INTEGRATOR)?;
         if i % 200 == 0 {
+            pb.set_message(&format!(
+                "H {:.6} - G {:.6}",
+                state_new.get_hamiltonian_total(),
+                state_new.e_field().get_gauss_sum_div(state_new.link_matrix(), state_new.lattice()).unwrap()
+            ));
             state_new.state_mut().lattice_state_mut().normalize_link_matrices();
+            
+            /*
             let new_e = state_new.e_field().project_to_gauss(state_new.link_matrix(), state_new.lattice())
                 .ok_or(SimulationError::NotValide)?;
             // let statement because of mutable_borrow_reservation_conflict
             // (https://github.com/rust-lang/rust/issues/59159)
             state_new.set_e_field(new_e);
+            */
         }
         let vec_data = points.par_iter()
             .map(|pt| {
@@ -190,11 +211,40 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
             })
             .collect::<Vec<f64>>();
         vec.push(vec_data);
+        
+        const PLOT_COUNT: usize = 1_000;
+        
+        if i % PLOT_COUNT == 0 {
+            let last_data = statistics::mean(vec.last().unwrap());
+            vec_plot.push(last_data);
+            if vec_plot.len() > 1 {
+                y_min = y_min.min(last_data);
+                y_max = y_max.max(last_data);
+                if y_min < y_max {
+                    let _ = draw_chart(
+                        &TextDrawingBackend(vec![PixelState::Empty; 5000]).into_drawing_area(),
+                        0_f64..((vec_plot.len() - 1) * PLOT_COUNT) as f64 * DT,
+                        y_min..y_max,
+                        vec_plot.iter().enumerate().map(|(index, el)| ((index * PLOT_COUNT) as f64 * DT, *el)),
+                        "E Corr"
+                    );
+                    println!();
+                    println!();
+                    let _ = console::Term::stderr().move_cursor_up(32);
+                }
+            }
+            else {
+                y_min = last_data;
+                y_max = last_data;
+            }
+        }
+        
         state = state_new;
         pb.inc(1);
     }
     
     pb.finish_and_clear();
+    let _ = console::Term::stderr().move_cursor_down(32);
     Ok((state, vec))
 }
 
@@ -252,19 +302,53 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
         .margin(5)
         .x_label_area_size(30)
         .y_label_area_size(60)
+        .right_y_label_area_size(60)
         .build_cartesian_2d(
-            0_f64..data.len() as f64 * delta_t,
+            -(data.len() as f64) / 2_f64 * delta_t..data.len() as f64 / 2_f64 * delta_t,
             (y_min..y_max * 1.1_f64).log_scale(),
-        )?;
+        )?
+        .set_secondary_coord(
+            -(data.len() as f64) / 2_f64 * delta_t..data.len() as f64 / 2_f64 * delta_t,
+            -std::f64::consts::PI..std::f64::consts::PI
+        );
     
     chart.configure_mesh()
-        .y_desc("Correlation E")
+        .y_desc("Modulus")
         .x_desc("w")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
+    chart.configure_secondary_axes()
+        .axis_desc_style(("sans-serif", 15))
+       .y_desc("Argument")
+       .draw()?;
     
+    /*
     chart.draw_series(data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
         Circle::new((index as f64 * delta_t , el.modulus() / (data.len() as f64).sqrt() ), 2, BLACK.filled())
     }))?;
+    
+    chart.draw_secondary_series(data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
+        Circle::new((index as f64 * delta_t , el.argument()), 2, RED.filled())
+    }))?;
+    */
+    
+    chart.draw_series(
+        LineSeries::new(
+            data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
+                ((index as f64 - data.len() as f64 / 2_f64) * delta_t, el.modulus() / (data.len() as f64).sqrt())
+            }),
+            &BLACK,
+        )
+    )?;
+    
+    chart.draw_secondary_series(
+        LineSeries::new(
+            data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
+                ((index as f64 - data.len() as f64 / 2_f64) * delta_t, el.argument())
+            }),
+            &RED,
+        )
+    )?;
+    
     Ok(())
 }

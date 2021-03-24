@@ -21,6 +21,8 @@ serde_json = "*"
 rand_xoshiro = { version = "0.6", features = ["serde1"] }
 crossbeam = "0.8.0"
 rustfft = "5.0"
+plotters-backend = "0.3.0"
+console = "0.14"
 
 
 [[bin]]

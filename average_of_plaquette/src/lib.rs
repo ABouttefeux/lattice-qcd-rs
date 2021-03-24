@@ -39,6 +39,9 @@ extern crate serde;
 extern crate serde_json;
 extern crate csv;
 extern crate rand_xoshiro;
+extern crate console;
+extern crate plotters_backend;
+extern crate plotters;
 
 pub mod config;
 pub mod sim;
@@ -46,5 +49,6 @@ pub mod config_scan;
 pub mod data_analysis;
 pub mod rng;
 pub mod observable;
+pub mod plot_console;
 #[cfg(test)]
 mod test;
