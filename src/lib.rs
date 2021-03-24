@@ -3,7 +3,8 @@
 //! ![](https://img.shields.io/badge/language-Rust-orange)
 //! [![](https://img.shields.io/badge/doc-Read_Me-blue)](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/index.html)
 //! ![Build](https://img.shields.io/github/workflow/status/ABouttefeux/lattice-qcd-rs/Rust)
-//! ![](https://img.shields.io/criterion/ABouttefeux/lattice_qcd_rs)
+//! ![](https://img.shields.io/criterion/ABouttefeux/lattice-qcd-rs)
+//! [![codecov](https://codecov.io/gh/ABouttefeux/lattice-qcd-rs/branch/develop/graph/badge.svg?token=NMRHQZ3ZQ1)](https://codecov.io/gh/ABouttefeux/lattice-qcd-rs)
 //!
 //! Classical lattice QCD simulation and tools.
 //!
