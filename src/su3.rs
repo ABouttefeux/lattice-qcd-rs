@@ -356,13 +356,10 @@ impl FactorialStorageStatic {
     pub const fn new() -> Self {
         let mut data : [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] = [1; FACTORIAL_STORAGE_STAT_SIZE];
         let mut i = 1;
-        loop {
+        while i < FACTORIAL_STORAGE_STAT_SIZE {
             // still not for loop in const fn
             set_factorial_storage!(data, i);
             i += 1;
-            if i > 34 {
-                break;
-            }
         }
         Self {data}
     }
@@ -392,13 +389,13 @@ const N: usize = 26;
 #[allow(clippy::as_conversions)] // no try into for f64
 pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
-    let n = N - 1;
-    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    const N_LOOP: usize = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t();
-    for i in (0..n).rev() {
+    for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
         let q2_n = I * q1;
@@ -428,7 +425,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// use lattice_qcd_rs::su3::{matrix_su3_exp_i, MatrixExp};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
-/// let matrix = Matrix3::identity(); // this is NOT an su(3)
+/// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
 /// let output = unsafe {
 ///     matrix_su3_exp_i(matrix)
 /// };
@@ -439,13 +436,13 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
 pub unsafe fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
-    let n = N - 1;
-    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    const N_LOOP: usize = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = matrix.determinant() * I;
-    let t: Complex = - na::Complex::from(0.5_f64) * (matrix * matrix).trace();
-    for i in (0..n).rev() {
+    let t: Complex = - Complex::from(0.5_f64) * (matrix * matrix).trace();
+    for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
         let q2_n = I * q1;
@@ -467,13 +464,13 @@ pub unsafe fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
 pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
-    let n = N - 1;
-    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    const N_LOOP: usize = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t();
-    for i in (0..n).rev() {
+    for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
         let q2_n = q1;
@@ -512,13 +509,13 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
 pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
-    let n = N - 1;
-    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(n).unwrap() as f64);
+    const N_LOOP: usize = N - 1;
+    let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = matrix.determinant() * I;
-    let t: Complex = - na::Complex::from(0.5_f64) * (matrix * matrix).trace();
-    for i in (0..n).rev() {
+    let t: Complex = - Complex::from(0.5_f64) * (matrix * matrix).trace();
+    for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
         let q2_n = q1;

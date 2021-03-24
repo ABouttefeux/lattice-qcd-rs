@@ -7,9 +7,6 @@ pub use super::{
     Complex,
     CMatrix3,
     ComplexField,
-    lattice::{
-        
-    },
     field::Su3Adjoint,
     dim::U4,
     dim::U3,

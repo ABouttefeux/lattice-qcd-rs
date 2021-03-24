@@ -821,7 +821,7 @@ impl<D> EField<D>
     
     /// Get the deviation from the Gauss law
     #[inline]
-    fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
+    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }

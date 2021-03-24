@@ -41,6 +41,6 @@ pub fn e_correletor(state: &LeapFrogStateDefault<U3>, state_new: &LeapFrogStateD
             .map(|(el1, el2)| el1.to_matrix() *  el2.to_matrix())
             .sum::<CMatrix3>()
             .trace()
-            .real() / -3_f64
+            .real() / 3_f64
     )
 }

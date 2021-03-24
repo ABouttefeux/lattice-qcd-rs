@@ -751,7 +751,7 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     
     /// Get the derive of U_i(x).
     fn get_derivative_u(link: &LatticeLinkCanonical<na::U4>, link_matrix: &LinkMatrix, e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<CMatrix3> {
-        let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
+        let c = Complex::new(0_f64, (2_f64 * Self::CA).sqrt());
         let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
         let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
         Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
@@ -1121,7 +1121,7 @@ impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationSta
     
     /// Get the derive of U_i(x).
     fn get_derivative_u(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
-        let c = Complex::new(0_f64, 2_f64 * Self::CA ).sqrt();
+        let c = Complex::new(0_f64, (2_f64 * Self::CA).sqrt());
         let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
         let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
         Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
