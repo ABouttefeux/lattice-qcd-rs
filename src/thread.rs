@@ -81,7 +81,6 @@ pub enum ThreadError {
 /// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:60
 /// thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Panic(Any)', src\thread.rs:7:8
 /// ```
-
 pub fn run_pool_parallel<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,

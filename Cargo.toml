@@ -13,6 +13,7 @@ publish = false
 [features]
 serde-serialize = ["serde"]
 default = ["serde-serialize"]
+no-overflow-test= []
 
 [workspace]
 members = ["simulation-bin", "average_of_plaquette", "procedural_macro"]

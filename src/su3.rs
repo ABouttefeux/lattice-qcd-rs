@@ -563,7 +563,6 @@ mod test {
     use crate::assert_eq_matrix;
     
     const EPSILON: f64 = 0.000_000_001_f64;
-    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
     #[test]
     /// test that [`N`] is indeed what we need

@@ -23,7 +23,9 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 /// ```
 /// ```should_panic
 /// # use lattice_qcd_rs::utils::factorial;
-/// factorial(35);
+/// let n = factorial(34);
+/// let (_, overflowed) = n.overflowing_mul(35); // try compute 35! with overflow check.
+/// assert!(! overflowed);
 /// ```
 #[allow(clippy::as_conversions)] // constant function cant use try into
 pub const fn factorial(n: usize) -> FactorialNumber {
@@ -127,31 +129,19 @@ mod test {
     
     #[test]
     #[should_panic]
+    #[cfg(not(feature = "no-overflow-test"))]
     /// test that the factorial overflow for MAX_NUMBER_FACTORIAL + 1
     fn test_factorial_bigger() {
         factorial(MAX_NUMBER_FACTORIAL + 1);
     }
     
     #[test]
-    fn factorial_storage() {
-        // same test as examples
-        
-        let mut f = FactorialStorageDyn::new();
-        assert_eq!(f.get_factorial(4), 24);
-        assert_eq!(f.get_factorial_no_storage(6), 720);
-        assert_eq!(f.try_get_factorial(6), None);
-        
-        // --
-        
-        let mut f = FactorialStorageDyn::new();
-        assert_eq!(f.get_factorial(4), 24);
-        assert_eq!(*f.try_get_factorial(4).unwrap(), 24);
-        assert_eq!(f.try_get_factorial(6), None);
-        
-        // --
-        
-        let mut f = FactorialStorageDyn::new();
-        assert_eq!(f.get_factorial(6), 720);
+    #[should_panic]
+    /// test that the factorial overflow for MAX_NUMBER_FACTORIAL + 1
+    fn test_factorial_overflow() {
+        let n = factorial(MAX_NUMBER_FACTORIAL);
+        let (_, overflowed) = n.overflowing_mul(MAX_NUMBER_FACTORIAL as u128 + 1);
+        assert!(! overflowed);
     }
 
 }
