@@ -33,6 +33,7 @@ impl<T> ModifiedNormal<T>
 {
     /// Create the distribution. `param_exp` should be greater than 0
     pub fn new(param_exp: T)-> Option<Self> {
+        // todo manage NaN
         if param_exp.le(&T::zero()) {
             return None;
         }
@@ -79,6 +80,7 @@ impl<T> HeatBathDistribution<T>
 {
     /// Create the distribution. `param_exp` should be greater than 0
     pub fn new(param_exp: T)-> Option<Self> {
+        // todo manage NaN
         if param_exp.le(&T::zero()) {
             return None;
         }
@@ -139,6 +141,7 @@ pub struct CloseToUnit {
 impl CloseToUnit {
     /// Create a new distribution, spread_parameter should be in `(0,1)` 0 and 1 excluded
     pub fn new(spread_parameter: Real) -> Option<Self> {
+        // todo manage NaN
         if spread_parameter <= 0_f64 || spread_parameter >= 1_f64 {
             return None;
         }

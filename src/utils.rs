@@ -116,16 +116,42 @@ impl FactorialStorageDyn {
 }
 
 #[cfg(test)]
-#[test]
-/// test that the factorial pass for MAX_NUMBER_FACTORIAL
-fn test_factorial_pass() {
-    factorial(MAX_NUMBER_FACTORIAL);
-}
+mod test {
+    use super::*;
+    
+    #[test]
+    /// test that the factorial pass for MAX_NUMBER_FACTORIAL
+    fn test_factorial_pass() {
+        factorial(MAX_NUMBER_FACTORIAL);
+    }
+    
+    #[test]
+    #[should_panic]
+    /// test that the factorial overflow for MAX_NUMBER_FACTORIAL + 1
+    fn test_factorial_bigger() {
+        factorial(MAX_NUMBER_FACTORIAL + 1);
+    }
+    
+    #[test]
+    fn factorial_storage() {
+        // same test as examples
+        
+        let mut f = FactorialStorageDyn::new();
+        assert_eq!(f.get_factorial(4), 24);
+        assert_eq!(f.get_factorial_no_storage(6), 720);
+        assert_eq!(f.try_get_factorial(6), None);
+        
+        // --
+        
+        let mut f = FactorialStorageDyn::new();
+        assert_eq!(f.get_factorial(4), 24);
+        assert_eq!(*f.try_get_factorial(4).unwrap(), 24);
+        assert_eq!(f.try_get_factorial(6), None);
+        
+        // --
+        
+        let mut f = FactorialStorageDyn::new();
+        assert_eq!(f.get_factorial(6), 720);
+    }
 
-#[cfg(test)]
-#[test]
-#[should_panic]
-/// test that the factorial overflow for MAX_NUMBER_FACTORIAL + 1
-fn test_factorial_bigger() {
-    factorial(MAX_NUMBER_FACTORIAL + 1);
 }

@@ -7,7 +7,8 @@ use super::{
     I,
     CMatrix2,
     Real,
-    Complex
+    Complex,
+    ComplexField,
 };
 use once_cell::sync::Lazy;
 use rand_distr::Distribution;
@@ -80,4 +81,48 @@ pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> 
 pub fn get_complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0) +
         x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::new(0_f64, *el)).sum::<CMatrix2>()
+}
+
+/// Take any 2x2 matrix and project it to a matric `X` such that `X / X.determinant().sqrt()` is SU(2).
+pub fn project_to_su2_unorm(m: CMatrix2) -> CMatrix2 {
+    m - m.adjoint() + CMatrix2::identity() * m.trace().conjugate()
+}
+
+/// return wether the input matrix is SU(2) up to epsilon.
+pub fn is_matrix_su2(m: &CMatrix2, epsilon: f64) -> bool {
+    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m * m.adjoint() - CMatrix2::identity()).norm() < epsilon)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rand_distr::Distribution;
+    use rand::SeedableRng;
+    
+    const EPSILON: f64 = 0.000_000_001_f64;
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
+    
+    #[test]
+    fn test_su2_const() {
+        // test constant
+        for el in &*PAULI_MATRICES {
+            assert_matrix_is_su_2!(*el, EPSILON);
+        }
+    }
+        
+    #[test]
+    fn test_su2_project() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
+        for _ in 0..100 {
+            let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
+            let p = project_to_su2_unorm(r);
+            assert!(p.trace().imaginary().abs() < EPSILON);
+            assert!((p * p.adjoint() - CMatrix2::identity() * p.determinant()).norm() < EPSILON);
+            
+            assert_matrix_is_su_2!((p/ p.determinant().sqrt()), EPSILON);
+        }
+        
+    }
 }

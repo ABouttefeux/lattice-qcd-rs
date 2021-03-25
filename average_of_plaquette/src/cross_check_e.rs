@@ -11,7 +11,6 @@ use rayon::prelude::*;
 use lattice_qcd_rs::{
     field::{
         Su3Adjoint,
-        EField,
     },
     simulation::*,
     lattice::{Direction, DirectionList, LatticePoint},
@@ -92,14 +91,15 @@ fn main_cross_with_e() {
         }
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
         let mut mc = get_mc_from_config_sweep(cfg.sim_config().mc_config(), rng);
-        //let mut hb = HeatBathSweep::new(rng);
-        //let mut or1 = OverrelaxationSweepReverse::new();
-        //let mut or2 = OverrelaxationSweepReverse::new();
-        //let mut hm = HybrideMethode::new_empty();
-        //hm.push_methods(&mut hb);
-        //hm.push_methods(&mut or1);
-        //hm.push_methods(&mut or2);
-        
+        /*
+        let mut hb = HeatBathSweep::new(rng);
+        let mut or1 = OverrelaxationSweepReverse::new();
+        let mut or2 = OverrelaxationSweepReverse::new();
+        let mut hm = HybrideMethode::new_empty();
+        hm.push_methods(&mut hb);
+        hm.push_methods(&mut or1);
+        hm.push_methods(&mut or2);
+        */
         
         let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs).unwrap();
         let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
@@ -131,7 +131,7 @@ fn main_cross_with_e() {
 //const DT: f64 = 0.000_01_f64; // to big
 //const DT: f64 = 0.000_000_1_f64; // OK ?
 //const DT: f64 = 0.000_000_000_1_f64; // too small
-const DT: f64 = 0.000_01_f64; // OK ?
+const DT: f64 = 0.000_001_f64; // OK ?
 
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -171,7 +171,6 @@ fn thermalize_with_e_field<D, Rng>(
     
     let mut rng = hmc.rng_owned();
     let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
-    //let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new(state.lattice().clone(), state.beta(), EField::new_cold(state.lattice()), state.link_matrix_owned(), 0)?;
     let leap = state_with_e.simulate_to_leapfrog(DT, &INTEGRATOR)?;
     pb.inc(1);
     pb.finish_and_clear();
@@ -246,9 +245,7 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
                         vec_plot.iter().enumerate().map(|(index, el)| ((index * PLOT_COUNT) as f64 * DT, *el)),
                         "E Corr"
                     );
-                    println!();
-                    println!();
-                    let _ = console::Term::stderr().move_cursor_up(32);
+                    let _ = console::Term::stderr().move_cursor_up(30);
                 }
             }
             else {
@@ -262,7 +259,7 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
     }
     
     pb.finish_and_clear();
-    let _ = console::Term::stderr().move_cursor_down(32);
+    let _ = console::Term::stderr().move_cursor_down(30);
     Ok((state, vec))
 }
 

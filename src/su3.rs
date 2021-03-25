@@ -284,6 +284,29 @@ pub fn get_sub_block_t (m: CMatrix3) -> CMatrix2 {
     )
 }
 
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "r" sub block see
+/// [`get_sub_block_r`] and [`get_r`].
+pub fn get_su2_r_unorm(input : CMatrix3) -> CMatrix2 {
+    su2::project_to_su2_unorm(get_sub_block_r(input))
+}
+
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "s" sub block see
+/// [`get_sub_block_s`] and [`get_s`].
+pub fn get_su2_s_unorm(input : CMatrix3) -> CMatrix2 {
+    su2::project_to_su2_unorm(get_sub_block_s(input))
+}
+
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "t" sub block see
+/// [`get_sub_block_t`] and [`get_t`].
+pub fn get_su2_t_unorm(input : CMatrix3) -> CMatrix2 {
+    su2::project_to_su2_unorm(get_sub_block_t(input))
+}
+
+/// Get the three unormalize sub SU(2) matrix of the given SU(3) matrix, ordered `r, s, t`
+pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
+    [get_su2_r_unorm(m), get_su2_s_unorm(m), get_su2_t_unorm(m)]
+}
+
 /// Return the matrix
 /// ```textrust
 /// U'_{ij} =| -U_{ij} if i not equal to j
@@ -528,17 +551,82 @@ pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + matrix * q1 + matrix * matrix * q2
 }
 
-#[cfg(test)]
-#[test]
-/// test that [`N`] is indeed what we need
-fn test_constante(){
-    assert_eq!(N, get_factorial_size_for_exp() + 1)
+/// return wether the input matrix is SU(3) up to epsilon.
+pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
+    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
 }
 
 #[cfg(test)]
-#[test]
-fn test_factorial(){
-    for i in 0..FACTORIAL_STORAGE_STAT_SIZE {
-        assert_eq!(*FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap(), utils::factorial(i));
+mod test {
+    use super::*;
+    use crate::assert_eq_matrix;
+    
+    const EPSILON: f64 = 0.000_000_001_f64;
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
+    
+    #[test]
+    /// test that [`N`] is indeed what we need
+    fn test_constante(){
+        assert_eq!(N, get_factorial_size_for_exp() + 1)
+    }
+    
+    #[test]
+    fn test_factorial(){
+        for i in 0..FACTORIAL_STORAGE_STAT_SIZE {
+            assert_eq!(*FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap(), utils::factorial(i));
+        }
+    }
+    
+    #[test]
+    fn sub_block() {
+        let m = CMatrix3::new(
+            Complex::from(1_f64), Complex::from(2_f64), Complex::from(3_f64),
+            Complex::from(4_f64), Complex::from(5_f64), Complex::from(6_f64),
+            Complex::from(7_f64), Complex::from(8_f64), Complex::from(9_f64),
+        );
+        let r = CMatrix2::new(
+            Complex::from(1_f64), Complex::from(2_f64),
+            Complex::from(4_f64), Complex::from(5_f64),
+        );
+        assert_eq_matrix!(get_sub_block_r(m), r, EPSILON);
+        
+        let m_r = CMatrix3::new(
+            Complex::from(1_f64), Complex::from(2_f64), Complex::from(0_f64),
+            Complex::from(4_f64), Complex::from(5_f64), Complex::from(0_f64),
+            Complex::from(0_f64), Complex::from(0_f64), Complex::from(1_f64),
+        );
+        assert_eq_matrix!(get_r(r), m_r, EPSILON);
+        
+        
+        let s = CMatrix2::new(
+            Complex::from(1_f64), Complex::from(3_f64),
+            Complex::from(7_f64), Complex::from(9_f64),
+        );
+        assert_eq_matrix!(get_sub_block_s(m), s, EPSILON);
+        
+        let m_s = CMatrix3::new(
+            Complex::from(1_f64), Complex::from(0_f64), Complex::from(3_f64),
+            Complex::from(0_f64), Complex::from(1_f64), Complex::from(0_f64),
+            Complex::from(7_f64), Complex::from(0_f64), Complex::from(9_f64),
+        );
+        assert_eq_matrix!(get_s(s), m_s, EPSILON);
+        
+        let t = CMatrix2::new(
+            Complex::from(5_f64), Complex::from(6_f64),
+            Complex::from(8_f64), Complex::from(9_f64),
+        );
+        assert_eq_matrix!(get_sub_block_t(m), t, EPSILON);
+        
+        let m_t = CMatrix3::new(
+            Complex::from(1_f64), Complex::from(0_f64), Complex::from(0_f64),
+            Complex::from(0_f64), Complex::from(5_f64), Complex::from(6_f64),
+            Complex::from(0_f64), Complex::from(8_f64), Complex::from(9_f64),
+        );
+        assert_eq_matrix!(get_t(t), m_t, EPSILON);
+        
+        for p in &extract_su2_unorm(m) {
+            assert_matrix_is_su_2!((p/ p.determinant().sqrt()), EPSILON);
+        }
     }
 }

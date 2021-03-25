@@ -177,3 +177,33 @@ macro_rules! project_mut {
         }
     };
 }
+
+
+#[macro_export]
+/// assert if two martix are approximatively the same
+macro_rules! assert_eq_matrix {
+    ($e:expr, $e2:expr, $epsilon:expr) => {
+        assert!(($e - $e2).norm() < $epsilon)
+    }
+}
+
+
+#[macro_export]
+/// assert if the matrix is SU(2)
+macro_rules! assert_matrix_is_su_2 {
+    ($m:expr, $epsilon:expr) => {
+        use na::ComplexField;
+        assert!(($m.determinant().modulus_squared() - 1_f64).abs() < $epsilon);
+        assert!(($m * $m.adjoint() - na::Matrix2::identity()).norm() < $epsilon);
+    }
+}
+
+#[macro_export]
+/// assert if the matrix is SU(2)
+macro_rules! assert_matrix_is_su_3 {
+    ($m:expr, $epsilon:expr) => {
+        use na::ComplexField;
+        assert!(($m.determinant().modulus_squared() - 1_f64).abs() < $epsilon);
+        assert!(($m * $m.adjoint() - na::Matrix2::identity()).norm() < $epsilon);
+    }
+}

@@ -80,9 +80,9 @@ impl<Rng> HeatBathSweep<Rng>
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link);
         
-        let r = su3::get_r(self.get_heat_bath_su2(su3::get_sub_block_r(link_matrix * a), state.beta()));
-        let s = su3::get_s(self.get_heat_bath_su2(su3::get_sub_block_s(r * link_matrix * a), state.beta()));
-        let t = su3::get_t(self.get_heat_bath_su2(su3::get_sub_block_t(s * r * link_matrix * a), state.beta()));
+        let r = su3::get_r(self.get_heat_bath_su2(su3::get_su2_r_unorm(link_matrix * a), state.beta()));
+        let s = su3::get_s(self.get_heat_bath_su2(su3::get_su2_s_unorm(r * link_matrix * a), state.beta()));
+        let t = su3::get_t(self.get_heat_bath_su2(su3::get_su2_t_unorm(s * r * link_matrix * a), state.beta()));
         
         t * s * r * link_matrix
     }
