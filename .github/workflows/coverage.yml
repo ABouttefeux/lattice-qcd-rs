@@ -14,14 +14,23 @@ jobs:
         with:
           toolchain: nightly
 
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
+      - name: Install grcov
+        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+      - name: Install llvm-tools-preview
+        run: rustup component add llvm-tools-preview
 
       - name: Generate code coverage
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml -Z unstable-options --profile dev
+          export CARGO_INCREMENTAL=0
+          export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=on -Zpanic_abort_tests"
+          export RUSTDOCFLAGS="-Cpanic=abort"
+          cargo +nightly build --verbose --all
+          cargo +nightly test --verbose --all
+
+      - name: parse code coverage
+        run: |
+          zip -0 ccov.zip `find . \( -name "lattice_qcd_rs*.gc*" \) -print`
+          ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
-        with:
-          fail_ci_if_error: true
+        run: bash <(curl -s https://codecov.io/bash) -f lcov.info
