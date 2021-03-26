@@ -13,7 +13,6 @@ use super::{
             LatticeLink,
         },
         field::LinkMatrix,
-        error::ErrorWithOnwnedValue,
     },
     state::{
         LatticeState,
@@ -102,19 +101,15 @@ pub trait MonteCarloDefault<State, D>
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, ErrorWithOnwnedValue<Self::Error, State>> {
-        match self.get_potential_next_element(&state, rng) {
-            Err(err) => Err(ErrorWithOnwnedValue::new(err, state)),
-            Ok(potential_next) => {
-                let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
-                let d = rand::distributions::Bernoulli::new(proba).unwrap();
-                if d.sample(rng) {
-                    Ok(potential_next)
-                }
-                else{
-                    Ok(state)
-                }
-            },
+    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
+        let potential_next = self.get_potential_next_element(&state, rng)?;
+        let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
+        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        if d.sample(rng) {
+            Ok(potential_next)
+        }
+        else{
+            Ok(state)
         }
     }
 }
@@ -169,7 +164,7 @@ impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    type Error = ErrorWithOnwnedValue<T::Error, State>;
+    type Error = T::Error;
     
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
         self.mcd.get_next_element_default(state, &mut self.rng)

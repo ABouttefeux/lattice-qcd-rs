@@ -15,7 +15,6 @@ use super::{
             },
             error::{
                 MultiIntegrationError,
-                ErrorWithOnwnedValue,
             },
         },
         state::{
@@ -116,16 +115,12 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, 
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    type Error = ErrorWithOnwnedValue<MultiIntegrationError<I::Error, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>>, State>;
+    type Error = MultiIntegrationError<I::Error>;
     
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng)
             .map(|el| el.get_state_owned())
-            .map_err(|err| {
-                let (error, data) = err.deconstruct();
-                ErrorWithOnwnedValue::new(error, data.get_state_owned())
-            })
     }
 }
 
@@ -184,7 +179,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    type Error = MultiIntegrationError<I::Error, SimulationStateLeap<State, D>>;
+    type Error = MultiIntegrationError<I::Error>;
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         state.simulate_using_leapfrog_n_auto(self.delta_t, self.number_of_steps, &self.integrator)
@@ -287,16 +282,12 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State
     Direction<D>: DirectionList,
 {
     
-    type Error = ErrorWithOnwnedValue<MultiIntegrationError<I::Error, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>>, State>;
+    type Error = MultiIntegrationError<I::Error>;
     
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng)
             .map(|el| el.get_state_owned())
-            .map_err(|err| {
-                let (error, data) = err.deconstruct();
-                ErrorWithOnwnedValue::new(error, data.get_state_owned())
-            })
     }
 }
 
@@ -369,7 +360,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagno
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    type Error = MultiIntegrationError<I::Error, SimulationStateLeap<State, D>>;
+    type Error = MultiIntegrationError<I::Error>;
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         state.simulate_using_leapfrog_n_auto(self.delta_t, self.number_of_steps, &self.integrator)
@@ -381,22 +372,18 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagno
             .max(0_f64)
     }
     
-    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) ->  Result<State, ErrorWithOnwnedValue<Self::Error, State>> {
-        match self.get_potential_next_element(&state, rng) {
-            Err(err) => Err(ErrorWithOnwnedValue::new(err, state)),
-            Ok(potential_next) => {
-                let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
-                self.prob_replace_last = proba;
-                let d = rand::distributions::Bernoulli::new(proba).unwrap();
-                if d.sample(rng) {
-                    self.has_replace_last = true;
-                    Ok(potential_next)
-                }
-                else{
-                    self.has_replace_last = false;
-                    Ok(state)
-                }
-            },
+    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) ->  Result<State, Self::Error> {
+        let potential_next = self.get_potential_next_element(&state, rng)?;
+        let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
+        self.prob_replace_last = proba;
+        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        if d.sample(rng) {
+            self.has_replace_last = true;
+            Ok(potential_next)
+        }
+        else{
+            self.has_replace_last = false;
+            Ok(state)
         }
     }
     

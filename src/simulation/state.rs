@@ -31,7 +31,6 @@ use super::{
             ImplementationError,
             StateInitializationError,
             StateInitializationErrorThreaded,
-            ErrorWithOnwnedValue,
         },
     },
     monte_carlo::MonteCarlo,
@@ -122,7 +121,7 @@ pub trait LatticeStateNew<D>
     ///
     /// # Errors
     /// Give an error if the parameter are incorrect or the length of `link_matrix` does not correspond to `lattice`.
-    fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, ErrorWithOnwnedValue<Self::Error, LinkMatrix>>;
+    fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, Self::Error>;
 }
 
 /// Represent a lattice state where the conjugate momenta of the link matrices are included.
@@ -203,24 +202,18 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     /// # Errors
     /// Give an error if the parameter are incorrect or the length of `link_matrix`
     /// and `e_field` does not correspond to `lattice`
-    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, ErrorWithOnwnedValue<Self::Error, (LinkMatrix, EField<D>)>>;
+    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error>;
     
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
     /// Gives an [`SimulationError::InvalideParameterDistribution`]  if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0) or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
-    fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, ErrorWithOnwnedValue<Self::Error, LinkMatrix>>
+    fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, Self::Error>
     {
         // TODO verify
         // rand_distr::StandardNormal
-        let result = rand_distr::Normal::new(0_f64, 0.5_f64 / beta);
-        match result {
-            Err(error) => Err(ErrorWithOnwnedValue::new(error.into(), link_matrix)),
-            Ok(d) => {
-                let e_field = EField::new_deterministe(&lattice, rng, &d).project_to_gauss(&link_matrix, &lattice).unwrap();
-                Self::new(lattice, beta, e_field, link_matrix, 0).map_err(|err| err.into())
-            },
-        }
-        
+        let d = rand_distr::Normal::new(0_f64, 0.5_f64 / beta)?;
+        let e_field = EField::new_deterministe(&lattice, rng, &d).project_to_gauss(&link_matrix, &lattice).unwrap();
+        Self::new(lattice, beta, e_field, link_matrix, 0)
     }
 }
 
@@ -265,7 +258,7 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
         integrator: &I,
-    ) -> Result<Self, MultiIntegrationError<I::Error, State>>
+    ) -> Result<Self, MultiIntegrationError<I::Error>>
         where State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
@@ -273,18 +266,18 @@ pub trait SimulationStateSynchrone<D>
             return Err(MultiIntegrationError::ZeroIntegration);
         }
         let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator)
-            .map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
+            .map_err(|error| MultiIntegrationError::IntegrationError(0, error))?;
         if number_of_steps > 1 {
             let result = state_leap.simulate_leap_n(delta_t, integrator, number_of_steps -1);
             match result {
                 Ok(state) => state_leap = state,
                 Err(error) => {
                     match error {
-                        MultiIntegrationError::IntegrationError(0, error, _) => {
-                            return Err( MultiIntegrationError::IntegrationError(1, error, Some(state_leap)))
+                        MultiIntegrationError::IntegrationError(0, error) => {
+                            return Err( MultiIntegrationError::IntegrationError(1, error))
                         },
-                        MultiIntegrationError::IntegrationError(i, error, Some(state)) => {
-                            return Err(MultiIntegrationError::IntegrationError(i + 1, error, Some(state)))
+                        MultiIntegrationError::IntegrationError(i, error) => {
+                            return Err(MultiIntegrationError::IntegrationError(i + 1, error))
                         },
                         _ => {
                             return Err(MultiIntegrationError::ImplementationError(ImplementationError::Unreachable))
@@ -295,7 +288,7 @@ pub trait SimulationStateSynchrone<D>
         }
         let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator)
             .map_err(|error| {
-                MultiIntegrationError::IntegrationError(number_of_steps, error, Some(state_leap))
+                MultiIntegrationError::IntegrationError(number_of_steps, error)
             })?;
         Ok(state_sync)
     }
@@ -310,7 +303,7 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
         integrator: &I,
-    ) -> Result<Self, MultiIntegrationError<I::Error, SimulationStateLeap<Self, D>>>
+    ) -> Result<Self, MultiIntegrationError<I::Error>>
         where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
         self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
@@ -332,16 +325,16 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error, Self>>
+    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
             return Err(MultiIntegrationError::ZeroIntegration);
         }
-        let mut state = self.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
+        let mut state = self.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error))?;
         for i in 1..numbers_of_times {
-            state = state.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error, Some(state)))?;
+            state = state.simulate_sync(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error))?;
         }
         Ok(state)
     }
@@ -387,16 +380,16 @@ pub trait SimulationStateLeapFrog<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error, Self>>
+    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         if numbers_of_times == 0 {
             return Err(MultiIntegrationError::ZeroIntegration);
         }
-        let mut state = self.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error, None))?;
+        let mut state = self.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(0, error))?;
         for i in 1..(numbers_of_times) {
-            state = state.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error, Some(state)))?;
+            state = state.simulate_leap(delta_t, integrator).map_err(|error| MultiIntegrationError::IntegrationError(i, error))?;
         }
         Ok(state)
     }
@@ -436,10 +429,7 @@ impl<D> LatticeStateDefault<D>
     pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_cold(&lattice);
-        Self::new(lattice, beta, link_matrix).map_err(|err| {
-            let (error, _) = err.deconstruct();
-            error
-        })
+        Self::new(lattice, beta, link_matrix)
     }
     
     /// Create a "hot" configuration, i.e. the link matrices are chosen randomly.
@@ -477,7 +467,7 @@ impl<D> LatticeStateDefault<D>
     ) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
-        Self::new(lattice, beta, link_matrix).map_err(|err| err.error_owned())
+        Self::new(lattice, beta, link_matrix)
     }
     
     /// Correct the numerical drift, reprojecting all the link matrices to SU(3).
@@ -512,9 +502,9 @@ impl<D> LatticeStateNew<D> for LatticeStateDefault<D>
     
     type Error = StateInitializationError;
     
-    fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, ErrorWithOnwnedValue<Self::Error, LinkMatrix>> {
+    fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, Self::Error> {
         if ! lattice.has_compatible_lenght_links(&link_matrix) {
-            return Err(ErrorWithOnwnedValue::new(StateInitializationError::IncompatibleSize, link_matrix));
+            return Err(StateInitializationError::IncompatibleSize);
         }
         Ok(Self {lattice, link_matrix, beta})
     }
@@ -620,7 +610,7 @@ impl LatticeHamiltonianSimulationStateSync {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let e_field = EField::new_deterministe(&lattice, rng, d);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
-        Self::new(lattice, beta, e_field, link_matrix, 0).map_err(|err| err.error_owned())
+        Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
     /// Generate a configuration with cold e_field and hot link matrices
@@ -638,7 +628,7 @@ impl LatticeHamiltonianSimulationStateSync {
         let e_field = EField::new_cold(&lattice);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
         
-        Self::new(lattice, beta, e_field, link_matrix, 0).map_err(|err| err.error_owned())
+        Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
     /// Generate a hot (i.e. random) initial state.
@@ -668,7 +658,8 @@ impl LatticeHamiltonianSimulationStateSync {
             let mut rng = rand::thread_rng();
             return Self::new_deterministe(size, beta, number_of_points, &mut rng, d).map_err(|err| err.into());
         }
-        let lattice = LatticeCyclique::new(size, number_of_points).map_err(|err| StateInitializationErrorThreaded::StateInitializationError(err.into()))?;
+        let lattice = LatticeCyclique::new(size, number_of_points)
+            .map_err(|err| StateInitializationErrorThreaded::StateInitializationError(err.into()))?;
         thread::scope(|s| {
             let lattice_clone = lattice.clone();
             let handel = s.spawn(move |_| {
@@ -677,7 +668,8 @@ impl LatticeHamiltonianSimulationStateSync {
             let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)?;
             let e_field = handel.join().map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?;
             // TODO not very clean: imporve
-            Self::new(lattice, beta, e_field, link_matrix, 0).map_err(|err| StateInitializationErrorThreaded::StateInitializationError(err.error_owned()))
+            Self::new(lattice, beta, e_field, link_matrix, 0)
+                .map_err(StateInitializationErrorThreaded::StateInitializationError)
         }).map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?
     }
     
@@ -692,7 +684,7 @@ impl LatticeHamiltonianSimulationStateSync {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_cold(&lattice);
         let e_field = EField::new_cold(&lattice);
-        Self::new(lattice, beta, e_field, link_matrix, 0).map_err(|err| err.error_owned())
+        Self::new(lattice, beta, e_field, link_matrix, 0)
     }
     
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
@@ -748,9 +740,9 @@ impl LatticeHamiltonianSimulationStateNew<na::U4> for LatticeHamiltonianSimulati
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
     /// `t` is the number of time the simulation ran. i.e. the time sate.
-    fn new(lattice: LatticeCyclique<na::U4>, beta: Real, e_field: EField<na::U4>, link_matrix: LinkMatrix, t: usize) -> Result<Self, ErrorWithOnwnedValue<Self::Error, (LinkMatrix, EField<na::U4>)>> {
+    fn new(lattice: LatticeCyclique<na::U4>, beta: Real, e_field: EField<na::U4>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error> {
         if ! lattice.has_compatible_lenght(&link_matrix, &e_field) {
-            return Err(ErrorWithOnwnedValue::new(StateInitializationError::IncompatibleSize, (link_matrix, e_field)));
+            return Err(StateInitializationError::IncompatibleSize);
         }
         Ok(Self {lattice, e_field, link_matrix, t, beta})
     }
@@ -932,7 +924,7 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for SimulationStateLeap<S
 {
     type Error = State::Error;
     
-    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, ErrorWithOnwnedValue<Self::Error, (LinkMatrix, EField<D>)>> {
+    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error> {
         let state = State::new(lattice, beta, e_field, link_matrix, t)?;
         Ok(Self {state, _phantom: PhantomData})
     }
@@ -1119,17 +1111,14 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for LatticeHamiltonianSim
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
     /// `t` is the number of time the simulation ran. i.e. the time sate.
-    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, ErrorWithOnwnedValue<Self::Error, (LinkMatrix, EField<D>)>> {
+    fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error> {
         if ! lattice.has_compatible_lenght_e_field(&e_field){
-            return Err(ErrorWithOnwnedValue::new(StateInitializationError::IncompatibleSize.into(), (link_matrix, e_field)));
+            return Err(StateInitializationError::IncompatibleSize.into());
         }
         let lattice_state_r = State::new(lattice, beta, link_matrix);
         match lattice_state_r  {
             Ok(lattice_state) => Ok(Self {lattice_state, e_field, t}),
-            Err(err) => {
-                let (error, data) = err.deconstruct();
-                Err(ErrorWithOnwnedValue::new(error, (data, e_field)))
-            },
+            Err(err) => Err(err)
         }
     }
 }

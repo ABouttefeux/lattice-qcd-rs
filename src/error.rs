@@ -83,51 +83,33 @@ impl Error for ImplementationError {}
 /// Error return while doing multiple steps.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub enum MultiIntegrationError<Error, State> {
+pub enum MultiIntegrationError<Error> {
     /// atempting to integrate doing zero steps
     ZeroIntegration,
-    /// An intgration error occured at the position of the first field, return an owned value ofthe
-    /// integration until the error occured so that everything isn't loss
-    IntegrationError(usize, Error, Option<State>),
+    /// An intgration error occured at the position of the first field.
+    IntegrationError(usize, Error),
     /// an [`ImplementationError`] occured.
     ImplementationError(ImplementationError),
 }
 
-impl<Error: Display, State> Display for MultiIntegrationError<Error, State> {
+impl<Error: Display> Display for MultiIntegrationError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             MultiIntegrationError::ZeroIntegration => write!(f, "error: no integration steps"),
             MultiIntegrationError::ImplementationError(error) => write!(f, "{}", error),
-            MultiIntegrationError::IntegrationError(index, error, _) => write!(f, "error during intgration step {}: {}",index, error),
+            MultiIntegrationError::IntegrationError(index, error) => write!(f, "error during intgration step {}: {}",index, error),
             //_ => write!(f, "{:?}", self),
         }
     }
 }
 
 
-impl<E: Display + Debug + Error + 'static, State: Debug> Error for MultiIntegrationError<E, State> {
+impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             MultiIntegrationError::ZeroIntegration => None,
             MultiIntegrationError::ImplementationError(error) => Some(error),
-            MultiIntegrationError::IntegrationError(_, error, _) => Some(error),
-        }
-    }
-}
-
-impl<Error, State> GetOwnedValue<State> for MultiIntegrationError<Error, State> {
-    fn get_owned_value(self) -> Option<State> {
-        match self {
-            MultiIntegrationError::ZeroIntegration => None,
-            MultiIntegrationError::ImplementationError(_) => None,
-            MultiIntegrationError::IntegrationError(_, _, s) => s,
-        }
-    }
-    
-    fn get_ref_value(&self) -> Option<&State> {
-        match self {
-            MultiIntegrationError::IntegrationError(_, _, Some(s)) => Some(&s),
-            _ => None
+            MultiIntegrationError::IntegrationError(_, error) => Some(error),
         }
     }
 }

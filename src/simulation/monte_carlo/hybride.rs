@@ -9,7 +9,6 @@ use super::{
                 Direction,
                 DirectionList,
             },
-            error::GetOwnedValue,
         },
         state::{
             LatticeState,
@@ -32,59 +31,30 @@ use core::fmt::{Display, Debug};
 /// Error given by [`HybrideMethode`]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
-pub enum HybrideMethodeError<Error, State> {
+pub enum HybrideMethodeError<Error> {
     /// An Error comming from one of the method.
     ///
     /// the first field usize gives the position of the method giving the error
     Error(usize, Error),
     /// No method founds, give back the ownership of the state.
-    NoMethod(State),
+    NoMethod,
 }
 
-impl<Error, State> HybrideMethodeError<Error, State> {
-    /// Return the state if the error is [`HybrideMethodeError::NoMethod`].
-    /// # Errors
-    /// Return the error of [`HybrideMethodeError::Error`] otherwise.
-    #[allow(clippy::missing_const_for_fn)] // false positive
-    pub fn get_state(self) -> Result<State, Error>{
-        match self {
-            Self::Error(_, error) => Err(error),
-            Self::NoMethod(state) => Ok(state),
-        }
-    }
-}
-
-impl<Error: Display, State> Display for HybrideMethodeError<Error, State> {
+impl<Error: Display> Display for HybrideMethodeError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            HybrideMethodeError::NoMethod(_) => write!(f, "error: no Monte Carlo method"),
+            HybrideMethodeError::NoMethod => write!(f, "error: no Monte Carlo method"),
             HybrideMethodeError::Error(index, error) => write!(f, "error during intgration step {}: {}",index, error),
         }
     }
 }
 
 
-impl<E: Display + Debug + Error + 'static, State: Debug> Error for HybrideMethodeError<E, State> {
+impl<E: Display + Debug + Error + 'static> Error for HybrideMethodeError<E> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            HybrideMethodeError::NoMethod(_) => None,
+            HybrideMethodeError::NoMethod => None,
             HybrideMethodeError::Error(_, error) => Some(error),
-        }
-    }
-}
-
-impl<Error: GetOwnedValue<State>, State> GetOwnedValue<State> for HybrideMethodeError<Error, State> {
-    fn get_owned_value(self) -> Option<State> {
-        match self {
-            HybrideMethodeError::NoMethod(state) => Some(state),
-            HybrideMethodeError::Error(_, error) => error.get_owned_value(),
-        }
-    }
-    
-    fn get_ref_value(&self) -> Option<&State> {
-        match self {
-            HybrideMethodeError::NoMethod(state) => Some(state),
-            HybrideMethodeError::Error(_, error) => error.get_ref_value(),
         }
     }
 }
@@ -255,12 +225,12 @@ impl<'a, State, D, E> MonteCarlo<State, D> for HybrideMethode<'a, State, D, E>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    type Error = HybrideMethodeError<E, State>;
+    type Error = HybrideMethodeError<E>;
     
     #[inline]
     fn get_next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
         if self.methods.is_empty() {
-            return Err(HybrideMethodeError::NoMethod(state));
+            return Err(HybrideMethodeError::NoMethod);
         }
         for (index, m) in &mut self.methods.iter_mut().enumerate() {
             let result = state.monte_carlo_step(*m);

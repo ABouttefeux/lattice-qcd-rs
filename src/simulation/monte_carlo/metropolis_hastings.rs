@@ -24,7 +24,6 @@ use super::{
             },
             error::{
                 Never,
-                ErrorWithOnwnedValue
             },
         },
         state::{
@@ -88,7 +87,7 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastings<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    type Error = ErrorWithOnwnedValue<State::Error, LinkMatrix>;
+    type Error = State::Error;
     
     fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
@@ -170,26 +169,22 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
             let pos = d.sample(rng);
             link_matrix[pos] *= su3::get_random_su3_close_to_unity(self.spread, rng);
         });
-        State::new(state.lattice().clone(), state.beta(), LinkMatrix::new(link_matrix)).map_err(|err| err.error_owned())
+        State::new(state.lattice().clone(), state.beta(), LinkMatrix::new(link_matrix))
     }
     
-    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, ErrorWithOnwnedValue<Self::Error, State>> {
-        match self.get_potential_next_element(&state, rng) {
-                Err(err) => Err(ErrorWithOnwnedValue::new(err, state)),
-                Ok(potential_next) => {
-                    let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
-                    self.prob_replace_last = proba;
-                    let d = rand::distributions::Bernoulli::new(proba).unwrap();
-                    if d.sample(rng) {
-                        self.has_replace_last = true;
-                        Ok(potential_next)
-                    }
-                    else{
-                        self.has_replace_last = false;
-                        Ok(state)
-                    }
-                },
-            }
+    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
+        let potential_next = self.get_potential_next_element(&state, rng)?;
+        let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
+        self.prob_replace_last = proba;
+        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        if d.sample(rng) {
+            self.has_replace_last = true;
+            Ok(potential_next)
+        }
+        else{
+            self.has_replace_last = false;
+            Ok(state)
+        }
     }
 }
 
@@ -489,7 +484,7 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaOn
     type Error = Never;
     
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Never>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
         Ok(self.get_next_element_default(state))
     }
 }
