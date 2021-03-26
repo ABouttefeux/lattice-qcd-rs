@@ -80,6 +80,13 @@ impl<Error: GetOwnedValue<State>, State> GetOwnedValue<State> for HybrideMethode
             HybrideMethodeError::Error(_, error) => error.get_owned_value(),
         }
     }
+    
+    fn get_ref_value(&self) -> Option<&State> {
+        match self {
+            HybrideMethodeError::NoMethod(state) => Some(state),
+            HybrideMethodeError::Error(_, error) => error.get_ref_value(),
+        }
+    }
 }
 
 

@@ -196,7 +196,7 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     Direction<D>: DirectionList,
 {
     /// Error type
-    type Error: From<rand_distr::NormalError>;
+    type Error : From<rand_distr::NormalError>;
     
     /// Create a new simulation state
     ///

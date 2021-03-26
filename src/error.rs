@@ -12,6 +12,26 @@ use super::{
 pub trait GetOwnedValue<State> {
     /// Absorbe self and return the owned value
     fn get_owned_value(self) -> Option<State>;
+    
+    /// Return a reference to the value
+    fn get_ref_value(&self) -> Option<&State>;
+}
+
+/// Try extract the owned value, discarding the error
+impl<State, Error: GetOwnedValue<State>> GetOwnedValue<State> for Result<State, Error> {
+    fn get_owned_value(self) -> Option<State> {
+        match self {
+            Ok(state) => Some(state),
+            Err(err) => err.get_owned_value(),
+        }
+    }
+    
+    fn get_ref_value(&self) -> Option<&State> {
+        match self {
+            Ok(state) => Some(state),
+            Err(err) => err.get_ref_value(),
+        }
+    }
 }
 
 /// Type that can never be (safly) initialized.
@@ -31,6 +51,10 @@ impl<T> GetOwnedValue<T> for Never {
     fn get_owned_value(self) -> Option<T> {
         None
     }
+    
+    fn get_ref_value(&self) -> Option<&T> {
+        None
+    }
 }
 
 /// Errors in the implementation of the library. This is unwanted to return this type but
@@ -40,13 +64,15 @@ impl<T> GetOwnedValue<T> for Never {
 pub enum ImplementationError {
     /// We atain a portion of the code that was tought to be unreachable.
     Unreachable,
+    /// An option contained an unexpected non_exhaustive value
+    OptionWithUnexpectedNone
 }
 
 impl Display for ImplementationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             ImplementationError::Unreachable => write!(f, "internal error: entered unreachable code"),
-            //_ => write!(f, "{:?}", self),
+            ImplementationError::OptionWithUnexpectedNone => write!(f, "An option contained an unexpected non_exhaustive value"),
         }
     }
 }
@@ -95,6 +121,13 @@ impl<Error, State> GetOwnedValue<State> for MultiIntegrationError<Error, State> 
             MultiIntegrationError::ZeroIntegration => None,
             MultiIntegrationError::ImplementationError(_) => None,
             MultiIntegrationError::IntegrationError(_, _, s) => s,
+        }
+    }
+    
+    fn get_ref_value(&self) -> Option<&State> {
+        match self {
+            MultiIntegrationError::IntegrationError(_, _, Some(s)) => Some(&s),
+            _ => None
         }
     }
 }
@@ -245,10 +278,14 @@ impl<Error, State> ErrorWithOnwnedValue<Error, State> {
     }
 }
 
-
+/// Always suceed
 impl<Error, State> GetOwnedValue<State> for ErrorWithOnwnedValue<Error, State> {
     fn get_owned_value(self) -> Option<State> {
         Some(self.owned)
+    }
+    
+    fn get_ref_value(&self) -> Option<&State> {
+        Some(self.owned())
     }
 }
 
@@ -265,9 +302,9 @@ impl<Error : Display, State: Display> Display for ErrorWithOnwnedValue<Error, St
     }
 }
 
-impl<E : Display + Error + Debug, State: Display + Debug> Error for ErrorWithOnwnedValue<E, State>  {
+impl<E : Display + Error + Debug + 'static, State: Display + Debug> Error for ErrorWithOnwnedValue<E, State>  {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.error.source()
+        Some(&self.error)
     }
 }
 
