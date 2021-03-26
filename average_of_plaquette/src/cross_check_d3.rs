@@ -28,6 +28,7 @@ pub fn get_vect_dim(number_of_data: usize, beta: f64, low_pt: f64, high_pt: f64)
     vec_dim
 }
 
+
 const BETA: f64 = 24_f64;
 const NUMBER_OF_DATA: usize = 16;
 const LOW_PT: f64 = 0.25_f64;
@@ -79,7 +80,7 @@ fn main_cross_check_volume() {
     
     let _result_all_sim = array_config.par_iter().enumerate().map(|(index, cfg)| {
         let mut rng = get_rand_from_seed(0xd6_4b_ef_fd_9f_c8_b2_a4);
-        for _ in 0..index{
+        for _ in 0..index {
             rng.jump();
         }
         let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);

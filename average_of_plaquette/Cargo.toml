@@ -38,5 +38,5 @@ name = "cross_check_e"
 path = "src/cross_check_e.rs"
 
 [[bin]]
-name = "cross_check_3d_analysis"
-path = "src/cross_check_3d_analysis.rs"
+name = "cross_check_d3_analysis"
+path = "src/cross_check_d3_analysis.rs"

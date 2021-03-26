@@ -26,12 +26,14 @@ const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
 type DataComputed = (usize, [f64; 2], [f64; 2], [f64; 2]);
 
 fn main() {
+    
     let pb = ProgressBar::new(N_ARRAY.len() as u64);
     
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         get_pb_template()
     ));
     pb.enable_steady_tick(300);
+    
     let data = N_ARRAY.par_iter().map( |n_size| {
         let file_name = format!("../data/set_11_03_21_d3/raw_measures_{}.csv", n_size);
         let result = read_file(&file_name, 1_000).unwrap();

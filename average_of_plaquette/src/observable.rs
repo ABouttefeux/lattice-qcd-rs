@@ -12,7 +12,19 @@ use rayon::prelude::*;
 
 pub fn volume_obs(p: &LatticePoint<U3>, state: &LatticeStateDefault<U3>) -> f64
 {
-    state.link_matrix().get_pij(&p, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], state.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+    let number_of_directions = (Direction::<U3>::dim() * (Direction::<U3>::dim() - 1)) * 2; // ( *4 / 2)
+    let directions_all = Direction::<U3>::get_all_directions();
+    // We consider all plaquette in positive and negative directions
+    // but we avoid counting two times the plaquette P_IJ P_JI
+    // as this is manage by taking the real part
+    directions_all.iter().map(|dir_1| {
+        directions_all.iter()
+            .filter(|dir_2| dir_1.to_index() > dir_2.to_index())
+            .map(|dir_2| {
+                state.link_matrix().get_pij(&p, &dir_1, &dir_2, state.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+            }).sum::<f64>()
+    }).sum::<f64>() / number_of_directions as f64
+    
 }
 
 pub fn volume_obs_mean(state: &LatticeStateDefault<U3>) -> f64 {
