@@ -35,7 +35,7 @@ fn main() {
     pb.enable_steady_tick(300);
     
     let data = N_ARRAY.par_iter().map( |n_size| {
-        let file_name = format!("../data/set_11_03_21_d3/raw_measures_{}.csv", n_size);
+        let file_name = format!("raw_measures_{}.csv", n_size);
         let result = read_file(&file_name, 1_000).unwrap();
         let (mean_and_err_block, mean_and_err_individual, mean_and_err_mean) = thread::scope(|s| {
             let handle_block = s.spawn(|_| {
