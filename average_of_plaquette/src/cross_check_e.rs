@@ -17,6 +17,10 @@ use lattice_qcd_rs::{
     integrator::SymplecticEulerRayon,
     dim::U3,
     statistics,
+    error::{
+        MultiIntegrationError,
+        StateInitializationError,
+    },
 };
 use nalgebra::{
     DefaultAllocator,
@@ -138,12 +142,30 @@ const DT: f64 = 0.000_001_f64; // OK ?
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 
+#[derive(Clone, Debug, PartialEq)]
+enum ThermalizeError {
+    HmcError(MultiIntegrationError<StateInitializationError>),
+    StateInitializationError(StateInitializationError),
+}
+
+impl From<MultiIntegrationError<StateInitializationError>> for ThermalizeError {
+    fn from(err: MultiIntegrationError<StateInitializationError>) -> Self{
+        Self::HmcError(err)
+    }
+}
+
+impl From<StateInitializationError> for ThermalizeError {
+    fn from(err: StateInitializationError) -> Self{
+        Self::StateInitializationError(err)
+    }
+}
+
 #[allow(clippy::useless_format)]
 fn thermalize_with_e_field<D, Rng>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-) -> Result<(LeapFrogStateDefault<D>, Rng), SimulationError>
+) -> Result<(LeapFrogStateDefault<D>, Rng), ThermalizeError>
     where D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -181,7 +203,7 @@ fn thermalize_with_e_field<D, Rng>(
 }
 
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LeapFrogStateDefault<U3>, Vec<Vec<f64>>), SimulationError> {
+fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LeapFrogStateDefault<U3>, Vec<Vec<f64>>), StateInitializationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
