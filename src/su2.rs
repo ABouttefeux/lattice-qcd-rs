@@ -90,7 +90,7 @@ pub fn project_to_su2_unorm(m: CMatrix2) -> CMatrix2 {
 
 /// return wether the input matrix is SU(2) up to epsilon.
 pub fn is_matrix_su2(m: &CMatrix2, epsilon: f64) -> bool {
-    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon) &&
     ((m * m.adjoint() - CMatrix2::identity()).norm() < epsilon)
 }
 

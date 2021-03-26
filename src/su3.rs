@@ -445,14 +445,14 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
 /// otherwise the ouptut gives unexpected values.
 /// ```should_panic
-/// use lattice_qcd_rs::su3::{matrix_su3_exp_i, MatrixExp};
+/// use lattice_qcd_rs::{su3::{matrix_su3_exp_i, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
 /// let output = unsafe {
 ///     matrix_su3_exp_i(matrix)
 /// };
-/// assert!( (output - (matrix* i).exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
 /// ```
 /// This function is memory safe and won't cause any
 /// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
@@ -518,14 +518,14 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
 /// otherwise the ouptut gives unexpected value.
 /// ```should_panic
-/// use lattice_qcd_rs::su3::{matrix_su3_exp_r, MatrixExp};
+/// use lattice_qcd_rs::{su3::{matrix_su3_exp_r, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3)
 /// let output = unsafe {
 ///     matrix_su3_exp_r(matrix)
 /// };
-/// assert!( (output - matrix.exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
 /// ```
 /// This function is memory safe and won't cause any
 /// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
@@ -553,16 +553,19 @@ pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
 
 /// return wether the input matrix is SU(3) up to epsilon.
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
-    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon) &&
     ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_eq_matrix;
+    use crate::{assert_eq_matrix, I};
+    use rand_distr::Distribution;
+    use rand::SeedableRng;
     
     const EPSILON: f64 = 0.000_000_001_f64;
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
     #[test]
     /// test that [`N`] is indeed what we need
@@ -626,6 +629,33 @@ mod test {
         
         for p in &extract_su2_unorm(m) {
             assert_matrix_is_su_2!((p/ p.determinant().sqrt()), EPSILON);
+        }
+    }
+    #[test]
+    fn exp_matrix_unsafe() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        for m in &*GENERATORS {
+            let output_r = unsafe {
+                matrix_su3_exp_r(**m)
+            };
+            assert_eq_matrix!(output_r, m.exp(), EPSILON);
+            let output_i = unsafe {
+                matrix_su3_exp_i(**m)
+            };
+            assert_eq_matrix!(output_i, (*m * I).exp(), EPSILON);
+        }
+        for _ in 0..100 {
+            let v = Su3Adjoint::random(&mut rng, &d);
+            let m = v.to_matrix();
+            let output_r = unsafe {
+                matrix_su3_exp_r(m)
+            };
+            assert_eq_matrix!(output_r, m.exp(), EPSILON);
+            let output_i = unsafe {
+                matrix_su3_exp_i(m)
+            };
+            assert_eq_matrix!(output_i, (m * I).exp(), EPSILON);
         }
     }
 }

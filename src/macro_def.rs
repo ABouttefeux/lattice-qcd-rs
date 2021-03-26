@@ -180,11 +180,27 @@ macro_rules! project_mut {
 
 
 #[macro_export]
-/// assert if two martix are approximatively the same
+/// assert if two matrices are approximatively the same
 macro_rules! assert_eq_matrix {
     ($e:expr, $e2:expr, $epsilon:expr) => {
-        assert!(($e - $e2).norm() < $epsilon)
-    }
+        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} < {}`", ($e - $e2).norm(), $epsilon)
+    };
+    ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
+        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} < {}` : {}", ($e - $e2).norm(), $epsilon, format_args!($($arg)*))
+    };
+}
+
+#[macro_export]
+/// assert if two complex are approximatively the same
+macro_rules! assert_eq_complex {
+    ($e:expr, $e2:expr, $epsilon:expr) => {
+        use nalgebra::ComplexField;
+        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() < {}", $e, $e2, $epsilon)
+    };
+    ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
+        use nalgebra::ComplexField;
+        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() < {} : {}", $e, $e2, $epsilon, format_args!($($arg)*))
+    };
 }
 
 
@@ -192,9 +208,9 @@ macro_rules! assert_eq_matrix {
 /// assert if the matrix is U(2) ( unitary 2 x 2)
 macro_rules! assert_matrix_is_unitary_2 {
     ($m:expr, $epsilon:expr) => {
-        use na::ComplexField;
-        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon);
-        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon);
+        use nalgebra::ComplexField;
+        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {:?} is not of norm 1", $m.determinant().modulus(), $m);
+        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon, "The matrix is not unitary");
     }
 }
 
@@ -202,9 +218,9 @@ macro_rules! assert_matrix_is_unitary_2 {
 /// assert if the matrix is U(2) (unitary 3 x 3)
 macro_rules! assert_matrix_is_unitary_3 {
     ($m:expr, $epsilon:expr) => {
-        use na::ComplexField;
-        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon);
-        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon);
+        use nalgebra::ComplexField;
+        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {:?} is not of norm 1", $m.determinant().modulus(), $m);
+        assert_eq_matrix!($m * $m.adjoint(), na::Matrix3::identity(), $epsilon, "The matrix is not unitary");
     }
 }
 
@@ -212,7 +228,7 @@ macro_rules! assert_matrix_is_unitary_3 {
 /// assert if the matrix is SU(2)
 macro_rules! assert_matrix_is_su_2 {
     ($m:expr, $epsilon:expr) => {
-        assert!(($m.determinant() - na::Complex::from(1_f64)).modulus() < $epsilon);
+        assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon);
         assert_matrix_is_unitary_2!($m, $epsilon);
     }
 }
