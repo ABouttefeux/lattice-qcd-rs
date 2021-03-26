@@ -189,12 +189,31 @@ macro_rules! assert_eq_matrix {
 
 
 #[macro_export]
-/// assert if the matrix is SU(2)
-macro_rules! assert_matrix_is_su_2 {
+/// assert if the matrix is U(2) ( unitary 2 x 2)
+macro_rules! assert_matrix_is_unitary_2 {
     ($m:expr, $epsilon:expr) => {
         use na::ComplexField;
         assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon);
-        assert!(($m * $m.adjoint() - na::Matrix2::identity()).norm() < $epsilon);
+        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon);
+    }
+}
+
+#[macro_export]
+/// assert if the matrix is U(2) (unitary 3 x 3)
+macro_rules! assert_matrix_is_unitary_3 {
+    ($m:expr, $epsilon:expr) => {
+        use na::ComplexField;
+        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon);
+        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon);
+    }
+}
+
+#[macro_export]
+/// assert if the matrix is SU(2)
+macro_rules! assert_matrix_is_su_2 {
+    ($m:expr, $epsilon:expr) => {
+        assert!(($m.determinant() - na::Complex::from(1_f64)).modulus() < $epsilon);
+        assert_matrix_is_unitary_2!($m, $epsilon);
     }
 }
 
@@ -202,8 +221,7 @@ macro_rules! assert_matrix_is_su_2 {
 /// assert if the matrix is SU(3)
 macro_rules! assert_matrix_is_su_3 {
     ($m:expr, $epsilon:expr) => {
-        use na::ComplexField;
-        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon);
-        assert!(($m * $m.adjoint() - na::Matrix3::identity()).norm() < $epsilon);
+        assert!(($m.determinant() - na::Complex::from(1_f64)).modulus() < $epsilon);
+        assert_matrix_is_unitary_3!($m, $epsilon);
     }
 }

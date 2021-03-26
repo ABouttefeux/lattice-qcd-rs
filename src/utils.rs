@@ -25,7 +25,7 @@ pub const MAX_NUMBER_FACTORIAL: usize = 34;
 /// # use lattice_qcd_rs::utils::factorial;
 /// let n = factorial(34);
 /// let (_, overflowed) = n.overflowing_mul(35); // try compute 35! with overflow check.
-/// assert!(! overflowed);
+/// assert!(!overflowed);
 /// ```
 #[allow(clippy::as_conversions)] // constant function cant use try into
 pub const fn factorial(n: usize) -> FactorialNumber {
@@ -141,7 +141,7 @@ mod test {
     fn test_factorial_overflow() {
         let n = factorial(MAX_NUMBER_FACTORIAL);
         let (_, overflowed) = n.overflowing_mul(MAX_NUMBER_FACTORIAL as u128 + 1);
-        assert!(! overflowed);
+        assert!(!overflowed);
     }
 
 }

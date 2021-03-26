@@ -26,6 +26,8 @@
 #![warn(clippy::unreadable_literal)]
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
+#![warn(clippy::unnecessary_wraps)]
+
 
 //#![warn(clippy::missing_errors_doc)]
 //#![warn(missing_docs)]

@@ -30,12 +30,14 @@ use plotters::prelude::*;
 use rustfft::FftPlanner;
 
 fn main() {
-    //test_fft();
     main_cross_with_e();
 }
 
+#[cfg(test)]
+#[test]
+#[ignore]
 fn test_fft() {
-    let mut data = (0..16_384_0).map(|index| {
+    let mut data = (0..163_840).map(|index| {
         Complex::from(((index as f64) / 500_f64).cos())
     }).collect::<Vec<_>>();
     

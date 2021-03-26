@@ -264,13 +264,13 @@ fn sim_mh() {
     let spread_parameter = 0.00001;
     let number_of_rand = 1;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
-    let mut mh = MCWrapper::new(MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
+    let mut mh = McWrapper::new(MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(), rng);
     let number_of_sims = 1000;
     
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
-        &|sim, mc : &MCWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault<_>, _>, LatticeStateDefault<_>, _, Xoshiro256PlusPlus>| {
+        &|sim, mc : &McWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault<_>, _>, LatticeStateDefault<_>, _, Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
         }

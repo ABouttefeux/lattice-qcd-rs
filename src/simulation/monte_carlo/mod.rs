@@ -106,7 +106,7 @@ pub trait MonteCarloDefault<State, D>
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug)]
-pub struct MCWrapper<MCD, State, D, Rng>
+pub struct McWrapper<MCD, State, D, Rng>
     where MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
@@ -120,7 +120,7 @@ pub struct MCWrapper<MCD, State, D, Rng>
     _phantom: PhantomData<(State, D)>,
 }
 
-impl<MCD, State, Rng, D> MCWrapper<MCD, State, D, Rng>
+impl<MCD, State, Rng, D> McWrapper<MCD, State, D, Rng>
     where MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
@@ -145,7 +145,7 @@ impl<MCD, State, Rng, D> MCWrapper<MCD, State, D, Rng>
     }
 }
 
-impl<T, State, D, Rng> MonteCarlo<State, D> for MCWrapper<T, State, D, Rng>
+impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
     where T: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,

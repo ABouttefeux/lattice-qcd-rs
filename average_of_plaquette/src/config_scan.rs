@@ -152,11 +152,11 @@ impl LatticeConfigScan {
     }
     
     pub fn get(&self, pos: usize) -> Option<LatticeConfig> {
-        Some(LatticeConfig::new(
+        LatticeConfig::new(
             *self.lattice_size.get(pos)?,
             *self.lattice_number_of_points.get(pos)?,
             *self.lattice_beta.get(pos)?,
-        )?)
+        )
     }
 }
 
@@ -289,13 +289,13 @@ impl SimConfigScan {
     }
     
     pub fn get(&self, pos: usize) -> Option<SimConfig> {
-        Some(SimConfig::new(
+        SimConfig::new(
             self.mc_config.get(pos)?,
             *self.number_of_thermalisation.get(pos)?,
             *self.number_between_renorm.get(pos)?,
             *self.number_of_averages.get(pos)?,
             *self.number_of_steps_between_average.get(pos)?,
-        )?)
+        )
     }
 }
 
@@ -367,10 +367,10 @@ impl MonteCarloConfigScan {
     }
     
     pub fn get(&self, pos: usize) -> Option<MonteCarloConfig> {
-        Some(MonteCarloConfig::new(
+        MonteCarloConfig::new(
             *self.number_of_rand.get(pos)?,
             *self.spread.get(pos)?,
-        )?)
+        )
     }
 }
 

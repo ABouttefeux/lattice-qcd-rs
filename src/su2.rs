@@ -107,7 +107,7 @@ mod test {
     fn test_su2_const() {
         // test constant
         for el in &*PAULI_MATRICES {
-            assert_matrix_is_su_2!(*el, EPSILON);
+            assert_matrix_is_unitary_2!(*el, EPSILON);
         }
     }
         

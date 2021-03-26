@@ -126,7 +126,7 @@
 //! ```rust
 //! use lattice_qcd_rs::{
 //!    simulation::state::{LatticeStateDefault, LatticeState},
-//!    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDeltaDiagnostic},
+//!    simulation::monte_carlo::{MetropolisHastingsDeltaDiagnostic},
 //!    ComplexField,
 //!    dim::U4,
 //! };
@@ -155,7 +155,7 @@
 //! ```rust
 //! use lattice_qcd_rs::{
 //!    simulation::state::{LatticeStateDefault, LatticeState},
-//!    simulation::monte_carlo::{MCWrapper, MetropolisHastingsDiagnostic},
+//!    simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
 //!    dim::U4,
 //! };
 //!
@@ -168,7 +168,7 @@
 //!
 //! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
-//! let mut mc = MCWrapper::new(
+//! let mut mc = McWrapper::new(
 //!     MetropolisHastingsDiagnostic::new(
 //!         number_of_rand,
 //!         spread_parameter
@@ -233,6 +233,7 @@
 #![warn(clippy::unreadable_literal)]
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
+#![warn(clippy::unnecessary_wraps)]
 
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]

@@ -16,7 +16,7 @@ pub use super::{
         monte_carlo::{
             MonteCarlo,
             MonteCarloDefault,
-            MCWrapper,
+            McWrapper,
             MetropolisHastingsDeltaDiagnostic,
             MetropolisHastingsDeltaOneDiagnostic,
             HybridMonteCarloDiagnostic,
