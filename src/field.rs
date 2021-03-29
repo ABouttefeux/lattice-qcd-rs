@@ -131,21 +131,36 @@ impl Su3Adjoint {
         }
     }
     
-    /// Return the t coeff `t = 1/2 * Tr(X^2)`.
-    /// Used for [`su3::su3_exp_i`]
+    /// Returns the trace squared `Tr(X^2)`.
+    ///
+    /// It is more accurate and faster than computing
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # use lattice_qcd_rs::ComplexField;
+    /// # let m = Su3Adjoint::default();
+    /// (m.to_matrix() * m.to_matrix()).trace().real();
+    /// ```
+    #[inline]
+    pub fn trace_squared(&self) -> Real {
+        // TODO investigate.
+        self.data.iter().map(|el| el * el).sum::<Real>() / 2_f64
+    }
+    
+    /// Return the t coeff `t = - 1/2 * Tr(X^2)`.
+    /// If you are looking for the trace square use [Self::trace_squared] instead.
+    ///
+    /// It is used for [`su3::su3_exp_i`].
     /// # Example
     /// ```
     /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::from([1_f64; 8]);
     /// let m = su3.to_matrix();
-    /// assert_eq!(su3.t(), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
+    /// assert_eq!(nalgebra::Complex::new(su3.t(), 0_f64), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
     /// ```
     #[inline]
-    pub fn t(&self) -> na::Complex<Real> {
-        // todo optimize
-        let m = self.to_matrix();
-        - na::Complex::from(0.5_f64) * (m * m).trace()
+    pub fn t(&self) -> Real {
+        - 0.5_f64 * self.trace_squared()
     }
     
     /// Return the t coeff `d = i * det(X)`.
@@ -941,14 +956,37 @@ impl<D> IndexMut<usize> for EField<D>
 }
 
 #[cfg(test)]
-#[test]
-fn test_get_e_field_pos_neg() {
-    use super::lattice;
+mod test{
+    use super::*;
+    use rand::SeedableRng;
+    use approx::*;
+    use super::super::Complex;
     
-    let l = LatticeCyclique::new(1_f64, 4).unwrap();
-    let e = EField::new(vec![VectorN::<_, na::U4>::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
-    assert_eq!(
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XPos.into(), &l),
-        e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XNeg.into(), &l)
-    );
+    const EPSILON: f64 = 0.000_000_001_f64;
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
+    
+    #[test]
+    fn test_get_e_field_pos_neg() {
+        use super::super::lattice;
+        
+        let l = LatticeCyclique::new(1_f64, 4).unwrap();
+        let e = EField::new(vec![VectorN::<_, na::U4>::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
+        assert_eq!(
+            e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XPos.into(), &l),
+            e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XNeg.into(), &l)
+        );
+    }
+    
+    #[test]
+    fn test_su3_adj(){
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        for _ in 0..100 {
+            let v = Su3Adjoint::random(&mut rng, &d);
+            let m = v.to_matrix();
+            assert_abs_diff_eq!(v.trace_squared(), (m * m).trace().modulus(), epsilon=EPSILON);
+            assert_eq_complex!(v.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant(), EPSILON);
+            assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
+        }
+    }
 }

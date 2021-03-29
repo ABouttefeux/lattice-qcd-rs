@@ -148,6 +148,8 @@ impl From<SimulationError> for ThermalisationSimumlationError {
 }
 
 #[allow(clippy::needless_range_loop)]
+/// thermalize the state using a observable as a mesurement.
+/// It plot a graph and write a csv file for the correlation
 pub fn thermalize_state<D, MC, F>(
     //config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
@@ -220,7 +222,6 @@ pub fn thermalize_state<D, MC, F>(
     let init_auto_corr = statistics::variance(&init_vec).abs();
     let mut last_auto_corr_mean = 1_f64;
     
-    // TODO remove
     let mut vec_corr_plot = Vec::with_capacity(NUMBER_OF_PASS_AUTO_CORR);
     
     let mut auto_corr_limiter = 0_f64;

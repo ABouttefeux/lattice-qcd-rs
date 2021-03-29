@@ -724,8 +724,8 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::get_all_positive_directions().iter().map(|dir_i| {
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found").to_matrix();
-                (e_i * e_i).trace().real()
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found");
+                e_i.trace_squared()
             }).sum::<Real>()
         }).sum::<Real>() * self.beta()
     }
@@ -1094,8 +1094,8 @@ impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationSta
         // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::get_all_positive_directions().iter().map(|dir_i| {
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap().to_matrix();
-                (e_i * e_i).trace().real()
+                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap();
+                e_i.trace_squared()
             }).sum::<Real>()
         }).sum::<Real>() * self.beta()
     }

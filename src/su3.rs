@@ -417,7 +417,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
-    let t: Complex = su3_adj.t();
+    let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
@@ -442,20 +442,22 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 ///
-/// # Requirement
+/// # Panic
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the ouptut gives unexpected values.
+/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
 /// ```should_panic
 /// use lattice_qcd_rs::{su3::{matrix_su3_exp_i, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
 /// let output = matrix_su3_exp_i(matrix);
-/// assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
+/// // We panic in debug. In release the following asset will fail.
+/// // assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
 pub fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
+    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
     const N_LOOP: usize = N - 1;
     let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
@@ -489,7 +491,7 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
-    let t: Complex = su3_adj.t();
+    let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
@@ -511,22 +513,22 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 ///
-/// # Requirement
+/// # Panic
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the ouptut gives unexpected value.
+/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
 /// ```should_panic
 /// use lattice_qcd_rs::{su3::{matrix_su3_exp_r, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3)
-/// let output = unsafe {
-///     matrix_su3_exp_r(matrix)
-/// };
-/// assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
+/// let output = matrix_su3_exp_r(matrix);
+/// // We panic in debug. In release the following asset will fail.
+/// // assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
 pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
+    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
     const N_LOOP: usize = N - 1;
     let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
@@ -550,6 +552,11 @@ pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
     ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon) &&
     ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
+}
+
+/// Returns wether the given matric is in the lie algebra su(3) that generates SU(3) up to epsilon
+pub fn is_matrix_su3_lie(matrix: &CMatrix3, epsilon: Real) -> bool {
+    matrix.trace().modulus() < epsilon && (matrix - matrix.adjoint()).norm() < epsilon
 }
 
 #[cfg(test)]
@@ -643,6 +650,19 @@ mod test {
             assert_eq_matrix!(output_r, m.exp(), EPSILON);
             let output_i = matrix_su3_exp_i(m);
             assert_eq_matrix!(output_i, (m * I).exp(), EPSILON);
+        }
+    }
+    #[test]
+    fn test_is_matrix_su3_lie() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        for m in &*GENERATORS{
+            assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
+        }
+        for _ in 0..100 {
+            let v = Su3Adjoint::random(&mut rng, &d);
+            let m = v.to_matrix();
+            assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
         }
     }
 }

@@ -89,7 +89,7 @@ pub fn project_to_su2_unorm(m: CMatrix2) -> CMatrix2 {
     m - m.adjoint() + CMatrix2::identity() * m.trace().conjugate()
 }
 
-/// Project the matrix to SU(2) Return [CMatrix2::identity] if the norm after unormalize is
+/// Project the matrix to SU(2). Return the identity if the norm after unormalize is
 /// subnormal (see[`f64::is_normal`]).
 pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
     let m = project_to_su2_unorm(m);
