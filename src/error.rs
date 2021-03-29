@@ -7,33 +7,6 @@ use super::{
     thread::ThreadError,
 };
 
-
-/// A trait for errors that can may store an important owned value
-pub trait GetOwnedValue<State> {
-    /// Absorbe self and return the owned value
-    fn get_owned_value(self) -> Option<State>;
-    
-    /// Return a reference to the value
-    fn get_ref_value(&self) -> Option<&State>;
-}
-
-/// Try extract the owned value, discarding the error
-impl<State, Error: GetOwnedValue<State>> GetOwnedValue<State> for Result<State, Error> {
-    fn get_owned_value(self) -> Option<State> {
-        match self {
-            Ok(state) => Some(state),
-            Err(err) => err.get_owned_value(),
-        }
-    }
-    
-    fn get_ref_value(&self) -> Option<&State> {
-        match self {
-            Ok(state) => Some(state),
-            Err(err) => err.get_ref_value(),
-        }
-    }
-}
-
 /// Type that can never be (safly) initialized.
 /// This is temporary, until [`never`](https://doc.rust-lang.org/std/primitive.never.html) is accepted into stable rust.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -46,16 +19,6 @@ impl core::fmt::Display for Never {
 }
 
 impl Error for Never {}
-
-impl<T> GetOwnedValue<T> for Never {
-    fn get_owned_value(self) -> Option<T> {
-        None
-    }
-    
-    fn get_ref_value(&self) -> Option<&T> {
-        None
-    }
-}
 
 /// Errors in the implementation of the library. This is unwanted to return this type but
 /// somethimes this is better to return that instead of panicking.
@@ -88,17 +51,13 @@ pub enum MultiIntegrationError<Error> {
     ZeroIntegration,
     /// An intgration error occured at the position of the first field.
     IntegrationError(usize, Error),
-    /// an [`ImplementationError`] occured.
-    ImplementationError(ImplementationError),
 }
 
 impl<Error: Display> Display for MultiIntegrationError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             MultiIntegrationError::ZeroIntegration => write!(f, "error: no integration steps"),
-            MultiIntegrationError::ImplementationError(error) => write!(f, "{}", error),
-            MultiIntegrationError::IntegrationError(index, error) => write!(f, "error during intgration step {}: {}",index, error),
-            //_ => write!(f, "{:?}", self),
+            MultiIntegrationError::IntegrationError(index, error) => write!(f, "error during intgration step {}: {}", index, error),
         }
     }
 }
@@ -108,7 +67,6 @@ impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             MultiIntegrationError::ZeroIntegration => None,
-            MultiIntegrationError::ImplementationError(error) => Some(error),
             MultiIntegrationError::IntegrationError(_, error) => Some(error),
         }
     }
@@ -172,13 +130,13 @@ pub enum StateInitializationErrorThreaded {
 }
 
 impl From<ThreadError> for StateInitializationErrorThreaded {
-    fn from(err: ThreadError) -> Self{
+    fn from(err: ThreadError) -> Self {
         Self::ThreadingError(err)
     }
 }
 
 impl From<StateInitializationError> for StateInitializationErrorThreaded {
-    fn from(err: StateInitializationError) -> Self{
+    fn from(err: StateInitializationError) -> Self {
         Self::StateInitializationError(err)
     }
 }
@@ -186,7 +144,7 @@ impl From<StateInitializationError> for StateInitializationErrorThreaded {
 impl Display for StateInitializationErrorThreaded {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ThreadingError(error) => write!(f, "thread error: {:?}", error),
+            Self::ThreadingError(error) => write!(f, "thread error: {}", error),
             Self::StateInitializationError(error) =>  write!(f, "{}", error),
         }
     }
@@ -259,18 +217,6 @@ impl<Error, State> ErrorWithOnwnedValue<Error, State> {
         self.error
     }
 }
-
-/// Always suceed
-impl<Error, State> GetOwnedValue<State> for ErrorWithOnwnedValue<Error, State> {
-    fn get_owned_value(self) -> Option<State> {
-        Some(self.owned)
-    }
-    
-    fn get_ref_value(&self) -> Option<&State> {
-        Some(self.owned())
-    }
-}
-
 
 impl<Error, State> From<(Error, State)> for ErrorWithOnwnedValue<Error, State> {
     fn from(data: (Error, State)) -> Self{

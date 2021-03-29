@@ -28,7 +28,6 @@ use super::{
         su3,
         error::{
             MultiIntegrationError,
-            ImplementationError,
             StateInitializationError,
             StateInitializationErrorThreaded,
         },
@@ -279,8 +278,9 @@ pub trait SimulationStateSynchrone<D>
                         MultiIntegrationError::IntegrationError(i, error) => {
                             return Err(MultiIntegrationError::IntegrationError(i + 1, error))
                         },
-                        _ => {
-                            return Err(MultiIntegrationError::ImplementationError(ImplementationError::Unreachable))
+                        MultiIntegrationError::ZeroIntegration => {
+                            // We cannot have 0 step integration as it is verified by the if
+                            unreachable!();
                         },
                     }
                 },

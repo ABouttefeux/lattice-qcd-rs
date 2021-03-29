@@ -103,7 +103,7 @@ impl<Error> From<ThreadError> for SymplecticEulerError<Error> {
 impl<Error: core::fmt::Display> core::fmt::Display for SymplecticEulerError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ThreadingError(error) => write!(f, "thread error: {:?}", error),
+            Self::ThreadingError(error) => write!(f, "thread error: {}", error),
             Self::StateInitializationError(error) =>  write!(f, "{}", error),
         }
     }
