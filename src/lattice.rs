@@ -209,7 +209,7 @@ impl<D> LatticeCyclique<D>
     }
     
     /// Retuns the length is compatible for both `links` and `e_field`.
-    /// See [`has_compatible_lenght_links`] and [`has_compatible_lenght_e_field`].
+    /// See [`Self::has_compatible_lenght_links`] and [`Self::has_compatible_lenght_e_field`].
     pub fn has_compatible_lenght(&self, links: &LinkMatrix, e_field: &EField<D>) -> bool {
         self.has_compatible_lenght_links(links) && self.has_compatible_lenght_e_field(e_field)
     }

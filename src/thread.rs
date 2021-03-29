@@ -87,7 +87,7 @@ impl std::error::Error for ThreadError {
 /// Returns [`ThreadError::Panic`] if a thread panicked. Containt the panick message.
 ///
 /// # Example
-/// let us computes the value of `i^2 * c` for i in [2,9999] with 4 threads
+/// let us computes the value of `i^2 * c` for i in \[2,9999\] with 4 threads
 /// ```
 /// # use lattice_qcd_rs::thread::run_pool_parallel;
 /// let iter = 2..10000;

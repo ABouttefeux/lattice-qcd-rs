@@ -155,7 +155,6 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
     D: Eq,
     Direction<D>: DirectionList,
 {
-    // TODO err
     type Error = SymplecticEulerError<State::Error>;
     
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {

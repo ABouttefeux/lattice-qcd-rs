@@ -68,7 +68,8 @@ pub trait LatticeState<D>
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
     
-    /// Replace the links matrices with the given input. It should panic if link matrix is not of the correct size.
+    /// Replace the links matrices with the given input. It should panic if link matrix is not of
+    /// the correct size.
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix);
@@ -119,7 +120,8 @@ pub trait LatticeStateNew<D>
     /// Create a new simulation state.
     ///
     /// # Errors
-    /// Give an error if the parameter are incorrect or the length of `link_matrix` does not correspond to `lattice`.
+    /// Give an error if the parameter are incorrect or the length of `link_matrix` does not correspond
+    /// to `lattice`.
     fn new(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix) -> Result<Self, Self::Error>;
 }
 
@@ -158,7 +160,8 @@ pub trait LatticeHamiltonianSimulationState<D>
     /// The "Electrical" field of this state.
     fn e_field(&self) -> &EField<D>;
     
-    /// Replace the electrical field with the given input. It should panic if the input is not of the correct size.
+    /// Replace the electrical field with the given input. It should panic if the input is not of
+    /// the correct size.
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
     fn set_e_field(&mut self, e_field: EField<D>);
@@ -205,7 +208,8 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
-    /// Gives an [`SimulationError::InvalideParameterDistribution`]  if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0) or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
+    /// Gives an error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
+    /// or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
     fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, Self::Error>
     {
         // TODO verify
@@ -216,10 +220,12 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     }
 }
 
-/// [`LatticeHamiltonianSimulationState`] who represent link matrices at the same time position as its conjugate momenta
+/// [`LatticeHamiltonianSimulationState`] who represent link matrices at the same time position as
+/// its conjugate momenta
 /// `e_field`.
 ///
-/// If you have a LatticeState and want the default way of adding the conjugate momenta and doing simulation look at
+/// If you have a LatticeState and want the default way of adding the conjugate momenta and doing
+/// simulation look at
 /// [`LatticeHamiltonianSimulationStateSyncDefault`].
 ///
 /// I would adivce of implementing this trait and not [`SimulationStateLeapFrog`], as there is
@@ -251,7 +257,7 @@ pub trait SimulationStateSynchrone<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done
-    /// or [`SimulationError::ZeroStep`] is the number of step is zero.
+    /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_using_leapfrog_n<I, State>(
         &self,
         delta_t: Real,
@@ -324,7 +330,7 @@ pub trait SimulationStateSynchrone<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done
-    /// or [`SimulationError::ZeroStep`] is the number of step is zero.
+    /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
@@ -341,7 +347,8 @@ pub trait SimulationStateSynchrone<D>
     
 }
 
-/// [`LatticeHamiltonianSimulationState`] who represent link matrices at time T and its conjugate momenta at time T + 1/2
+/// [`LatticeHamiltonianSimulationState`] who represent link matrices at time T and its conjugate
+/// momenta at time T + 1/2.
 ///
 /// If you have a [`SimulationStateSynchrone`] look at the wrapper [`SimulationStateLeap`].
 pub trait SimulationStateLeapFrog<D>
@@ -379,7 +386,7 @@ pub trait SimulationStateLeapFrog<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done
-    /// or [`SimulationError::ZeroStep`] is the number of step is zero.
+    /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
@@ -424,7 +431,8 @@ impl<D> LatticeStateDefault<D>
     /// and beta parameter `beta`.
     ///
     /// # Errors
-    /// Returns [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
+    /// Returns [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
     /// Or propagate the error form [`Self::new`].
     pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
@@ -440,7 +448,8 @@ impl<D> LatticeStateDefault<D>
     /// The creation is determiste in the sence that it is reproducible:
     ///
     /// # Errors
-    /// Returns [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
+    /// Returns [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
     /// Or propagate the error form [`Self::new`].
     ///
     /// # Example
@@ -578,10 +587,12 @@ impl LatticeHamiltonianSimulationStateSync {
     /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
     /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
     ///
-    /// useful to reproduce a set of data but slower than [`LatticeHamiltonianSimulationStateSync::new_random_threaded`].
+    /// useful to reproduce a set of data but slower than
+    /// [`LatticeHamiltonianSimulationStateSync::new_random_threaded`].
     ///
     /// # Errors
-    /// Return [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
     /// Or propagates the error form [`Self::new`].
     ///
     /// # Example
@@ -616,7 +627,8 @@ impl LatticeHamiltonianSimulationStateSync {
     /// Generate a configuration with cold e_field and hot link matrices
     ///
     /// # Errors
-    /// Return [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
     /// Or propagates the error form [`Self::new`].
     pub fn new_deterministe_cold_e_hot_link (
         size: Real,
@@ -638,8 +650,10 @@ impl LatticeHamiltonianSimulationStateSync {
     /// [`LatticeHamiltonianSimulationStateSync::new_deterministe`].
     ///
     /// # Errors
-    /// Return [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
-    /// Return an [`SimulationError::ThreadingError`]([`ThreadError::ThreadNumberIncorect`]) if `number_of_points = 0`.
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
+    /// Return an [`SimulationError::ThreadingError`]([`ThreadError::ThreadNumberIncorect`])
+    /// if `number_of_points = 0`.
     /// Returns an error if a thread panicked.
     /// Or propagates the error form [`Self::new`].
     pub fn new_random_threaded<Distribution>(
@@ -678,7 +692,8 @@ impl LatticeHamiltonianSimulationStateSync {
     /// It meas that the link matrices are set to the identity and electrical field are set to 0.
     ///
     /// # Errors
-    /// Return [`SimulationError::InitialisationError`] if the parameter is invalide for [`LatticeCyclique`].
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
     /// Or propagates the error form [`Self::new`].
     pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
@@ -817,7 +832,8 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     
 }
 
-/// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type ([`SimulationStateSynchrone`]).
+/// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type
+/// ([`SimulationStateSynchrone`]).
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SimulationStateLeap<State, D>
@@ -878,7 +894,7 @@ impl<State, D> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
     Direction<D>: DirectionList,
 {}
 
-    /// We just transmit the function of `State`, there is nothing new.
+/// We just transmit the function of `State`, there is nothing new.
 impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
     where State: LatticeHamiltonianSimulationState<D> + SimulationStateSynchrone<D>,
     D: DimName,

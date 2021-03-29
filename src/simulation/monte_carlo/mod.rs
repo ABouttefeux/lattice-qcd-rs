@@ -54,9 +54,6 @@ pub trait MonteCarlo<State, D>
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
-    ///
-    /// Hint : this is a goog idea for the Error to return an owned version of the state,
-    /// so that all progress are not loss.
     type Error;
     
     /// Do one Monte Carlo simulation step.
@@ -77,9 +74,6 @@ pub trait MonteCarloDefault<State, D>
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
-    ///
-    /// Hint : this is a goog idea for the Error to return an owned version of the state,
-    /// so that all progress are not loss.
     type Error;
     
     /// Generate a radom element from the previous element ( like a Markov chain).

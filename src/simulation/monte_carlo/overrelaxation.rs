@@ -2,7 +2,7 @@
 //! Overrelaxation methode
 //!
 //! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
-//! You can look at [`super::HybrideMethode`].
+//! You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 
 use super::{
     MonteCarlo,
@@ -38,7 +38,7 @@ use serde::{Serialize, Deserialize};
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
 /// You need to use other methode with this one.
-/// You can look at [`super::HybrideMethode`].
+/// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
 /// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -106,7 +106,7 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
 /// You need to use other methode with this one.
-/// You can look at [`super::HybrideMethode`].
+/// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
 /// see (https://doi.org/10.1016/0370-2693(90)90032-2)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
