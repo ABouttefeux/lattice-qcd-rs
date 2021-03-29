@@ -33,6 +33,7 @@ use plotters_backend::{
 };
 use std::error::Error;
 use plotters::coord::types::RangedCoordf64;
+use std::io::{self, Write};
 
 #[derive(Copy, Clone)]
 pub enum PixelState {
@@ -93,12 +94,15 @@ impl DrawingBackend for TextDrawingBackend {
     }
 
     fn present(&mut self) -> Result<(), DrawingErrorKind<std::io::Error>> {
+        let stderr = io::stderr();
+        let mut handle = io::BufWriter::new(stderr);
+        // we aquire the lock on stderr
         for r in 0..30 {
             let mut buf = String::new();
             for c in 0..100 {
                 buf.push(self.0[r * 100 + c].to_char());
             }
-            eprintln!("{}", buf);
+            writeln!(handle, "{}", buf).map_err(DrawingErrorKind::DrawingError)?;
         }
 
         Ok(())

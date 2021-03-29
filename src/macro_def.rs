@@ -183,10 +183,10 @@ macro_rules! project_mut {
 /// assert if two matrices are approximatively the same
 macro_rules! assert_eq_matrix {
     ($e:expr, $e2:expr, $epsilon:expr) => {
-        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} < {}`", ($e - $e2).norm(), $epsilon)
+        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} > {}`", ($e - $e2).norm(), $epsilon)
     };
     ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
-        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} < {}` : {}", ($e - $e2).norm(), $epsilon, format_args!($($arg)*))
+        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} > {}` : {}", ($e - $e2).norm(), $epsilon, format_args!($($arg)*))
     };
 }
 
@@ -195,11 +195,11 @@ macro_rules! assert_eq_matrix {
 macro_rules! assert_eq_complex {
     ($e:expr, $e2:expr, $epsilon:expr) => {
         use nalgebra::ComplexField;
-        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() < {}", $e, $e2, $epsilon)
+        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {}", $e, $e2, $epsilon)
     };
     ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
         use nalgebra::ComplexField;
-        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() < {} : {}", $e, $e2, $epsilon, format_args!($($arg)*))
+        assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {} : {}", $e, $e2, $epsilon, format_args!($($arg)*))
     };
 }
 
@@ -210,34 +210,36 @@ macro_rules! assert_matrix_is_unitary_2 {
     ($m:expr, $epsilon:expr) => {
         use nalgebra::ComplexField;
         assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {:?} is not of norm 1", $m.determinant().modulus(), $m);
-        assert_eq_matrix!($m * $m.adjoint(), na::Matrix2::identity(), $epsilon, "The matrix is not unitary");
+        assert!(($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon, "The matrix is not unitary");
     }
 }
 
 #[macro_export]
-/// assert if the matrix is U(2) (unitary 3 x 3)
+/// assert if the matrix is U(3) (unitary 3 x 3)
 macro_rules! assert_matrix_is_unitary_3 {
     ($m:expr, $epsilon:expr) => {
         use nalgebra::ComplexField;
-        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {:?} is not of norm 1", $m.determinant().modulus(), $m);
-        assert_eq_matrix!($m * $m.adjoint(), na::Matrix3::identity(), $epsilon, "The matrix is not unitary");
+        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
+        assert!(($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon, "The matrix {} is not unitary", $m);
     }
 }
 
 #[macro_export]
-/// assert if the matrix is SU(2)
+/// assert if the matrix is SU(2) (special unitary)
 macro_rules! assert_matrix_is_su_2 {
     ($m:expr, $epsilon:expr) => {
-        assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon);
-        assert_matrix_is_unitary_2!($m, $epsilon);
+        use nalgebra::ComplexField;
+        assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
+        assert!(($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon, "The matrix {} is not unitary", $m);
     }
 }
 
 #[macro_export]
-/// assert if the matrix is SU(3)
+/// assert if the matrix is SU(3) (special unitary)
 macro_rules! assert_matrix_is_su_3 {
     ($m:expr, $epsilon:expr) => {
-        assert!(($m.determinant() - na::Complex::from(1_f64)).modulus() < $epsilon);
-        assert_matrix_is_unitary_3!($m, $epsilon);
+        use nalgebra::ComplexField;
+        assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
+        assert!(($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon, "The matrix is not unitary {}", $m);
     }
 }
