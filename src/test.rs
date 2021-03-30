@@ -266,7 +266,7 @@ fn test_sim_hamiltonian() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
-    let sim2 = simulation.simulate_sync(0.0001, &SymplecticEuler::new(8)).unwrap();
+    let sim2 = simulation.simulate_sync(&SymplecticEuler::new(8), 0.0001).unwrap();
     let h2 = sim2.get_hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64 );
@@ -279,7 +279,7 @@ fn test_gauss_law() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
-    let sim2 = simulation.simulate_sync(0.000001, &SymplecticEuler::new(8)).unwrap();
+    let sim2 = simulation.simulate_sync(&SymplecticEuler::new(8), 0.000001).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
     });
@@ -300,7 +300,7 @@ fn test_sim_hamiltonian_rayon() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
-    let sim2 = simulation.simulate_sync(0.0001, &SymplecticEulerRayon::new()).unwrap();
+    let sim2 = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.0001).unwrap();
     let h2 = sim2.get_hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64 );
@@ -313,7 +313,7 @@ fn test_gauss_law_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
-    let sim2 = simulation.simulate_sync(0.000001, &SymplecticEulerRayon::new()).unwrap();
+    let sim2 = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.000001).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
     });
@@ -334,13 +334,13 @@ fn test_sim_cold(){
     let number_of_pts = 10;
     let beta = 0.1_f64;
     let sim1 = LatticeHamiltonianSimulationStateSync::new_cold(size, beta, number_of_pts).unwrap();
-    let sim2 = sim1.simulate_to_leapfrog(0.1, &SymplecticEulerRayon::new()).unwrap();
+    let sim2 = sim1.simulate_to_leapfrog(&SymplecticEulerRayon::new(), 0.1).unwrap();
     assert_eq!(sim1.e_field(), sim2.e_field());
     assert_eq!(sim1.link_matrix(), sim2.link_matrix());
-    let sim3 = sim2.simulate_leap(0.1, &SymplecticEulerRayon::new()).unwrap();
+    let sim3 = sim2.simulate_leap(&SymplecticEulerRayon::new(), 0.1).unwrap();
     assert_eq!(sim2.e_field(), sim3.e_field());
     assert_eq!(sim2.link_matrix(), sim3.link_matrix());
-    let sim4 = sim3.simulate_to_synchrone(0.1, &SymplecticEulerRayon::new()).unwrap();
+    let sim4 = sim3.simulate_to_synchrone(&SymplecticEulerRayon::new(), 0.1).unwrap();
     assert_eq!(sim3.e_field(), sim4.e_field());
     assert_eq!(sim3.link_matrix(), sim4.link_matrix());
 }

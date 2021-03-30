@@ -4,8 +4,8 @@ use average_of_plaquette::{
     data_analysis::*,
     rng::*,
     observable,
-    plot_console::*,
  };
+use plotter_backend_text::*;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use lattice_qcd_rs::{
@@ -133,7 +133,7 @@ fn main_cross_with_e() {
 //const DT: f64 = 0.000_01_f64; // to big
 //const DT: f64 = 0.000_000_1_f64; // OK ?
 //const DT: f64 = 0.000_000_000_1_f64; // too small
-const DT: f64 = 0.000_001_f64; // OK ?
+const DT: f64 = 0.000_01_f64; // OK ?
 
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
