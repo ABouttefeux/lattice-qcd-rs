@@ -176,7 +176,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
-        state.simulate_using_leapfrog_n_auto(self.delta_t, self.number_of_steps, &self.integrator)
+        state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
     
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {
@@ -352,7 +352,7 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagno
 {
     
     fn get_potential_next_element(&mut self, state: &State, _rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
-        state.simulate_using_leapfrog_n_auto(self.delta_t, self.number_of_steps, &self.integrator)
+        state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
     
     fn get_probability_of_replacement(old_state: &State, new_state : &State) -> Real {

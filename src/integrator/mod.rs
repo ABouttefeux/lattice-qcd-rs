@@ -144,6 +144,15 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     /// # Errors
     /// Return an error if the integration encounter a problem
     fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, SimulationError>;
+    
+    /// Integrate a Sync state by going to leap and then back to sync.
+    /// This is the symplectic methode of integration, which should conserve the hamiltonian
+    ///
+    /// # Errors
+    /// Return an error if the integration encounter a problem
+    fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError> {
+        self.integrate_leap_sync(&self.integrate_sync_leap(l, delta_t)?, delta_t)
+    }
 }
 
 /// function for link intregration

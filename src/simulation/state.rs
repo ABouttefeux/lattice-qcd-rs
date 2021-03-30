@@ -229,7 +229,7 @@ pub trait SimulationStateSynchrone<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_to_leapfrog<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
+    fn simulate_to_leapfrog<I, State>(&self, integrator: &I, delta_t: Real) -> Result<State, SimulationError>
         where State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
@@ -244,9 +244,9 @@ pub trait SimulationStateSynchrone<D>
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
     fn simulate_using_leapfrog_n<I, State>(
         &self,
+        integrator: &I,
         delta_t: Real,
         number_of_steps: usize,
-        integrator: &I,
     ) -> Result<Self, SimulationError>
         where State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
@@ -254,11 +254,11 @@ pub trait SimulationStateSynchrone<D>
         if number_of_steps == 0 {
             return Err(SimulationError::ZeroStep);
         }
-        let mut state_leap = self.simulate_to_leapfrog(delta_t, integrator)?;
+        let mut state_leap = self.simulate_to_leapfrog(integrator, delta_t)?;
         if number_of_steps > 1 {
-            state_leap = state_leap.simulate_leap_n(delta_t, integrator, number_of_steps -1)?;
+            state_leap = state_leap.simulate_leap_n(integrator, delta_t, number_of_steps -1)?;
         }
-        let state_sync = state_leap.simulate_to_synchrone(delta_t, integrator)?;
+        let state_sync = state_leap.simulate_to_synchrone(integrator, delta_t)?;
         Ok(state_sync)
     }
     
@@ -269,20 +269,20 @@ pub trait SimulationStateSynchrone<D>
     /// Return an error if the integration could not be done.
     fn simulate_using_leapfrog_n_auto<I>(
         &self,
+        integrator: &I,
         delta_t: Real,
         number_of_steps: usize,
-        integrator: &I,
     ) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
-        self.simulate_using_leapfrog_n(delta_t, number_of_steps, integrator)
+        self.simulate_using_leapfrog_n(integrator, delta_t, number_of_steps)
     }
     
     /// Does a simulation step using the sync algorithm
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_sync<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+    fn simulate_sync<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
@@ -294,20 +294,65 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_sync_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+    fn simulate_sync_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
             return Err(SimulationError::ZeroStep);
         }
-        let mut state = self.simulate_sync(delta_t, integrator)?;
+        let mut state = self.simulate_sync(integrator, delta_t)?;
         for _ in 0..(numbers_of_times - 1) {
-            state = state.simulate_sync(delta_t, integrator)?;
+            state = state.simulate_sync(integrator, delta_t)?;
         }
         Ok(state)
     }
     
+    /// Integrate the state using the symplectic algorithm ( by going to leapfrog and back to sync)
+    ///
+    /// # Errors
+    /// Return an error if the integration could not be done
+    fn simulate_symplectic<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+        T: SimulationStateLeapFrog<D>,
+    {
+        integrator.integrate_symplectic(&self, delta_t)
+    }
+    
+    /// Does `numbers_of_times` of step of size `delta_t` using the symplectic algorithm
+    ///
+    /// # Errors
+    /// Return an error if the integration could not be done
+    /// or [`SimulationError::ZeroStep`] is the number of step is zero.
+    fn simulate_symplectic_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+        T: SimulationStateLeapFrog<D>,
+    {
+        if numbers_of_times == 0 {
+            return Err(SimulationError::ZeroStep);
+        }
+        let mut state = self.simulate_symplectic(integrator, delta_t)?;
+        for _ in 0..(numbers_of_times - 1) {
+            state = state.simulate_symplectic(integrator, delta_t)?;
+        }
+        Ok(state)
+    }
+    
+    /// Does the same thing as [`SimulationStateSynchrone::simulate_symplectic_n`]
+    /// but use the default wrapper [`SimulationStateLeap`] for the leap frog state.
+    ///
+    /// # Errors
+    /// Return an error if the integration could not be done.
+    fn simulate_symplectic_n_auto<I>(
+        &self,
+        integrator: &I,
+        delta_t: Real,
+        number_of_steps: usize,
+    ) -> Result<Self, SimulationError>
+        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
+    {
+        self.simulate_symplectic_n(integrator, delta_t, number_of_steps)
+    }
 }
 
 /// [`LatticeHamiltonianSimulationState`] who represent link matrices at time T and its conjugate momenta at time T + 1/2
@@ -326,7 +371,7 @@ pub trait SimulationStateLeapFrog<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_to_synchrone<I, State>(&self, delta_t: Real, integrator: &I) -> Result<State, SimulationError>
+    fn simulate_to_synchrone<I, State>(&self, integrator: &I, delta_t: Real) -> Result<State, SimulationError>
         where State: SimulationStateSynchrone<D>,
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
@@ -337,7 +382,7 @@ pub trait SimulationStateLeapFrog<D>
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
-    fn simulate_leap<I, T>(&self, delta_t: Real, integrator: &I) -> Result<Self, SimulationError>
+    fn simulate_leap<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
@@ -349,16 +394,16 @@ pub trait SimulationStateLeapFrog<D>
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`SimulationError::ZeroStep`] is the number of step is zero.
-    fn simulate_leap_n<I, T>(&self, delta_t: Real, integrator: &I, numbers_of_times: usize) -> Result<Self, SimulationError>
+    fn simulate_leap_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         if numbers_of_times == 0 {
             return Err(SimulationError::ZeroStep);
         }
-        let mut state = self.simulate_leap(delta_t, integrator)?;
+        let mut state = self.simulate_leap(integrator, delta_t)?;
         for _ in 0..(numbers_of_times - 1) {
-            state = state.simulate_leap(delta_t, integrator)?;
+            state = state.simulate_leap(integrator, delta_t)?;
         }
         Ok(state)
     }
@@ -825,7 +870,7 @@ impl<State, D> SimulationStateLeap<State, D>
     pub fn from_synchrone<I>(s: &State, integrator: &I , delta_t: Real) -> Result<Self, SimulationError>
         where I: SymplecticIntegrator<State, Self, D>
     {
-        s.simulate_to_leapfrog(delta_t, integrator)
+        s.simulate_to_leapfrog(integrator, delta_t)
     }
     
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.

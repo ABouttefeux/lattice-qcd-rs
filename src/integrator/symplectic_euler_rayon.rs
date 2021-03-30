@@ -136,4 +136,16 @@ impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for
         let e_field = EField::new(get_e_field_integrate::<State, D>(&link_matrix, l.e_field(), l.lattice(), delta_t / 2_f64));
         State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
     }
+    
+    fn integrate_symplectic(&self, l: &State, delta_t: Real) -> Result<State, SimulationError> {
+        // override for optimization.
+        // This remove a clone operation.
+        
+        let e_field_demi = EField::new(get_e_field_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t / 2_f64));
+        let link_matrix = LinkMatrix::new(get_link_matrix_integrate::<State, D>(l.link_matrix(), &e_field_demi, l.lattice(), delta_t));
+        // we advace the counter by one
+        let e_field = EField::new(get_e_field_integrate::<State, D>(&link_matrix, &e_field_demi, l.lattice(), delta_t / 2_f64));
+        
+        State::new(l.lattice().clone(), l.beta(), e_field, link_matrix, l.t() + 1)
+    }
 }

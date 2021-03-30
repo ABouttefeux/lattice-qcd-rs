@@ -143,7 +143,7 @@ fn thermalize_with_e_field<D, Rng>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-) -> Result<(LeapFrogStateDefault<D>, Rng), SimulationError>
+) -> Result<(LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, Rng), SimulationError>
     where D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -173,15 +173,15 @@ fn thermalize_with_e_field<D, Rng>(
     
     let mut rng = hmc.rng_owned();
     let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
-    let leap = state_with_e.simulate_to_leapfrog(DT, &INTEGRATOR)?;
+    let state_e = state_with_e.simulate_symplectic(&INTEGRATOR, DT)?;
     pb.inc(1);
     pb.finish_and_clear();
     //Ok((leap.simulate_leap_n(DT, &INTEGRATOR, STEPS)?, rng))
-    Ok((leap, rng))
+    Ok((state_e, rng))
 }
 
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LeapFrogStateDefault<U3>, Vec<Vec<f64>>), SimulationError> {
+fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>), SimulationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -205,14 +205,14 @@ fn measure(state_initial: LeapFrogStateDefault<U3>, number_of_measurement: usize
     let mut y_max = 0_f64;
     
     for i in 0..number_of_measurement {
-        let mut state_new = state.simulate_leap(DT, &INTEGRATOR)?;
+        let mut state_new = state.simulate_symplectic(&INTEGRATOR, DT)?;
         if i % 200 == 0 {
             pb.set_message(&format!(
                 "H {:.6} - G {:.6} ",
                 state_new.get_hamiltonian_total(),
                 state_new.e_field().get_gauss_sum_div(state_new.link_matrix(), state_new.lattice()).unwrap(),
             ));
-            state_new.state_mut().lattice_state_mut().normalize_link_matrices();
+            state_new.lattice_state_mut().normalize_link_matrices();
             
             /*
             let new_e = state_new.e_field().project_to_gauss(state_new.link_matrix(), state_new.lattice())
