@@ -77,20 +77,47 @@ pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> 
     get_complex_matrix_from_vec(x0, x)
 }
 
-/// return x0 1 + i x_i * \sigma_i
+/// Return `x0 1 + i x_i * \sigma_i`.
 pub fn get_complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0) +
         x.iter().enumerate().map(|(i, el)| PAULI_MATRICES[i] * Complex::new(0_f64, *el)).sum::<CMatrix2>()
 }
 
-/// Take any 2x2 matrix and project it to a matric `X` such that `X / X.determinant().sqrt()` is SU(2).
+/// Take any 2x2 matrix and project it to a matric `X` such that `X / X.determinant().modulus().sqrt()`
+/// is SU(2).
 pub fn project_to_su2_unorm(m: CMatrix2) -> CMatrix2 {
     m - m.adjoint() + CMatrix2::identity() * m.trace().conjugate()
 }
 
-/// return wether the input matrix is SU(2) up to epsilon.
+/// Project the matrix to SU(2). Return the identity if the norm after unormalize is
+/// subnormal (see[`f64::is_normal`]).
+pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
+    let m = project_to_su2_unorm(m);
+    if m.determinant().modulus().is_normal() {
+        m / Complex::from(m.determinant().modulus().sqrt())
+    }
+    else {
+        CMatrix2::identity()
+    }
+}
+
+/// Get an Uniformly random SU(2) matrix.
+pub fn get_random_su2(rng: &mut impl rand::Rng) -> CMatrix2 {
+    let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
+    let mut random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
+    while !random_vector.norm().is_normal() {
+        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+    }
+    let vector_normalize = random_vector / Complex::from(random_vector.norm());
+    CMatrix2::new(
+        vector_normalize[0], vector_normalize[1],
+        - vector_normalize[1].conjugate(), vector_normalize[0].conjugate()
+    )
+}
+
+/// Return wether the input matrix is SU(2) up to epsilon.
 pub fn is_matrix_su2(m: &CMatrix2, epsilon: f64) -> bool {
-    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon) &&
     ((m * m.adjoint() - CMatrix2::identity()).norm() < epsilon)
 }
 
@@ -124,5 +151,19 @@ mod test {
             assert_matrix_is_su_2!((p/ p.determinant().sqrt()), EPSILON);
         }
         
+        for _ in 0..100 {
+            let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
+            let p = project_to_su2(r);
+            assert_matrix_is_su_2!(p, EPSILON);
+        }
+    }
+    
+    #[test]
+    fn random_su2(){
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        for _ in 0..100 {
+            let m = get_random_su2(&mut rng);
+            assert_matrix_is_su_2!(m, EPSILON);
+        }
     }
 }

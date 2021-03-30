@@ -6,7 +6,6 @@ use lattice_qcd_rs::{
     ComplexField,
     lattice::{Direction, DirectionList, LatticePoint},
     dim::{U3},
-    CMatrix3,
 };
 use rayon::prelude::*;
 
@@ -46,13 +45,15 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
 }
 
 
-pub fn e_correletor(state: &LeapFrogStateDefault<U3>, state_new: &LeapFrogStateDefault<U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+pub fn e_correletor(state: &LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
     Some(
         state_new.e_field().get_e_vec(pt, state_new.lattice())?.iter()
             .zip(state.e_field().get_e_vec(pt, state.lattice())?.iter())
-            .map(|(el1, el2)| el1.to_matrix() * el2.to_matrix())
-            .sum::<CMatrix3>()
-            .trace()
-            .real() / 3_f64
+            .map(|(el1, el2)| {
+                el1.iter().zip(el2.iter())
+                    .map(|(d1, d2)| (d1 * d2))
+                    .sum::<f64>()
+            })
+            .sum::<f64>() / (2_f64 * 3_f64)
     )
 }

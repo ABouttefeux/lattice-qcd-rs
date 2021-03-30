@@ -259,11 +259,10 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     {
         // TODO corect error staple
         let old_matrix_opt = previous_modification.iter().filter(|(link_m, _)| link_m == link ).last();
-        let old_matrix;
-        match old_matrix_opt {
-            Some((_, m)) => old_matrix = *m,
-            None => old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap(),
-        }
+        let old_matrix = match old_matrix_opt {
+            Some((_, m)) => *m,
+            None => link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap(),
+        };
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     

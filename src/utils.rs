@@ -68,6 +68,7 @@ impl FactorialStorageDyn {
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
     /// assert_eq!(f.get_factorial(6), 720);
+    /// assert_eq!(f.get_factorial(4), 24);
     /// ```
     pub fn get_factorial(&mut self, value: usize) -> FactorialNumber {
         let mut len = self.data.len();

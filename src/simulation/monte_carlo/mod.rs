@@ -65,7 +65,7 @@ pub trait MonteCarlo<State, D>
 
 /// Some times is is esayer to just implement a potential next element, the rest is done automatically.
 ///
-/// To get an [`MonteCarlo`] use the wrapper [`MCWrapper`]
+/// To get an [`MonteCarlo`] use the wrapper [`McWrapper`]
 pub trait MonteCarloDefault<State, D>
     where State: LatticeState<D>,
     D: DimName,

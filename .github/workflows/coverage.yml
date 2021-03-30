@@ -27,7 +27,7 @@ jobs:
 
       - name: parse code coverage
         run: |
-          zip -0 ccov.zip `find . \( -name "lattice_qcd_rs*.gc*" \) -print`
+          zip -0 ccov.zip `find . \( -name "*.gc*" \) -print`
           ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info
 
       - name: Upload to codecov.io

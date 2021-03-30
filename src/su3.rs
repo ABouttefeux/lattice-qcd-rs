@@ -70,7 +70,7 @@ pub static GENERATOR_4: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
         ZERO, ZERO, ONE,
         ZERO, ZERO, ZERO,
         ONE, ZERO, ZERO,
-) * Complex::from(0.5_f64) );
+) * Complex::from(0.5_f64));
 
 /// SU(3) generator
 /// ```textrust
@@ -397,7 +397,7 @@ impl FactorialStorageStatic {
 /// the set if for all number `N` such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`
 const FACTORIAL_STORAGE_STAT : FactorialStorageStatic = FactorialStorageStatic::new();
 
-/// size of the factorial storage
+/// number of step for the computation of matric exponential using the Cayley–Hamilton theorem.
 const N: usize = 26;
 
 /// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
@@ -417,7 +417,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
-    let t: Complex = su3_adj.t();
+    let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) + d * q2;
         let q1_n = I * (q0 - t * q2);
@@ -432,7 +432,8 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
 }
 
-/// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
+/// the input must be a su(3) matrix (generator of SU(3)), gives the SU3 matrix from the adjoint rep,
+/// i.e compute `exp(i v^a T^a )`
 ///
 /// The algorithm use is much more efficient the diagonalization method.
 /// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
@@ -441,24 +442,22 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 ///
-/// # Safety
+/// # Panic
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the ouptut gives unexpected values.
+/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
 /// ```should_panic
-/// use lattice_qcd_rs::su3::{matrix_su3_exp_i, MatrixExp};
+/// use lattice_qcd_rs::{su3::{matrix_su3_exp_i, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
-/// let output = unsafe {
-///     matrix_su3_exp_i(matrix)
-/// };
-/// assert!( (output - (matrix* i).exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// let output = matrix_su3_exp_i(matrix);
+/// // We panic in debug. In release the following asset will fail.
+/// // assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
 /// ```
-/// This function is memory safe and won't cause any
-/// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
-pub unsafe fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
+pub fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
+    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
     const N_LOOP: usize = N - 1;
     let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
@@ -492,7 +491,7 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
-    let t: Complex = su3_adj.t();
+    let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
         let q0_n = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64) - I * d * q2;
         let q1_n = q0 - t * q2;
@@ -507,31 +506,29 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + m * q1 + m * m * q2
 }
 
-/// gives the value `exp(v^a T^a )`
+/// the input must be a su(3) matrix (generator of SU(3)), gives the value `exp(v^a T^a )`
 ///
 /// The algorithm use is much more efficient the diagonalization method.
 /// It use the Cayley–Hamilton theorem. If you wish to find more about it you can read the
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 ///
-/// # Safety
+/// # Panic
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the ouptut gives unexpected value.
+/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
 /// ```should_panic
-/// use lattice_qcd_rs::su3::{matrix_su3_exp_r, MatrixExp};
+/// use lattice_qcd_rs::{su3::{matrix_su3_exp_r, MatrixExp}, assert_eq_matrix};
 /// use nalgebra::{Complex, Matrix3};
 /// let i = Complex::new(0_f64, 1_f64);
 /// let matrix = Matrix3::identity(); // this is NOT an su(3)
-/// let output = unsafe {
-///     matrix_su3_exp_r(matrix)
-/// };
-/// assert!( (output - matrix.exp()).norm() < f64::EPSILON * 100_000_f64 );
+/// let output = matrix_su3_exp_r(matrix);
+/// // We panic in debug. In release the following asset will fail.
+/// // assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
 /// ```
-/// This function is memory safe and won't cause any
-/// [Undefined Behavior](https://doc.rust-lang.org/reference/behavior-considered-undefined.html).
 #[inline]
 #[allow(clippy::as_conversions)] // no try into for f64
-pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
+pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
+    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
     const N_LOOP: usize = N - 1;
     let mut q0: Complex = Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
     let mut q1: Complex = Complex::from(0_f64);
@@ -553,16 +550,23 @@ pub unsafe fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
 
 /// return wether the input matrix is SU(3) up to epsilon.
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
-    ((m.determinant().modulus_squared() - 1_f64).abs() < epsilon) &&
+    ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon) &&
     ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
+}
+
+/// Returns wether the given matric is in the lie algebra su(3) that generates SU(3) up to epsilon
+pub fn is_matrix_su3_lie(matrix: &CMatrix3, epsilon: Real) -> bool {
+    matrix.trace().modulus() < epsilon && (matrix - matrix.adjoint()).norm() < epsilon
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_eq_matrix;
+    use crate::{assert_eq_matrix, I};
+    use rand::SeedableRng;
     
     const EPSILON: f64 = 0.000_000_001_f64;
+    const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
     #[test]
     /// test that [`N`] is indeed what we need
@@ -626,6 +630,39 @@ mod test {
         
         for p in &extract_su2_unorm(m) {
             assert_matrix_is_su_2!((p/ p.determinant().sqrt()), EPSILON);
+        }
+    }
+    
+    #[test]
+    fn exp_matrix() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        for m in &*GENERATORS {
+            let output_r = matrix_su3_exp_r(**m);
+            assert_eq_matrix!(output_r, m.exp(), EPSILON);
+            let output_i = matrix_su3_exp_i(**m);
+            assert_eq_matrix!(output_i, (*m * I).exp(), EPSILON);
+        }
+        for _ in 0..100 {
+            let v = Su3Adjoint::random(&mut rng, &d);
+            let m = v.to_matrix();
+            let output_r = matrix_su3_exp_r(m);
+            assert_eq_matrix!(output_r, m.exp(), EPSILON);
+            let output_i = matrix_su3_exp_i(m);
+            assert_eq_matrix!(output_i, (m * I).exp(), EPSILON);
+        }
+    }
+    #[test]
+    fn test_is_matrix_su3_lie() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        for m in &*GENERATORS{
+            assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
+        }
+        for _ in 0..100 {
+            let v = Su3Adjoint::random(&mut rng, &d);
+            let m = v.to_matrix();
+            assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
         }
     }
 }

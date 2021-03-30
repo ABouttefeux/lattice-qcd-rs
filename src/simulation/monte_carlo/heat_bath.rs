@@ -16,6 +16,7 @@ use super::{
                 DirectionList,
             },
             error::Never,
+            su2,
         },
         state::{
             LatticeState,
@@ -64,10 +65,16 @@ impl<Rng> HeatBathSweep<Rng>
     #[inline]
     fn get_heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
         let staple_coeef = staple.determinant().real().sqrt();
-        let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coeef);
-        let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coeef).unwrap();
-        let rand_m_r: CMatrix2 = self.rng.sample(d_heat_bath_r);
-        rand_m_r * v_r
+        if staple_coeef.is_normal() {
+            let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coeef);
+            let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coeef).unwrap();
+            let rand_m_r: CMatrix2 = self.rng.sample(d_heat_bath_r);
+            rand_m_r * v_r
+        }
+        else{
+            // if the determinant is 0 (or close to zero)
+            su2::get_random_su2(&mut self.rng)
+        }
     }
     
     #[inline]

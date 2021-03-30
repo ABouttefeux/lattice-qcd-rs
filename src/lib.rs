@@ -238,6 +238,8 @@
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 
+#![forbid(unsafe_code)]
+
 extern crate nalgebra as na;
 extern crate approx;
 extern crate num_traits;

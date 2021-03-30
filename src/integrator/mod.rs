@@ -27,8 +27,8 @@
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
 //! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
-//! let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
+//! let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! ```
 //! Let us then compute and compare the Hamiltonian.
 //! ```
@@ -46,8 +46,8 @@
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
 //! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
-//! # let state2 = state1.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
-//! # let state3 = state2.simulate_sync(0.0001_f64, &SymplecticEuler::new(8)).unwrap();
+//! # let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
+//! # let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! let h = state1.get_hamiltonian_total();
 //! let h2 = state3.get_hamiltonian_total();
 //! println!("The error on the Hamiltonian is {}", h - h2);
@@ -144,6 +144,15 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     /// # Errors
     /// Return an error if the integration encounter a problem
     fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
+    
+    /// Integrate a Sync state by going to leap and then back to sync.
+    /// This is the symplectic methode of integration, which should conserve the hamiltonian
+    ///
+    /// # Errors
+    /// Return an error if the integration encounter a problem
+    fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error> {
+        self.integrate_leap_sync(&self.integrate_sync_leap(l, delta_t)?, delta_t)
+    }
 }
 
 /// function for link intregration.
