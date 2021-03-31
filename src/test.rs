@@ -14,6 +14,8 @@ use super::{
     thread::*,
     integrator::*,
     simulation::*,
+    dim::{U3, U4},
+    error::*,
 };
 use std::{
     f64,
@@ -423,4 +425,16 @@ fn random_su3(){
     for _ in 0..100 {
         test_matrix_is_su3(&get_random_su3(&mut rng));
     }
+}
+
+#[test]
+fn lattice_init_error() {
+    assert_eq!(LatticeCyclique::<U3>::new(0_f64, 4), Err(LatticeInitializationError::NonPositiveSize));
+    assert_eq!(LatticeCyclique::<U4>::new(-1_f64, 4), Err(LatticeInitializationError::NonPositiveSize));
+    assert_eq!(LatticeCyclique::<U4>::new(f64::NAN, 4), Err(LatticeInitializationError::NonPositiveSize));
+    assert_eq!(LatticeCyclique::<U4>::new(-0_f64, 4), Err(LatticeInitializationError::NonPositiveSize));
+    assert_eq!(LatticeCyclique::<U4>::new(f64::INFINITY, 4), Err(LatticeInitializationError::NonPositiveSize));
+    assert_eq!(LatticeCyclique::<U3>::new(1_f64, 1), Err(LatticeInitializationError::DimTooSmall));
+    assert_eq!(LatticeCyclique::<U3>::new(1_f64, 1), Err(LatticeInitializationError::DimTooSmall));
+    assert!(LatticeCyclique::<U3>::new(1_f64, 2).is_ok());
 }

@@ -165,7 +165,7 @@ impl Error for StateInitializationErrorThreaded {
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LatticeInitializationError {
-    /// `size` must be Stricly greater than 0.
+    /// `size` must be stricly greater 0 than and be a finite number.
     NonPositiveSize,
     /// `dim` must be greater than 2.
     DimTooSmall,
@@ -174,8 +174,8 @@ pub enum LatticeInitializationError {
 impl Display for LatticeInitializationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::NonPositiveSize => write!(f, "lattice initialization error : `size` must be Stricly greater than 0"),
-            Self::DimTooSmall => write!(f, "lattice initialization error : `dim` must be greater than 2"),
+            Self::NonPositiveSize => write!(f, "lattice initialization error : `size` must be stricly greater than 0 and be a finite number"),
+            Self::DimTooSmall => write!(f, "lattice initialization error : `dim` must be greater or equal to 2"),
         }
     }
 }

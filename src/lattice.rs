@@ -135,7 +135,7 @@ impl<D> LatticeCyclique<D>
     /// # Errors
     /// Size should be greater than 0 and dime greater or equal to 2, otherwise return an error.
     pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError>{
-        if size < 0_f64 {
+        if size <= 0_f64 || size.is_nan() || size.is_infinite() {
             return Err(LatticeInitializationError::NonPositiveSize);
         }
         if dim < 2 {
