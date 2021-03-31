@@ -23,6 +23,7 @@ crossbeam = "0.8.0"
 rustfft = "5.0"
 console = "0.14"
 plotter_backend_text = { version = "0.0.0", git = "https://github.com/ABouttefeux/plotter_backend_text", branch = "develop" }
+once_cell = "1.5.2"
 
 [[bin]]
 name = "cross_check_d4"

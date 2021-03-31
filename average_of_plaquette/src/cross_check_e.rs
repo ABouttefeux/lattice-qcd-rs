@@ -1,6 +1,6 @@
 use average_of_plaquette::{
     sim::*,
-    config_scan::*,
+    config::*,
     data_analysis::*,
     rng::*,
     observable,
@@ -28,9 +28,15 @@ use nalgebra::{
 };
 use plotters::prelude::*;
 use rustfft::FftPlanner;
+use once_cell::sync::Lazy;
+use std::env;
+
 
 fn main() {
-    main_cross_with_e();
+    let args: Vec<String> = env::args().collect();
+    let index = args[1].parse().unwrap();
+    println!("Simulate for beta = {}", BETA[index]);
+    main_cross_with_e(index);
 }
 
 #[cfg(test)]
@@ -49,28 +55,45 @@ fn test_fft() {
     let _ = plot_data_fft(&data[0..data.len()/2], DT, &"test_fft.svg");
 }
 
-fn main_cross_with_e() {
-    let cfg_l = LatticeConfigScan::new(
-        ScanPossibility::Default(1_f64), //size
-        ScanPossibility::Default(4), // dim
-        ScanPossibility::Default(24_f64), // Beta
+const BETA: [f64; 11] = [1_f64, 3_f64, 6_f64, 9_f64, 12_f64, 15_f64, 18_f64, 21_f64, 24_f64, 27_f64, 30_f64];
+//const CF: f64 = 1.333_333_333_333_333_3_f64; // = (Nc^2-1)/(2 * Nc) = 4/3
+//const DT: f64 = 0.000_1_f64; // test
+const DT: f64 = 0.000_01_f64; // prod
+
+const FFT_RESOLUTION_SIZE :f64 = 0.1_f64;
+static NUMBER_OF_MEASUREMENT: Lazy<usize> = Lazy::new(|| {
+    ((1_f64 / DT) * 2_f64 / FFT_RESOLUTION_SIZE).ceil() as usize
+});
+
+const LATTICE_DIM: usize = 24;
+const LATTICE_SIZE: f64 = 1_f64;
+
+const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
+const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
+
+fn main_cross_with_e(simulation_index: usize) {
+    let beta = BETA[simulation_index];
+    let cfg_l = LatticeConfig::new(
+        LATTICE_SIZE, //size
+        LATTICE_DIM, // dim
+        beta, // Beta
     ).unwrap();
-    let mc_cfg = MonteCarloConfigScan::new(
-        ScanPossibility::Default(1),
-        ScanPossibility::Default(0.1),
+    let mc_cfg = MonteCarloConfig::new(
+        1,
+        0.1,
     ).unwrap();
-    let sim_cfg = SimConfigScan::new(
+    let sim_cfg = SimConfig::new(
         mc_cfg,
-        ScanPossibility::Default(10_000), //th steps (unused)
-        ScanPossibility::Default(1), // renormn (unused)
-        ScanPossibility::Default(1_000), // number_of_averages (unused)
-        ScanPossibility::Default(200) //between av (unused)
+        10_000, //th steps (unused)
+        1, // renormn (unused)
+        1_000, // number_of_averages (unused)
+        200 //between av (unused)
     ).unwrap();
-    let config = ConfigScan::new(cfg_l, sim_cfg).unwrap();
-    let array_config = config.get_all_config();
+    let cfg = Config::new(cfg_l, sim_cfg);
+    
     
     let multi_pb = std::sync::Arc::new(MultiProgress::new());
-    let pb = multi_pb.add(ProgressBar::new(array_config.len() as u64));
+    let pb = multi_pb.add(ProgressBar::new(1));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         get_pb_template()
     ));
@@ -85,65 +108,56 @@ fn main_cross_with_e() {
     });
     pb.tick();
     
-    const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
-    let _result_all_sim = array_config.par_iter().enumerate().map(|(index, cfg)| {
-        let mut rng = get_rand_from_seed(SEED);
-        for _ in 0..index{
-            rng.jump();
-        }
-        let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
-        let mut mc = get_mc_from_config_sweep(cfg.sim_config().mc_config(), rng);
-        /*
-        let mut hb = HeatBathSweep::new(rng);
-        let mut or1 = OverrelaxationSweepReverse::new();
-        let mut or2 = OverrelaxationSweepReverse::new();
-        let mut hm = HybrideMethode::new_empty();
-        hm.push_methods(&mut hb);
-        hm.push_methods(&mut or1);
-        hm.push_methods(&mut or2);
-        */
-        
-        let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs).unwrap();
-        let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
-        let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", index));
-        
-        const NUMBER_OF_MEASUREMENT: usize = 3_000_000;
-        let (state, measure) = measure(state, NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
-        
-        let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", index));
-        let _ = write_vec_to_file_csv(&measure, &format!("raw_measures_{}.csv", index));
-        let _ = plot_data(&measure, DT, &format!("e_corr_{}.svg", index));
-        
-        let mut measure_fft = measure.iter().map(|el| statistics::mean(el).into()).collect::<Vec<Complex<f64>>>();
-        
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(measure_fft.len());
-        
-        fft.process(&mut measure_fft);
-        let _ = plot_data_fft(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft.svg", index));
-        pb.inc(1);
-        (*cfg, measure)
-    }).collect::<Vec<_>>();
+    
+    let mut rng = get_rand_from_seed(SEED);
+    for _ in 0..simulation_index{
+        rng.jump();
+    }
+    let sim_init = generate_state_default(cfg.lattice_config(), &mut rng);
+    let mut mc = get_mc_from_config_sweep(cfg.sim_config().mc_config(), rng);
+    /*
+    let mut hb = HeatBathSweep::new(rng);
+    let mut or1 = OverrelaxationSweepReverse::new();
+    let mut or2 = OverrelaxationSweepReverse::new();
+    let mut hm = HybrideMethode::new_empty();
+    hm.push_methods(&mut hb);
+    hm.push_methods(&mut or1);
+    hm.push_methods(&mut or2);
+    */
+    
+    let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs, &format!("_ecorr_{}", beta)).unwrap();
+    let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
+    let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", beta));
+    
+    let (state, measure) = measure(state, *NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
+    
+    let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", beta));
+    let _ = write_vec_to_file_csv(&measure, &format!("raw_measures_corr_e_{}.csv", beta));
+    let _ = plot_data(&measure, DT, &format!("e_corr_{}.svg", beta));
+    
+    let mut measure_fft = measure.iter().map(|el| statistics::mean(el).into()).collect::<Vec<Complex<f64>>>();
+    
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(measure_fft.len());
+    
+    fft.process(&mut measure_fft);
+    let _ = plot_data_fft(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft.svg", beta));
+    let _ = plot_data_fft_2(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft_2.svg", beta));
+    pb.inc(1);
     
     pb.finish();
     let _ = h.join();
 }
 
 
-//const DT: f64 = 0.000_01_f64; // to big
-//const DT: f64 = 0.000_000_1_f64; // OK ?
-//const DT: f64 = 0.000_000_000_1_f64; // too small
-const DT: f64 = 0.000_01_f64; // OK ?
 
-
-const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
-
+type ResultThermalizeE<D, Rng> = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, Rng);
 #[allow(clippy::useless_format)]
 fn thermalize_with_e_field<D, Rng>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-) -> Result<(LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, Rng), SimulationError>
+) -> Result<ResultThermalizeE<D, Rng>, SimulationError>
     where D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -180,8 +194,9 @@ fn thermalize_with_e_field<D, Rng>(
     Ok((state_e, rng))
 }
 
+type ResultMeasure = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>);
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<(LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>), SimulationError> {
+fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, SimulationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -323,13 +338,15 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
     let root = SVGBackend::new(file_name, (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     
+    let step = 1_f64 / (delta_t * data.len() as f64 * 2_f64);
+    
     let mut chart = ChartBuilder::on(&root)
         .margin(5)
         .x_label_area_size(30)
         .y_label_area_size(60)
         .right_y_label_area_size(60)
         .build_cartesian_2d(
-            (delta_t..data.len() as f64 * delta_t).log_scale(),
+            (step..step * data.len() as f64).log_scale(),
             (y_min.max(1E-15)..y_max * 1.1_f64).log_scale(),
         )?
         .set_secondary_coord(
@@ -344,23 +361,13 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
         .draw()?;
     chart.configure_secondary_axes()
         .axis_desc_style(("sans-serif", 15))
-       .y_desc("Argument")
-       .draw()?;
-    
-    /*
-    chart.draw_series(data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
-        Circle::new((index as f64 * delta_t , el.modulus() / (data.len() as f64).sqrt() ), 2, BLACK.filled())
-    }))?;
-    
-    chart.draw_secondary_series(data.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
-        Circle::new((index as f64 * delta_t , el.argument()), 2, RED.filled())
-    }))?;
-    */
+        .y_desc("Argument")
+        .draw()?;
     
     chart.draw_series(
         LineSeries::new(
             data.iter().enumerate().step_by(1).map(|(index, el)| {
-                (index as f64 * delta_t, el.modulus().max(1E-15) / (data.len() as f64).sqrt())
+                (index as f64 * step, el.modulus().max(1E-15) / (data.len() as f64).sqrt())
             }),
             &BLACK,
         )
@@ -372,6 +379,50 @@ fn plot_data_fft(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result
                 (index as f64 * delta_t, el.argument())
             }),
             &RED,
+        )
+    )?;
+    
+    Ok(())
+}
+
+fn plot_data_fft_2(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut y_min = data[0].modulus() / (data.len() as f64).sqrt();
+    let mut y_max = data[0].modulus() / (data.len() as f64).sqrt();
+    for el in data {
+        y_min = y_min.min(el.modulus() / (data.len() as f64).sqrt());
+        y_max = y_max.max(el.modulus() / (data.len() as f64).sqrt());
+    }
+    
+    let root = SVGBackend::new(file_name, (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+    
+    const MAX_W : f64 = 4_f64;
+    
+    let step = 1_f64 / (delta_t * data.len() as f64 * 2_f64);
+    let max_step = ((MAX_W / step).ceil() as usize + 1).min(data.len());
+    
+    let mut chart = ChartBuilder::on(&root)
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(60)
+        .right_y_label_area_size(60)
+        .build_cartesian_2d(
+            0_f64..MAX_W,
+            y_min..y_max,
+        )?;
+    
+    chart.configure_mesh()
+        .y_desc("Modulus")
+        .x_desc("w")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+    
+    chart.draw_series(
+        LineSeries::new(
+            data.iter().enumerate().take(max_step).step_by(1).map(|(index, el)| {
+                (index as f64 * step, el.modulus() / (data.len() as f64).sqrt())
+            }),
+            &BLACK,
         )
     )?;
     
