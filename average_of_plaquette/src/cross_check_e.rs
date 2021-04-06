@@ -65,7 +65,7 @@ static NUMBER_OF_MEASUREMENT: Lazy<usize> = Lazy::new(|| {
     ((1_f64 / DT) * 2_f64 / FFT_RESOLUTION_SIZE).ceil() as usize
 });
 
-const LATTICE_DIM: usize = 24;
+const LATTICE_DIM: usize = 16;
 const LATTICE_SIZE: f64 = 1_f64;
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -215,9 +215,9 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
         .collect::<Vec<f64>>();
     vec.push(vec_data);
     
-    let mut vec_plot = vec![];
-    let mut y_min = 0_f64;
-    let mut y_max = 0_f64;
+    //let mut vec_plot = vec![];
+    //let mut y_min = 0_f64;
+    //let mut y_max = 0_f64;
     
     for i in 0..number_of_measurement {
         let mut state_new = state.simulate_symplectic(&INTEGRATOR, DT)?;
@@ -245,8 +245,8 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
             .collect::<Vec<f64>>();
         vec.push(vec_data);
         
+        /*
         const PLOT_COUNT: usize = 1_000;
-        
         if i % PLOT_COUNT == 0 {
             // TODO clean, move to function
             let last_data = statistics::mean(vec.last().unwrap());
@@ -270,6 +270,7 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
                 y_max = last_data;
             }
         }
+        */
         
         state = state_new;
         pb.inc(1);
