@@ -50,9 +50,8 @@
 //!
 //! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
-//! let number_of_rand = 1;
 //! let spread_parameter = 0.1_f64;
-//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
 //!
 //! for _ in 0..100 {
 //!     for _ in 0..1_000 {
@@ -138,9 +137,8 @@
 //! let beta = 2_f64;
 //! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
-//! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
-//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
 //!
 //! let number_of_sims = 100;
 //! for _ in 0..number_of_sims / 10 {

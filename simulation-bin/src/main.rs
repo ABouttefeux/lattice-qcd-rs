@@ -296,9 +296,8 @@ fn sim_dmh() {
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.5;
-    let number_of_rand = 1;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
-    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
     let number_of_sims = 1000;
     let sub_block = 100;
     
@@ -327,8 +326,7 @@ fn sim_dmh_hmc() {
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.1;
-    let number_of_rand = 1;
-    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
     let number_of_sims = 10_000;
     let sub_block = 1_000;
     

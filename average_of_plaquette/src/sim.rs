@@ -40,7 +40,7 @@ pub fn generate_state_default<D>(cfg: &LatticeConfig, rng: &mut impl rand::Rng) 
 pub fn get_mc_from_config<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsDeltaDiagnostic<Rng>
     where Rng: rand::Rng,
 {
-    MetropolisHastingsDeltaDiagnostic::new(cfg.number_of_rand(), cfg.spread(), rng).expect("Invalide Configuration")
+    MetropolisHastingsDeltaDiagnostic::new(cfg.spread(), rng).expect("Invalide Configuration")
 }
 
 /// Generate a [`MetropolisHastingsSweep`] from a config
