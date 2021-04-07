@@ -178,8 +178,8 @@ pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn plot_data_auto_corr(auto_corr: &[f64], n: usize) -> Result<(), Box<dyn std::error::Error>> {
-    let name = format!("plot_auto_corr_{}.svg", n);
+pub fn plot_data_auto_corr(auto_corr: &[f64], n: usize, sufix: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let name = format!("plot_auto_corr_{}_{}.svg", n, sufix);
     let root = SVGBackend::new(&name, (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     

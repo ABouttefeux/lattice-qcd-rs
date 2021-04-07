@@ -156,6 +156,7 @@ pub fn thermalize_state<D, MC, F>(
     mc: &mut MC,
     mp : &MultiProgress,
     observable: F,
+    sufix: &str,
 ) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError<MC::Error>>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -172,7 +173,7 @@ pub fn thermalize_state<D, MC, F>(
     pb_th.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
         get_pb_template()
     ));
-    pb_th.set_prefix(&format!("T - est - {}", inital_state.lattice().dim()));
+    pb_th.set_prefix(&format!("T - est - {} {}", inital_state.lattice().dim(), sufix));
     
     let mut state = inital_state.monte_carlo_step(mc)?;
 
@@ -249,8 +250,8 @@ pub fn thermalize_state<D, MC, F>(
         last_auto_corr_mean = statistics::mean(&vec_corr);
         auto_corr_limiter += 0.1_f64;
     }
-    let _ = data_analysis::plot_data_auto_corr(&vec_corr_plot, state.lattice().dim());
-    let _ = write_vec_to_file_csv(&[vec_corr_plot], &format!("raw_auto_corr_{}.csv", state.lattice().dim()));
+    let _ = data_analysis::plot_data_auto_corr(&vec_corr_plot, state.lattice().dim(), sufix);
+    let _ = write_vec_to_file_csv(&[vec_corr_plot], &format!("raw_auto_corr_{}_{}.csv", state.lattice().dim(), sufix));
     pb_th.finish_and_clear();
     Ok((state, t_exp))
 }
