@@ -52,7 +52,7 @@ use std::marker::PhantomData;
 use serde::{Serialize, Deserialize};
 
 /// Default leap frog simulation state
-pub type LeapFrogStateDefault<D> = SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, D>;
+pub type LeapFrogStateDefault<D> = SimulationStateLeap<LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, D>;
 
 /// trait to represent a pure gauge lattice state.
 ///
@@ -128,13 +128,13 @@ pub trait LatticeStateNew<D>
 /// Represent a lattice state where the conjugate momenta of the link matrices are included.
 ///
 /// If you have a LatticeState and want the default way of adding the conjugate momenta look at
-/// [`LatticeHamiltonianSimulationStateSyncDefault`].
+/// [`LatticeStateWithEFieldSyncDefault`].
 ///
 /// If you want to solve the equation of motion using an [`SymplecticIntegrator`] also implement
 /// [`SimulationStateSynchrone`] and [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
 ///
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
-pub trait LatticeHamiltonianSimulationState<D>
+pub trait LatticeStateWithEField<D>
     where Self: Sized + Sync + LatticeState<D> + core::fmt::Debug,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -177,7 +177,7 @@ pub trait LatticeHamiltonianSimulationState<D>
     /// Get the energy of the conjugate momenta configuration
     fn get_hamiltonian_efield(&self) -> Real;
     
-    /// Get the total energy, by default [`LatticeHamiltonianSimulationState::get_hamiltonian_efield`]
+    /// Get the total energy, by default [`LatticeStateWithEField::get_hamiltonian_efield`]
     /// + [`LatticeState::get_hamiltonian_links`]
     fn get_hamiltonian_total(&self) -> Real {
         self.get_hamiltonian_links() + self.get_hamiltonian_efield()
@@ -187,8 +187,8 @@ pub trait LatticeHamiltonianSimulationState<D>
 }
 
 /// Trait to create a simulation state
-pub trait LatticeHamiltonianSimulationStateNew<D>
-    where Self: LatticeHamiltonianSimulationState<D>,
+pub trait LatticeStateWithEFieldNew<D>
+    where Self: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -209,7 +209,7 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
     /// Gives an error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
-    /// or propagate the error from [`LatticeHamiltonianSimulationStateNew::new`]
+    /// or propagate the error from [`LatticeStateWithEFieldNew::new`]
     fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, Self::Error>
     {
         // TODO verify
@@ -220,20 +220,20 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     }
 }
 
-/// [`LatticeHamiltonianSimulationState`] who represent link matrices at the same time position as
+/// [`LatticeStateWithEField`] who represent link matrices at the same time position as
 /// its conjugate momenta
 /// `e_field`.
 ///
 /// If you have a LatticeState and want the default way of adding the conjugate momenta and doing
 /// simulation look at
-/// [`LatticeHamiltonianSimulationStateSyncDefault`].
+/// [`LatticeStateWithEFieldSyncDefault`].
 ///
 /// I would adivce of implementing this trait and not [`SimulationStateLeapFrog`], as there is
 /// a wrapper ([`SimulationStateLeap`]) for [`SimulationStateLeapFrog`].
 /// Also not implementing both trait gives you a compile time verification that you did not
 /// considered a leap frog state as a sync one.
 pub trait SimulationStateSynchrone<D>
-    where Self: LatticeHamiltonianSimulationState<D> + Clone,
+    where Self: LatticeStateWithEField<D> + Clone,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -392,12 +392,12 @@ pub trait SimulationStateSynchrone<D>
     }
 }
 
-/// [`LatticeHamiltonianSimulationState`] who represent link matrices at time T and its conjugate
+/// [`LatticeStateWithEField`] who represent link matrices at time T and its conjugate
 /// momenta at time T + 1/2.
 ///
 /// If you have a [`SimulationStateSynchrone`] look at the wrapper [`SimulationStateLeap`].
 pub trait SimulationStateLeapFrog<D>
-    where Self: LatticeHamiltonianSimulationState<D>,
+    where Self: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -624,7 +624,7 @@ pub struct SimulationStateLeap<State, D>
 }
 
 impl<State, D> SimulationStateLeap<State, D>
-    where State: SimulationStateSynchrone<D> + LatticeHamiltonianSimulationState<D>,
+    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -659,7 +659,7 @@ impl<State, D> SimulationStateLeap<State, D>
 
 /// This state is a leap frog state
 impl<State, D> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
-    where State: SimulationStateSynchrone<D> + LatticeHamiltonianSimulationState<D>,
+    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -670,7 +670,7 @@ impl<State, D> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
 
 /// We just transmit the function of `State`, there is nothing new.
 impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
-    where State: LatticeHamiltonianSimulationState<D> + SimulationStateSynchrone<D>,
+    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -703,8 +703,8 @@ impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
     }
 }
 
-impl<State, D> LatticeHamiltonianSimulationStateNew<D> for SimulationStateLeap<State, D>
-    where State: LatticeHamiltonianSimulationState<D> + SimulationStateSynchrone<D> + LatticeHamiltonianSimulationStateNew<D>,
+impl<State, D> LatticeStateWithEFieldNew<D> for SimulationStateLeap<State, D>
+    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + LatticeStateWithEFieldNew<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -721,8 +721,8 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for SimulationStateLeap<S
 }
 
 /// We just transmit the function of `State`, there is nothing new.
-impl<State, D> LatticeHamiltonianSimulationState<D> for SimulationStateLeap<State, D>
-    where State: LatticeHamiltonianSimulationState<D> + SimulationStateSynchrone<D>,
+impl<State, D> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
+    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -759,13 +759,13 @@ impl<State, D> LatticeHamiltonianSimulationState<D> for SimulationStateLeap<Stat
     
 }
 
-/// wrapper to implement [`LatticeHamiltonianSimulationState`] from a [`LatticeState`] using
+/// wrapper to implement [`LatticeStateWithEField`] from a [`LatticeState`] using
 /// the default implementation of conjugate momenta.
 ///
 /// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeHamiltonianSimulationStateSyncDefault<State, D>
+pub struct LatticeStateWithEFieldSyncDefault<State, D>
     where State: LatticeState<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -781,7 +781,7 @@ pub struct LatticeHamiltonianSimulationStateSyncDefault<State, D>
 }
 
 
-impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
+impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     where State: LatticeState<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -822,8 +822,8 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
-    where Self: LatticeHamiltonianSimulationState<D>,
+impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
+    where Self: LatticeStateWithEField<D>,
     State: LatticeState<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -838,9 +838,9 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
-    where Self: LatticeHamiltonianSimulationStateNew<D>,
-    <Self as LatticeHamiltonianSimulationStateNew<D>>::Error: From<LatticeInitializationError>,
+impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
+    where Self: LatticeStateWithEFieldNew<D>,
+    <Self as LatticeStateWithEFieldNew<D>>::Error: From<LatticeInitializationError>,
     State: LatticeState<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -856,7 +856,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
     ///
     /// useful to reproduce a set of data but slower than
-    /// [`LatticeHamiltonianSimulationStateSync::new_random_threaded`].
+    /// [`LatticeStateWithEFieldSyncDefault::new_random_threaded`].
     ///
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
@@ -867,7 +867,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// ```
     /// extern crate rand;
     /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::{LatticeHamiltonianSimulationStateSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique, dim::U4};
+    /// # use lattice_qcd_rs::{simulation::{LatticeStateWithEFieldSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique, dim::U4};
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
@@ -875,8 +875,8 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// assert_eq!(
-    ///     LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -885,7 +885,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
         number_of_points: usize,
         rng: &mut impl rand::Rng,
         d: &impl rand_distr::Distribution<Real>,
-    ) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let e_field = EField::new_deterministe(&lattice, rng, d);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
@@ -903,7 +903,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
         beta: Real,
         number_of_points: usize,
         rng: &mut impl rand::Rng,
-    ) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let e_field = EField::new_cold(&lattice);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
@@ -919,7 +919,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
     /// for [`LatticeCyclique`].
     /// Or propagates the error form [`Self::new`].
-    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error> {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_cold(&lattice);
         let e_field = EField::new_cold(&lattice);
@@ -927,8 +927,8 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
-    where Self: LatticeHamiltonianSimulationStateNew<D, Error = StateInitializationError>,
+impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
+    where Self: LatticeStateWithEFieldNew<D, Error = StateInitializationError>,
     State: LatticeState<D>,
     D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D>,
@@ -941,7 +941,7 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     ///
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reproduce easily, In that case use
-    /// [`LatticeHamiltonianSimulationStateSync::new_deterministe`].
+    /// [`LatticeStateWithEFieldSyncDefault::new_deterministe`].
     ///
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
@@ -983,9 +983,9 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
 }
 
 /// This is an sync State
-impl<State, D> SimulationStateSynchrone<D> for LatticeHamiltonianSimulationStateSyncDefault<State, D>
+impl<State, D> SimulationStateSynchrone<D> for LatticeStateWithEFieldSyncDefault<State, D>
     where State: LatticeState<D> + Clone,
-    Self: LatticeHamiltonianSimulationState<D>,
+    Self: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -994,7 +994,7 @@ impl<State, D> SimulationStateSynchrone<D> for LatticeHamiltonianSimulationState
     Direction<D>: DirectionList,
 {}
 
-impl<State, D> LatticeState<D> for LatticeHamiltonianSimulationStateSyncDefault<State, D>
+impl<State, D> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
     where State: LatticeState<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -1029,9 +1029,9 @@ impl<State, D> LatticeState<D> for LatticeHamiltonianSimulationStateSyncDefault<
     }
 }
 
-impl<State, D> LatticeHamiltonianSimulationStateNew<D> for LatticeHamiltonianSimulationStateSyncDefault<State, D>
+impl<State, D> LatticeStateWithEFieldNew<D> for LatticeStateWithEFieldSyncDefault<State, D>
     where State: LatticeState<D> + LatticeStateNew<D>,
-    Self: LatticeHamiltonianSimulationState<D>,
+    Self: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -1057,7 +1057,7 @@ impl<State, D> LatticeHamiltonianSimulationStateNew<D> for LatticeHamiltonianSim
     }
 }
 
-impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>
+impl<D> LatticeStateWithEField<D> for LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     na::VectorN<usize, D>: Copy + Send + Sync,

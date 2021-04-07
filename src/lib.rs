@@ -78,7 +78,7 @@
 //!
 //! If you want to use your own state with the [hybride Monte Carlo](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/hybride_monte_carlo/struct.HybridMonteCarloDiagnostic.html)
 //! you will have to implement
-//! [`LatticeHamiltonianSimulationState`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeHamiltonianSimulationState.html) for [`LatticeHamiltonianSimulationStateSyncDefault<YourState>`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/struct.LatticeHamiltonianSimulationStateSyncDefault.html)
+//! [`LatticeStateWithEField`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeStateWithEField.html) for [`LatticeStateWithEFieldSyncDefault<YourState>`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/struct.LatticeStateWithEFieldSyncDefault.html)
 //!
 //! #### I want to use my own Monte Carlo algorithm.
 //!

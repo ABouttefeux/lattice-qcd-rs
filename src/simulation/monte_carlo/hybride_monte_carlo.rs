@@ -21,7 +21,7 @@ use super::{
             SimulationStateSynchrone,
             SimulationStateLeap,
             LatticeState,
-            LatticeHamiltonianSimulationStateSyncDefault,
+            LatticeStateWithEFieldSyncDefault,
         },
     },
 };
@@ -49,8 +49,8 @@ use serde::{Serialize, Deserialize};
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarlo<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -59,14 +59,14 @@ pub struct HybridMonteCarlo<State, Rng, I, D>
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    internal: HybridMonteCarloInternal<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
+    internal: HybridMonteCarloInternal<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
 impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -87,7 +87,7 @@ impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
         rng: Rng,
     ) -> Self {
         Self {
-            internal: HybridMonteCarloInternal::<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
+            internal: HybridMonteCarloInternal::<LatticeStateWithEFieldSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
             rng,
         }
     }
@@ -105,8 +105,8 @@ impl<State, Rng, I, D> HybridMonteCarlo<State, Rng, I, D>
 
 impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State ,D> ,D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State ,D> ,D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -118,13 +118,13 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, 
     type Error = MultiIntegrationError<I::Error>;
     
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
+        let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng)
             .map(|el| el.get_state_owned())
     }
 }
 
-/// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
+/// internal structure for HybridMonteCarlo using [`LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, D>
@@ -205,8 +205,8 @@ impl<State, I, D> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarloDiagnostic<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -215,14 +215,14 @@ pub struct HybridMonteCarloDiagnostic<State, Rng, I, D>
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    internal: HybridMonteCarloInternalDiagnostics<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>,
+    internal: HybridMonteCarloInternalDiagnostics<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
 impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -243,7 +243,7 @@ impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
         rng: Rng,
     ) -> Self {
         Self {
-            internal: HybridMonteCarloInternalDiagnostics::<LatticeHamiltonianSimulationStateSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
+            internal: HybridMonteCarloInternalDiagnostics::<LatticeStateWithEFieldSyncDefault<State, D>, I, D>::new(delta_t, number_of_steps, integrator),
             rng,
         }
     }
@@ -271,8 +271,8 @@ impl<State, Rng, I, D> HybridMonteCarloDiagnostic<State, Rng, I, D>
 
 impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State, Rng, I, D>
     where State: LatticeState<D> + Clone,
-    LatticeHamiltonianSimulationStateSyncDefault<State, D>: SimulationStateSynchrone<D>,
-    I: SymplecticIntegrator<LatticeHamiltonianSimulationStateSyncDefault<State, D>, SimulationStateLeap<LatticeHamiltonianSimulationStateSyncDefault<State, D>, D>, D>,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
@@ -285,13 +285,13 @@ impl<State, Rng, I, D> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State
     type Error = MultiIntegrationError<I::Error>;
     
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        let state_internal = LatticeHamiltonianSimulationStateSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
+        let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(state, self.get_rng());
         self.internal.get_next_element_default(state_internal, &mut self.rng)
             .map(|el| el.get_state_owned())
     }
 }
 
-/// internal structure for HybridMonteCarlo using [`LatticeHamiltonianSimulationState`]
+/// internal structure for HybridMonteCarlo using [`LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, D>

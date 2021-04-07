@@ -173,7 +173,7 @@ impl From<StateInitializationError> for ThermalizeError {
     }
 }
 
-type ResultThermalizeE<D, Rng> = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, Rng);
+type ResultThermalizeE<D, Rng> = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, Rng);
 
 #[allow(clippy::useless_format)]
 fn thermalize_with_e_field<D, Rng>(
@@ -209,7 +209,7 @@ fn thermalize_with_e_field<D, Rng>(
     }
     
     let mut rng = hmc.rng_owned();
-    let state_with_e = LatticeHamiltonianSimulationStateSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
+    let state_with_e = LatticeStateWithEFieldSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
     let state_e = state_with_e.simulate_symplectic(&INTEGRATOR, DT)?;
     pb.inc(1);
     pb.finish_and_clear();
@@ -217,9 +217,9 @@ fn thermalize_with_e_field<D, Rng>(
     Ok((state_e, rng))
 }
 
-type ResultMeasure = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>);
+type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>);
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
+fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(

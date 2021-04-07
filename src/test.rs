@@ -158,21 +158,19 @@ fn equivalece_exp_r(){
     }
 }
 
-#[allow(deprecated)]
 #[test]
 /// test creation of sim ( single threaded)
 fn create_sim() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng, &distribution).unwrap();
+    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng, &distribution).unwrap();
 }
 
-#[allow(deprecated)]
 #[test]
 /// test creation of sim multi threaded
 fn creat_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 4, &distribution, 2).unwrap();
+    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 4, &distribution, 2).unwrap();
 }
 
 /// return 1 if i==j 0 otherwise
@@ -260,13 +258,12 @@ fn test_thread_vec_error_zero_thread() {
 }
 
 
-#[allow(deprecated)]
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
+    let simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
     let sim2 = simulation.simulate_sync(&SymplecticEuler::new(8), 0.0001).unwrap();
     let h2 = sim2.get_hamiltonian_total();
@@ -274,13 +271,12 @@ fn test_sim_hamiltonian() {
     assert!(h - h2 < 0.01_f64 );
 }
 
-#[allow(deprecated)]
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
+    let simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate_sync(&SymplecticEuler::new(8), 0.000001).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
@@ -294,13 +290,12 @@ fn test_gauss_law() {
     }
 }
 
-#[allow(deprecated)]
 #[test]
 /// test if Hamiltonian is more or less conserved over simulation
 fn test_sim_hamiltonian_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
+    let simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(100_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let h = simulation.get_hamiltonian_total();
     let sim2 = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.0001).unwrap();
     let h2 = sim2.get_hamiltonian_total();
@@ -308,13 +303,12 @@ fn test_sim_hamiltonian_rayon() {
     assert!(h - h2 < 0.01_f64 );
 }
 
-#[allow(deprecated)]
 #[test]
 /// test if Gauss parameter is more or less conserved over simulation
 fn test_gauss_law_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
+    let simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 10, &mut rng, &distribution).unwrap();
     let sim2 = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.000001).unwrap();
     let iter_g_1 = simulation.lattice().get_points().map(|el| {
         simulation.get_gauss(&el).unwrap()
@@ -328,14 +322,13 @@ fn test_gauss_law_rayon() {
     }
 }
 
-#[allow(deprecated)]
 #[test]
 /// test that the simulatation of a cold state does not change over time
 fn test_sim_cold(){
     let size = 10_f64;
     let number_of_pts = 10;
     let beta = 0.1_f64;
-    let sim1 = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_cold(size, beta, number_of_pts).unwrap();
+    let sim1 = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_cold(size, beta, number_of_pts).unwrap();
     let sim2 = sim1.simulate_to_leapfrog(&SymplecticEulerRayon::new(), 0.1).unwrap();
     assert_eq!(sim1.e_field(), sim2.e_field());
     assert_eq!(sim1.link_matrix(), sim2.link_matrix());
