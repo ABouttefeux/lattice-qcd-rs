@@ -30,6 +30,7 @@ use super::{
             MultiIntegrationError,
             StateInitializationError,
             StateInitializationErrorThreaded,
+            LatticeInitializationError,
         },
     },
     monte_carlo::MonteCarlo,
@@ -37,7 +38,6 @@ use super::{
 
 use na::{
     ComplexField,
-    Vector4,
     VectorN,
     DimName,
     DefaultAllocator,
@@ -606,277 +606,6 @@ impl<D> LatticeState<D> for LatticeStateDefault<D>
     }
 }
 
-/// Depreciated use [`LatticeHamiltonianSimulationStateSyncDefault`] using [`LatticeStateDefault::<U4>`] instead.
-#[derive(Debug, PartialEq, Clone)]
-#[deprecated(
-    since = "0.1.0",
-    note = "Please use `LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<dim::U4>>` instead"
-)]
-pub struct LatticeHamiltonianSimulationStateSync {
-    lattice : LatticeCyclique<na::U4>,
-    beta: Real,
-    e_field: EField<na::U4>,
-    link_matrix: LinkMatrix,
-    t: usize,
-}
-
-#[allow(deprecated)]
-impl SimulationStateSynchrone<na::U4> for LatticeHamiltonianSimulationStateSync {}
-
-#[allow(deprecated)]
-impl LatticeHamiltonianSimulationStateSync {
-    
-    /// Generate a hot (i.e. random) initial state.
-    ///
-    /// Single threaded generation with a given random number generator.
-    /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
-    /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
-    ///
-    /// useful to reproduce a set of data but slower than
-    /// [`LatticeHamiltonianSimulationStateSync::new_random_threaded`].
-    ///
-    /// # Errors
-    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
-    /// for [`LatticeCyclique`].
-    /// Or propagates the error form [`Self::new`].
-    ///
-    /// # Example
-    /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::LatticeHamiltonianSimulationStateSync, lattice::LatticeCyclique};
-    /// use rand::{SeedableRng,rngs::StdRng};
-    ///
-    /// let mut rng_1 = StdRng::seed_from_u64(0);
-    /// let mut rng_2 = StdRng::seed_from_u64(0);
-    /// // They have the same seed and should generate the same numbers
-    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
-    /// assert_eq!(
-    ///     LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
-    /// );
-    /// ```
-    pub fn new_deterministe(
-        size: Real,
-        beta: Real,
-        number_of_points: usize,
-        rng: &mut impl rand::Rng,
-        d: &impl rand_distr::Distribution<Real>,
-    ) -> Result<Self, StateInitializationError> {
-        let lattice = LatticeCyclique::new(size, number_of_points)?;
-        let e_field = EField::new_deterministe(&lattice, rng, d);
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
-        Self::new(lattice, beta, e_field, link_matrix, 0)
-    }
-    
-    /// Generate a configuration with cold e_field and hot link matrices
-    ///
-    /// # Errors
-    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
-    /// for [`LatticeCyclique`].
-    /// Or propagates the error form [`Self::new`].
-    pub fn new_deterministe_cold_e_hot_link (
-        size: Real,
-        beta: Real,
-        number_of_points: usize,
-        rng: &mut impl rand::Rng,
-    ) -> Result<Self, StateInitializationError> {
-        let lattice = LatticeCyclique::new(size, number_of_points)?;
-        let e_field = EField::new_cold(&lattice);
-        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
-        
-        Self::new(lattice, beta, e_field, link_matrix, 0)
-    }
-    
-    /// Generate a hot (i.e. random) initial state.
-    ///
-    /// Multi threaded generation of random data. Due to the non deterministic way threads
-    /// operate a set cannot be reproduce easily, In that case use
-    /// [`LatticeHamiltonianSimulationStateSync::new_deterministe`].
-    ///
-    /// # Errors
-    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
-    /// for [`LatticeCyclique`].
-    /// Return an [`SimulationError::ThreadingError`]([`ThreadError::ThreadNumberIncorect`])
-    /// if `number_of_points = 0`.
-    /// Returns an error if a thread panicked.
-    /// Or propagates the error form [`Self::new`].
-    pub fn new_random_threaded<Distribution>(
-        size: Real,
-        beta: Real,
-        number_of_points: usize,
-        d: &Distribution,
-        number_of_thread : usize
-    ) -> Result<Self, StateInitializationErrorThreaded>
-        where Distribution: rand_distr::Distribution<Real> + Sync,
-    {
-        if number_of_thread == 0 {
-            return Err(StateInitializationErrorThreaded::ThreadingError(ThreadError::ThreadNumberIncorect));
-        }
-        else if number_of_thread == 1 {
-            let mut rng = rand::thread_rng();
-            return Self::new_deterministe(size, beta, number_of_points, &mut rng, d).map_err(|err| err.into());
-        }
-        let lattice = LatticeCyclique::new(size, number_of_points)
-            .map_err(|err| StateInitializationErrorThreaded::StateInitializationError(err.into()))?;
-        thread::scope(|s| {
-            let lattice_clone = lattice.clone();
-            let handel = s.spawn(move |_| {
-                EField::new_random(&lattice_clone, d)
-            });
-            let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)?;
-            let e_field = handel.join().map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?;
-            // TODO not very clean: imporve
-            Self::new(lattice, beta, e_field, link_matrix, 0)
-                .map_err(StateInitializationErrorThreaded::StateInitializationError)
-        }).map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?
-    }
-    
-    /// Generate a new cold state.
-    ///
-    /// It meas that the link matrices are set to the identity and electrical field are set to 0.
-    ///
-    /// # Errors
-    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
-    /// for [`LatticeCyclique`].
-    /// Or propagates the error form [`Self::new`].
-    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, StateInitializationError> {
-        let lattice = LatticeCyclique::new(size, number_of_points)?;
-        let link_matrix = LinkMatrix::new_cold(&lattice);
-        let e_field = EField::new_cold(&lattice);
-        Self::new(lattice, beta, e_field, link_matrix, 0)
-    }
-    
-    /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
-    pub fn get_gauss(&self, point: &LatticePoint<na::U4>) -> Option<CMatrix3> {
-        self.e_field().get_gauss(self.link_matrix(), point, self.lattice())
-    }
-}
-
-#[allow(deprecated)]
-impl LatticeState<na::U4> for LatticeHamiltonianSimulationStateSync {
-    
-    const CA: Real = 3_f64;
-    
-    getter_trait!(
-        /// The link matrices of this state.
-        link_matrix, LinkMatrix
-    );
-    getter_trait!(lattice, LatticeCyclique<na::U4>);
-    getter_copy_trait!(beta, Real);
-    
-    /// # Panic
-    /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
-    fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
-        if self.lattice.get_number_of_canonical_links_space() != link_matrix.len() {
-            panic!("Link matrices are not of the correct size");
-        }
-        self.link_matrix = link_matrix;
-    }
-    
-    /// Get the Hamiltonian of the state.
-    /// # Panic
-    /// Panic if plaquettes cannot be found
-    fn get_hamiltonian_links(&self) -> Real {
-        // here it is ok to use par_bridge() as we do not care for the order
-        self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
-                Direction::get_all_positive_directions().iter()
-                    .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
-                    .map(|dir_j| {
-                        1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
-                            .expect("Plaquette not found").trace().real() / Self::CA
-                    }).sum::<Real>()
-            }).sum::<Real>()
-        }).sum::<Real>() * self.beta()
-    }
-}
-
-#[allow(deprecated)]
-impl LatticeHamiltonianSimulationStateNew<na::U4> for LatticeHamiltonianSimulationStateSync{
-    
-    type Error = StateInitializationError;
-    
-    /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
-    /// amount of data compared to lattice it fails to create the state.
-    /// `t` is the number of time the simulation ran. i.e. the time sate.
-    fn new(lattice: LatticeCyclique<na::U4>, beta: Real, e_field: EField<na::U4>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error> {
-        if ! lattice.has_compatible_lenght(&link_matrix, &e_field) {
-            return Err(StateInitializationError::IncompatibleSize);
-        }
-        Ok(Self {lattice, e_field, link_matrix, t, beta})
-    }
-}
-
-#[allow(deprecated)]
-impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationStateSync {
-    
-    /// # Panic
-    /// Panic if EField cannot be found
-    fn get_hamiltonian_efield(&self) -> Real {
-        // TODO optimize
-        self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
-                let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found");
-                e_i.trace_squared()
-            }).sum::<Real>()
-        }).sum::<Real>() * self.beta()
-    }
-    
-    /// The "Electrical" field of this state.
-    fn e_field(&self) -> &EField<na::U4> {
-        &self.e_field
-    }
-    
-    /// # Panic
-    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
-    fn set_e_field(&mut self, e_field: EField<na::U4>) {
-        if self.lattice.get_number_of_points() != e_field.len() {
-            panic!("e_field is not of the correct size");
-        }
-        self.e_field = e_field;
-    }
-    
-    /// return the time state, i.e. the number of time the simulation ran.
-    fn t(&self) -> usize {
-        self.t
-    }
-    
-    /// Get the derive of U_i(x).
-    fn get_derivative_u(link: &LatticeLinkCanonical<na::U4>, link_matrix: &LinkMatrix, e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<CMatrix3> {
-        let c = Complex::new(0_f64, (2_f64 * Self::CA).sqrt());
-        let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
-        let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
-        Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
-    }
-    
-    /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint<na::U4>, link_matrix: &LinkMatrix, _e_field: &EField<na::U4>, lattice: &LatticeCyclique<na::U4>) -> Option<Vector4<Su3Adjoint>> {
-        let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::get_all_positive_directions();
-        let iterator = dir_pos.iter().map(|dir| {
-            let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
-            let sum_s: CMatrix3 = Direction::get_all_directions().iter()
-                .filter(|dir_2| dir_2.to_positive() != *dir)
-                .map(|dir_2| {
-                    link_matrix.get_sij(point, dir, dir_2, lattice)
-                        .map(|el| el.adjoint())
-                }).sum::<Option<CMatrix3>>()?;
-            Some(Su3Adjoint::new(
-                Vector8::<Real>::from_fn(|index, _| {
-                    c * (su3::GENERATORS[index] * u_i * sum_s).trace().imaginary() / lattice.size()
-                })
-            ))
-        });
-        let mut return_vector = Vector4::from_element(Su3Adjoint::default());
-        for (index, element) in iterator.enumerate() {
-            return_vector[index] = element?;
-        }
-        Some(return_vector)
-    }
-    
-}
-
 /// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type
 /// ([`SimulationStateSynchrone`]).
 #[derive(Debug, PartialEq, Clone)]
@@ -1106,6 +835,150 @@ impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field.get_gauss(self.link_matrix(), point, self.lattice())
+    }
+}
+
+impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
+    where Self: LatticeHamiltonianSimulationStateNew<D>,
+    <Self as LatticeHamiltonianSimulationStateNew<D>>::Error: From<LatticeInitializationError>,
+    State: LatticeState<D>,
+    D: DimName,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    /// Generate a hot (i.e. random) initial state.
+    ///
+    /// Single threaded generation with a given random number generator.
+    /// `size` is the size parameter of the lattice and `number_of_points` is the number of points
+    /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
+    ///
+    /// useful to reproduce a set of data but slower than
+    /// [`LatticeHamiltonianSimulationStateSync::new_random_threaded`].
+    ///
+    /// # Errors
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
+    /// Or propagates the error form [`Self::new`].
+    ///
+    /// # Example
+    /// ```
+    /// extern crate rand;
+    /// extern crate rand_distr;
+    /// # use lattice_qcd_rs::{simulation::{LatticeHamiltonianSimulationStateSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique, dim::U4};
+    /// use rand::{SeedableRng,rngs::StdRng};
+    ///
+    /// let mut rng_1 = StdRng::seed_from_u64(0);
+    /// let mut rng_2 = StdRng::seed_from_u64(0);
+    /// // They have the same seed and should generate the same numbers
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+    /// assert_eq!(
+    ///     LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    /// );
+    /// ```
+    pub fn new_deterministe(
+        size: Real,
+        beta: Real,
+        number_of_points: usize,
+        rng: &mut impl rand::Rng,
+        d: &impl rand_distr::Distribution<Real>,
+    ) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+        let lattice = LatticeCyclique::new(size, number_of_points)?;
+        let e_field = EField::new_deterministe(&lattice, rng, d);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
+        Self::new(lattice, beta, e_field, link_matrix, 0)
+    }
+    
+    /// Generate a configuration with cold e_field and hot link matrices
+    ///
+    /// # Errors
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
+    /// Or propagates the error form [`Self::new`].
+    pub fn new_deterministe_cold_e_hot_link (
+        size: Real,
+        beta: Real,
+        number_of_points: usize,
+        rng: &mut impl rand::Rng,
+    ) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+        let lattice = LatticeCyclique::new(size, number_of_points)?;
+        let e_field = EField::new_cold(&lattice);
+        let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
+        
+        Self::new(lattice, beta, e_field, link_matrix, 0)
+    }
+    
+    /// Generate a new cold state.
+    ///
+    /// It meas that the link matrices are set to the identity and electrical field are set to 0.
+    ///
+    /// # Errors
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
+    /// Or propagates the error form [`Self::new`].
+    pub fn new_cold(size: Real, beta: Real , number_of_points: usize) -> Result<Self, <Self as LatticeHamiltonianSimulationStateNew<D>>::Error> {
+        let lattice = LatticeCyclique::new(size, number_of_points)?;
+        let link_matrix = LinkMatrix::new_cold(&lattice);
+        let e_field = EField::new_cold(&lattice);
+        Self::new(lattice, beta, e_field, link_matrix, 0)
+    }
+}
+
+impl<State, D> LatticeHamiltonianSimulationStateSyncDefault<State, D>
+    where Self: LatticeHamiltonianSimulationStateNew<D, Error = StateInitializationError>,
+    State: LatticeState<D>,
+    D: DimName + Eq,
+    DefaultAllocator: Allocator<usize, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    DefaultAllocator: Allocator<Su3Adjoint, D>,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Direction<D>: DirectionList,
+{
+    /// Generate a hot (i.e. random) initial state.
+    ///
+    /// Multi threaded generation of random data. Due to the non deterministic way threads
+    /// operate a set cannot be reproduce easily, In that case use
+    /// [`LatticeHamiltonianSimulationStateSync::new_deterministe`].
+    ///
+    /// # Errors
+    /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
+    /// for [`LatticeCyclique`].
+    /// Return an [`SimulationError::ThreadingError`]([`ThreadError::ThreadNumberIncorect`])
+    /// if `number_of_points = 0`.
+    /// Returns an error if a thread panicked.
+    /// Or propagates the error form [`Self::new`].
+    pub fn new_random_threaded<Distribution>(
+        size: Real,
+        beta: Real,
+        number_of_points: usize,
+        d: &Distribution,
+        number_of_thread : usize
+    ) -> Result<Self, StateInitializationErrorThreaded>
+        where Distribution: rand_distr::Distribution<Real> + Sync,
+    {
+        if number_of_thread == 0 {
+            return Err(StateInitializationErrorThreaded::ThreadingError(ThreadError::ThreadNumberIncorect));
+        }
+        else if number_of_thread == 1 {
+            let mut rng = rand::thread_rng();
+            return Self::new_deterministe(size, beta, number_of_points, &mut rng, d).map_err(|err| err.into());
+        }
+        let lattice = LatticeCyclique::new(size, number_of_points)
+            .map_err(|err| StateInitializationErrorThreaded::StateInitializationError(err.into()))?;
+        thread::scope(|s| {
+            let lattice_clone = lattice.clone();
+            let handel = s.spawn(move |_| {
+                EField::new_random(&lattice_clone, d)
+            });
+            let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)?;
+            let e_field = handel.join().map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?;
+            // TODO not very clean: imporve
+            Self::new(lattice, beta, e_field, link_matrix, 0)
+                .map_err(StateInitializationErrorThreaded::StateInitializationError)
+        }).map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?
     }
 }
 

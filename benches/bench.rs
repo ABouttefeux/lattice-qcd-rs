@@ -25,7 +25,7 @@ fn bench_simulation_creation_deterministe(
     rng: &mut rand::rngs::ThreadRng,
     d: &impl rand_distr::Distribution<Real>,
 ) {
-    let _simulation = LatticeHamiltonianSimulationStateSync::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
+    let _simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
 }
 
 #[allow(deprecated)]
@@ -36,7 +36,7 @@ fn bench_simulation_creation_threaded<D>(
 )
     where D: rand_distr::Distribution<Real> + Sync,
 {
-    let _simulation = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
+    let _simulation = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
 }
 
 
@@ -82,12 +82,12 @@ fn create_hash_map(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distrib
 }
 
 #[allow(deprecated)]
-fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSync, number_of_thread: usize) {
+fn simulate_euler(simulation: &mut LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U4>, U4>, number_of_thread: usize) {
     *simulation = simulation.simulate_sync(&SymplecticEuler::new(number_of_thread), 0.00001).unwrap();
 }
 
 #[allow(deprecated)]
-fn simulate_euler_rayon(simulation: &mut LatticeHamiltonianSimulationStateSync) {
+fn simulate_euler_rayon(simulation: &mut LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U4>, U4>) {
     *simulation = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.00001).unwrap();
 }
 
@@ -137,13 +137,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     groupe_sim.sample_size(10);
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
-        let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
+        let mut sim = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
         groupe_sim.bench_with_input(BenchmarkId::new("thread", n), n,
             |b,i| b.iter(|| simulate_euler(&mut sim, *i))
         );
     }
     
-    let mut sim = LatticeHamiltonianSimulationStateSync::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
+    let mut sim = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
     groupe_sim.bench_function("simulate(20) rayon", |b| {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });
