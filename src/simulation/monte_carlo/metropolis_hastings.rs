@@ -21,14 +21,16 @@ use super::{
                 LatticeLink,
                 LatticeCyclique,
                 DirectionList,
-            }
+            },
+            error::{
+                Never,
+            },
         },
         state::{
             LatticeState,
             LatticeStateNew,
             LatticeStateDefault,
         },
-        SimulationError,
     },
 };
 use std::marker::PhantomData;
@@ -85,7 +87,9 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastings<State, D>
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
+    type Error = State::Error;
+    
+    fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
@@ -155,7 +159,10 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
+    
+    type Error = State::Error;
+    
+    fn get_potential_next_element(&mut self, state: &State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
@@ -165,7 +172,7 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
         State::new(state.lattice().clone(), state.beta(), LinkMatrix::new(link_matrix))
     }
     
-    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, SimulationError> {
+    fn get_next_element_default(&mut self, state: State, rng: &mut impl rand::Rng) -> Result<State, Self::Error> {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next).min(1_f64).max(0_f64);
         self.prob_replace_last = proba;
@@ -319,8 +326,11 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDi
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    // todo review
+    type Error = Never;
+    
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Never>{
         Ok(self.get_next_element_default(state))
     }
 }
@@ -469,8 +479,11 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaOn
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
+    // todo review
+    type Error = Never;
+    
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, SimulationError>{
+    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
         Ok(self.get_next_element_default(state))
     }
 }

@@ -199,11 +199,11 @@ pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
 /// For a matrix close to unity use [`get_random_su3_close_to_unity`]
 fn get_rand_su3_with_dis(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3 {
     let mut v1 = get_random_vec_3(rng, d);
-    while v1.norm() == 0_f64 {
+    while v1.norm() <= f64::EPSILON {
         v1 = get_random_vec_3(rng, d);
     }
     let mut v2 = get_random_vec_3(rng, d);
-    while v1.dot(&v2) == Complex::from(0_f64) {
+    while v1.dot(&v2).modulus() <= f64::EPSILON {
         v2 = get_random_vec_3(rng, d);
     }
     get_ortho_matrix_from_2_vector(v1, v2)
@@ -214,7 +214,7 @@ fn get_random_vec_3 (rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
-/// Get a radom SU(3) matrix close the matrices with diagonal (+/- 1, +/- 1, +/- 1).
+/// Get a radom SU(3) matrix close to `[get_r] (+/- 1) * [get_s] (+/- 1) * [get_t] (+/- 1)`.
 ///
 /// Note that it diverges from SU(3) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.

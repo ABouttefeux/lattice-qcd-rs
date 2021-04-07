@@ -31,10 +31,10 @@ impl<T> ModifiedNormal<T>
     where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
 {
-    /// Create the distribution. `param_exp` should be greater than 0
+    /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
+    /// Otherwise return None.
     pub fn new(param_exp: T)-> Option<Self> {
-        // todo manage NaN
-        if param_exp.le(&T::zero()) {
+        if param_exp.le(&T::zero()) && param_exp.is_finite() {
             return None;
         }
         Some(Self {param_exp})
@@ -62,7 +62,9 @@ impl<T> Distribution<T> for ModifiedNormal<T>
     }
 }
 
-/// Distribution for the Heat Bath methods with the parameter `param_exp = beta * sqrt(det(A))`
+/// Distribution for the Heat Bath methods with the parameter `param_exp = beta * sqrt(det(A))`.
+///
+/// With distribution `dP(X) = 1/(2 \pi^2) d \cos(\theta) d\phi dx_0 \sqrt(1-x_0^2) e^{param_exp x_0}`
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathDistribution<T>
@@ -78,10 +80,10 @@ impl<T> HeatBathDistribution<T>
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
-    /// Create the distribution. `param_exp` should be greater than 0
+    /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
+    /// Otherwise return None.
     pub fn new(param_exp: T)-> Option<Self> {
-        // todo manage NaN
-        if param_exp.le(&T::zero()) {
+        if param_exp.le(&T::zero()) && param_exp.is_finite() {
             return None;
         }
         Some(Self {param_exp})
@@ -89,11 +91,65 @@ impl<T> HeatBathDistribution<T>
     
     getter_copy!(
         /// return the parameter `param_exp`.
-        param_exp, T);
+        param_exp, T
+    );
+}
+
+impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
+    fn sample<R>(&self, rng: &mut R) -> CMatrix2
+        where R: rand::Rng + ?Sized,
+    {
+        // TODO make a functrion to reduce copy of code with su2::get_random_su2_close_to_unity
+        
+        let distr_norm = HeatBathDistributionNorm::new(self.param_exp()).expect("unreacheable");
+        // unreacheable because self.param_exp() > 0 which Create the distribution
+        let x0: f64 = rng.sample(&distr_norm);
+        let uniform = Uniform::new(-1_f64, 1_f64);
+        let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+        while x_unorm.norm() <= f64::EPSILON {
+            x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+        }
+        let x = x_unorm.try_normalize(f64::EPSILON).expect("unreacheable") * (1_f64 - x0 * x0).sqrt();
+        // unreacheable because the while loop above guarentee that the norm is bigger than [`f64::EPSILON`]
+        su2::get_complex_matrix_from_vec(x0, x)
+    }
+}
+
+/// Distribution for the norm of the SU2 adjoint to generate the [`HeatBathDistribution`] with the parameter `param_exp = beta * qrt(det(A))`.
+///
+/// With distribution `dP(x) = dx \sqrt(1-x_0^2) e^{-2 param_exp x^2}`
+#[derive(Clone, Debug, Copy, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub struct HeatBathDistributionNorm<T>
+    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+    rand::distributions::OpenClosed01: Distribution<T>,
+    Uniform<T>: Distribution<T>,
+{
+    param_exp: T,
+}
+
+impl<T> HeatBathDistributionNorm<T>
+    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+    rand::distributions::OpenClosed01: Distribution<T>,
+    Uniform<T>: Distribution<T>,
+{
+    /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
+    /// Otherwise return None.
+    pub fn new(param_exp: T)-> Option<Self> {
+        if param_exp.le(&T::zero()) && param_exp.is_finite() {
+            return None;
+        }
+        Some(Self {param_exp})
+    }
+    
+    getter_copy!(
+        /// return the parameter `param_exp`.
+        param_exp, T
+    );
 }
 
 
-impl<T> Distribution<T> for HeatBathDistribution<T>
+impl<T> Distribution<T> for HeatBathDistributionNorm<T>
     where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -114,23 +170,7 @@ impl<T> Distribution<T> for HeatBathDistribution<T>
     }
 }
 
-impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
-    fn sample<R>(&self, rng: &mut R) -> CMatrix2
-        where R: rand::Rng + ?Sized,
-    {
-        // TODO make a function to reduce copy of code with su2::get_random_su2_close_to_unity
-        let x0: f64 = rng.sample(&self);
-        let uniform = Uniform::new(-1_f64, 1_f64);
-        let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
-        while x_unorm.norm() <= f64::EPSILON {
-            x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
-        }
-        let x = x_unorm.try_normalize(f64::EPSILON).unwrap() * (1_f64 - x0 * x0).sqrt();
-        su2::get_complex_matrix_from_vec(x0, x)
-    }
-}
-
-/// used to generates matrix close the unit, for su2 close to +/-1, see [`su2::get_random_su2_close_to_unity`] and for su(3) close to (+/-1, +/-1, +/-1) as diagonal [`su3::get_random_su3_close_to_unity`]
+/// used to generates matrix close the unit, for su2 close to +/-1, see [`su2::get_random_su2_close_to_unity`] and for su(3) `[su3::get_r] (+/- 1) * [su3::get_s] (+/- 1) * [su3::get_t] (+/- 1)`
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct CloseToUnit {
@@ -150,7 +190,8 @@ impl CloseToUnit {
     
     getter_copy!(const,
         /// Get the spread parameter
-        spread_parameter, f64);
+        spread_parameter, f64
+    );
 }
 
 impl Distribution<CMatrix2> for CloseToUnit{

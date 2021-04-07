@@ -131,7 +131,7 @@ mod test {
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
     #[test]
-    fn test_su2_const() {
+    fn test_u2_const() {
         // test constant
         for el in &*PAULI_MATRICES {
             assert_matrix_is_unitary_2!(*el, EPSILON);

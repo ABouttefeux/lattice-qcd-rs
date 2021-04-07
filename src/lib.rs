@@ -269,6 +269,7 @@ pub mod simulation;
 pub mod dim;
 pub mod prelude;
 pub mod statistics;
+pub mod error;
 
 #[cfg(test)]
 mod test;

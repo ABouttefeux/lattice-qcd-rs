@@ -136,13 +136,13 @@ fn run_simulation_with_progress_bar<Rng, D>(
 }
 
 #[derive(Debug)]
-pub enum ThermalisationSimumlationError{
+pub enum ThermalisationSimumlationError<Error>{
     SignObsZero,
-    SimulationError(SimulationError),
+    SimulationError(Error),
 }
 
-impl From<SimulationError> for ThermalisationSimumlationError {
-    fn from(data: SimulationError) -> Self {
+impl<Error> From<Error> for ThermalisationSimumlationError<Error> {
+    fn from(data: Error) -> Self {
         Self::SimulationError(data)
     }
 }
@@ -157,7 +157,7 @@ pub fn thermalize_state<D, MC, F>(
     mp : &MultiProgress,
     observable: F,
     sufix: &str,
-) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError>
+) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError<MC::Error>>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -256,6 +256,8 @@ pub fn thermalize_state<D, MC, F>(
     Ok((state, t_exp))
 }
 
+type MesurementAndLattice<D> = (LatticeStateDefault<D>, Vec<Vec<Real>>);
+
 pub fn simulation_gather_measurement<D, MC, F>(
     //config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
@@ -264,7 +266,7 @@ pub fn simulation_gather_measurement<D, MC, F>(
     observable: F,
     number_of_discard: usize,
     number_of_measurement: usize,
-) -> Result<(LatticeStateDefault<D>, Vec<Vec<Real>>), ThermalisationSimumlationError>
+) -> Result<MesurementAndLattice<D>, ThermalisationSimumlationError<MC::Error>>
     where D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,

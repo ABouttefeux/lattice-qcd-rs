@@ -17,6 +17,10 @@ use lattice_qcd_rs::{
     integrator::SymplecticEulerRayon,
     dim::U3,
     statistics,
+    error::{
+        MultiIntegrationError,
+        StateInitializationError,
+    },
 };
 use nalgebra::{
     DefaultAllocator,
@@ -151,13 +155,32 @@ fn main_cross_with_e(simulation_index: usize) {
 
 
 
+#[derive(Clone, Debug, PartialEq)]
+enum ThermalizeError {
+    HmcError(MultiIntegrationError<StateInitializationError>),
+    StateInitializationError(StateInitializationError),
+}
+
+impl From<MultiIntegrationError<StateInitializationError>> for ThermalizeError {
+    fn from(err: MultiIntegrationError<StateInitializationError>) -> Self{
+        Self::HmcError(err)
+    }
+}
+
+impl From<StateInitializationError> for ThermalizeError {
+    fn from(err: StateInitializationError) -> Self{
+        Self::StateInitializationError(err)
+    }
+}
+
 type ResultThermalizeE<D, Rng> = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<D>, D>, Rng);
+
 #[allow(clippy::useless_format)]
 fn thermalize_with_e_field<D, Rng>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
-) -> Result<ResultThermalizeE<D, Rng>, SimulationError>
+) -> Result<ResultThermalizeE<D, Rng>, ThermalizeError>
     where D: DimName + Eq,
     DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -196,7 +219,7 @@ fn thermalize_with_e_field<D, Rng>(
 
 type ResultMeasure = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>);
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, SimulationError> {
+fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(

@@ -55,7 +55,6 @@
 
 use super::{
     simulation::{
-        SimulationError,
         LatticeHamiltonianSimulationState,
         SimulationStateLeapFrog,
         SimulationStateSynchrone,
@@ -118,44 +117,49 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
     VectorN<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
-    //TODO error
+    /// Type of error returned by the Integrator.
+    type Error;
     
     /// Integrate a sync state to a sync state.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError>;
+    fn integrate_sync_sync(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error>;
     
     /// Integrate a leap state to a leap state using leap frog algorithm.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) -> Result<StateLeap, SimulationError>;
+    fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) -> Result<StateLeap, Self::Error>;
     
     /// Integrate a sync state to a leap state by doing a half step for the conjugate momenta.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) -> Result<StateLeap, SimulationError>;
+    fn integrate_sync_leap(&self, l: &StateSync, delta_t: Real) -> Result<StateLeap, Self::Error>;
     
     /// Integrate a leap state to a sync state by finishing doing a step for the position and finishing
     /// the half step for the conjugate momenta.
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, SimulationError>;
+    fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
     
     /// Integrate a Sync state by going to leap and then back to sync.
     /// This is the symplectic methode of integration, which should conserve the hamiltonian
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
-    fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, SimulationError> {
+    fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error> {
         self.integrate_leap_sync(&self.integrate_sync_leap(l, delta_t)?, delta_t)
     }
 }
 
-/// function for link intregration
+/// function for link intregration.
+/// This must suceed as it is use while doing parallel computation. Returning a Option is undesirable.
+/// As it can panic if a out of bound link is passed it needs to stay private.
+/// # Panic
+/// It panics if a out of bound link is passed.
 fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
@@ -170,7 +174,10 @@ fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMa
     initial_value + State::get_derivative_u(link, link_matrix, e_field, lattice).expect("Derivative not found") * Complex::from(delta_t)
 }
 
-/// function for "Electrical" field intregration
+/// function for "Electrical" field intregration.
+/// Like [`integrate_link`] this must suceed.
+/// # Panics
+/// It panics if a out of bound link is passed.
 fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> VectorN<Su3Adjoint, D>
     where State: LatticeHamiltonianSimulationState<D>,
     D: DimName,
