@@ -156,6 +156,7 @@ pub fn thermalize_state<D, MC, F>(
     mc: &mut MC,
     mp : &MultiProgress,
     observable: F,
+    prefix: &str,
     sufix: &str,
 ) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError<MC::Error>>
     where D: DimName,
@@ -250,8 +251,8 @@ pub fn thermalize_state<D, MC, F>(
         last_auto_corr_mean = statistics::mean(&vec_corr);
         auto_corr_limiter += 0.1_f64;
     }
-    let _ = data_analysis::plot_data_auto_corr(&vec_corr_plot, state.lattice().dim(), sufix);
-    let _ = write_vec_to_file_csv(&[vec_corr_plot], &format!("raw_auto_corr_{}_{}.csv", state.lattice().dim(), sufix));
+    let _ = data_analysis::plot_data_auto_corr(&vec_corr_plot, &format!("{}plot_auto_corr_{}_{}.svg", prefix, state.lattice().dim(), sufix));
+    let _ = write_vec_to_file_csv(&[vec_corr_plot], &format!("{}raw_auto_corr_{}_{}.csv", prefix, state.lattice().dim(), sufix));
     pb_th.finish_and_clear();
     Ok((state, t_exp))
 }

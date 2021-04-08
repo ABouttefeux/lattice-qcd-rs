@@ -97,7 +97,7 @@ impl<D> LatticeCyclique<D>
     ///
     /// It is similar to [`LatticeLink::new`]. It however enforce that the point is inside the bounds.
     /// If it is not, it will use the modulus of the bound.
-    pub fn get_link (&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
+    pub fn get_link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
             pos_link[i] = pos[i] % self.dim();

@@ -94,7 +94,6 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    // TODO better error handelings
     type Error = Never;
     #[inline]
     fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
@@ -161,7 +160,6 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    // TODO better error handelings
     type Error = Never;
     
     #[inline]

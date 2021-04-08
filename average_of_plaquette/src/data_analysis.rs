@@ -107,8 +107,12 @@ pub fn write_data_to_file_csv_with_n(data: &Vec<(Config, AverageData)>) -> std::
     Ok(())
 }
 
-pub fn write_vec_to_file_csv(data: &[Vec<f64>], name: &str) -> std::io::Result<()> {
+pub fn write_vec_to_file_csv<T : Serialize>(data: &[T], name: &str) -> std::io::Result<()> {
     let file = File::create(name)?;
+    write_csv_to_file(data, file)
+}
+
+pub fn write_csv_to_file<T : Serialize>(data: &[T], file: File) -> std::io::Result<()> {
     let mut wtr = csv::Writer::from_writer(file);
     for data_el in data {
         wtr.serialize(data_el)?;
@@ -178,8 +182,7 @@ pub fn plot_data_volume(data: &[(Config, AverageData)]) -> Result<(), Box<dyn st
     Ok(())
 }
 
-pub fn plot_data_auto_corr(auto_corr: &[f64], n: usize, sufix: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let name = format!("plot_auto_corr_{}_{}.svg", n, sufix);
+pub fn plot_data_auto_corr(auto_corr: &[f64], name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let root = SVGBackend::new(&name, (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     
