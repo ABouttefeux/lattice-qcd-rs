@@ -1441,4 +1441,49 @@ mod test {
             assert_eq!(*dir, Direction::new(index, false).unwrap());
         }
     }
+    
+    #[test]
+    fn lattice_pt_from(){
+        let array = [1, 2, 3, 4];
+        assert_eq!(LatticePoint::from(array), LatticePoint::new(array.into()));
+    }
+    
+    #[test]
+    #[should_panic]
+    fn set_dir_neg() {
+        let mut lattice_link_canonical = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into()).unwrap();
+        
+        lattice_link_canonical.set_dir(DirectionEnum::XNeg.into());
+    }
+    
+    
+    
+    #[test]
+    fn dir() {
+        assert!(Direction::<4>::new(4, true).is_none());
+        assert!(Direction::<4>::new(32, true).is_none());
+        assert!(Direction::<4>::new(3, true).is_some());
+        assert!(Direction::<127>::new(128, true).is_none());
+        assert_eq!(Direction::<4>::dim(), 4);
+        assert_eq!(Direction::<124>::dim(), 124);
+        
+        assert!(DirectionEnum::TNeg.is_negative());
+        assert!(! DirectionEnum::ZPos.is_negative());
+        
+
+        assert_eq!(- &DirectionEnum::TNeg, &DirectionEnum::TPos);
+        assert_eq!(- &DirectionEnum::TPos, &DirectionEnum::TNeg);
+        assert_eq!(- &DirectionEnum::ZNeg, &DirectionEnum::ZPos);
+        assert_eq!(- &DirectionEnum::ZPos, &DirectionEnum::ZNeg);
+        assert_eq!(- &DirectionEnum::YNeg, &DirectionEnum::YPos);
+        assert_eq!(- &DirectionEnum::YPos, &DirectionEnum::YNeg);
+        assert_eq!(- &DirectionEnum::XNeg, &DirectionEnum::XPos);
+        assert_eq!(- &DirectionEnum::XPos, &DirectionEnum::XNeg);
+        
+        assert_eq!(DirectionEnum::get_all_directions().len(), 8);
+        assert_eq!(DirectionEnum::get_all_positive_directions().len(), 4);
+        
+        assert_eq!(Direction::<4>::get_all_directions().len(), 8);
+        assert_eq!(Direction::<4>::get_all_positive_directions().len(), 4);
+    }
 }
