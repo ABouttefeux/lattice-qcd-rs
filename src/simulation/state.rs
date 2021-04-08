@@ -144,17 +144,17 @@ pub trait LatticeHamiltonianSimulationState<D>
     Direction<D>: DirectionList,
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
-    /// # Panic
-    /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
-    fn reset_e_field(&mut self, rng: &mut impl rand::Rng){
-        // &rand_distr::StandardNormal
-        // TODO verify
-        let d = rand_distr::Normal::new(0_f64, 0.5_f64 / self.beta()).expect("Distribution not valide, check beta");
+    /// # Errors
+    /// Gives and error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
+    fn reset_e_field(&mut self, rng: &mut impl rand::Rng) -> Result<(), StateInitializationError> {
+        let d = rand_distr::Normal::new(0_f64, 0.5_f64 / self.beta())?;
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
-        if self.lattice().get_number_of_points() != new_e_field.len() {
-            panic!("Length of EField not compatible");
+        if !self.lattice().has_compatible_lenght_e_field(&new_e_field) {
+            return Err(StateInitializationError::IncompatibleSize);
         }
+        // TODO error handeling
         self.set_e_field(new_e_field.project_to_gauss(self.link_matrix(), self.lattice()).unwrap());
+        Ok(())
     }
     
     /// The "Electrical" field of this state.
@@ -213,9 +213,8 @@ pub trait LatticeHamiltonianSimulationStateNew<D>
     fn new_random_e(lattice: LatticeCyclique<D>, beta: Real, link_matrix: LinkMatrix, rng: &mut impl rand::Rng) -> Result<Self, Self::Error>
     {
         // TODO verify
-        // rand_distr::StandardNormal
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / beta)?;
-        let e_field = EField::new_deterministe(&lattice, rng, &d).project_to_gauss(&link_matrix, &lattice).unwrap();
+        let e_field = EField::new_deterministe(&lattice, rng, &d).project_to_gauss(&link_matrix, &lattice).expect("Projection to gauss failed");
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
 }
@@ -814,7 +813,6 @@ impl LatticeHamiltonianSimulationState<na::U4> for LatticeHamiltonianSimulationS
     /// # Panic
     /// Panic if EField cannot be found
     fn get_hamiltonian_efield(&self) -> Real {
-        // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::get_all_positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).expect("EField not found");
@@ -1194,7 +1192,6 @@ impl<D> LatticeHamiltonianSimulationState<D> for LatticeHamiltonianSimulationSta
 {
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
-        // TODO optimize
         self.lattice().get_points().par_bridge().map(|el| {
             Direction::get_all_positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap();

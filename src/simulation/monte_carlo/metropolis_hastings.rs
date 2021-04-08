@@ -326,7 +326,6 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDi
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    // todo review
     type Error = Never;
     
     #[inline]
@@ -479,7 +478,6 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaOn
     na::VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    // todo review
     type Error = Never;
     
     #[inline]

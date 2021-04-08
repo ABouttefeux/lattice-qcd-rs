@@ -34,7 +34,7 @@ impl<T> ModifiedNormal<T>
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return None.
     pub fn new(param_exp: T)-> Option<Self> {
-        if param_exp.le(&T::zero()) && param_exp.is_finite() {
+        if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
         }
         Some(Self {param_exp})
@@ -83,7 +83,7 @@ impl<T> HeatBathDistribution<T>
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return None.
     pub fn new(param_exp: T)-> Option<Self> {
-        if param_exp.le(&T::zero()) && param_exp.is_finite() {
+        if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
         }
         Some(Self {param_exp})
@@ -136,7 +136,7 @@ impl<T> HeatBathDistributionNorm<T>
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return None.
     pub fn new(param_exp: T)-> Option<Self> {
-        if param_exp.le(&T::zero()) && param_exp.is_finite() {
+        if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
         }
         Some(Self {param_exp})
@@ -181,8 +181,7 @@ pub struct CloseToUnit {
 impl CloseToUnit {
     /// Create a new distribution, spread_parameter should be in `(0,1)` 0 and 1 excluded
     pub fn new(spread_parameter: Real) -> Option<Self> {
-        // todo manage NaN
-        if spread_parameter <= 0_f64 || spread_parameter >= 1_f64 {
+        if spread_parameter <= 0_f64 || spread_parameter >= 1_f64 || spread_parameter.is_nan() {
             return None;
         }
         Some(Self {spread_parameter})

@@ -155,7 +155,6 @@ impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<R
     VectorN<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
-    // todo better error handeling
     type Error = Never;
     #[inline]
     fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
