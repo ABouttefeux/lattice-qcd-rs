@@ -48,7 +48,7 @@ use serde::{Serialize, Deserialize};
 /// It is slightly faster than [`super::SymplecticEuler`] but use slightly more memory.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct SymplecticEulerRayon {}
+pub struct SymplecticEulerRayon;
 
 impl SymplecticEulerRayon {
     /// Create a new SymplecticEulerRayon

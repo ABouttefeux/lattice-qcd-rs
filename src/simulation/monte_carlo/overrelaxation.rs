@@ -43,7 +43,7 @@ use serde::{Serialize, Deserialize};
 /// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct OverrelaxationSweepRotation {}
+pub struct OverrelaxationSweepRotation;
 
 impl OverrelaxationSweepRotation {
     
@@ -111,7 +111,7 @@ impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
 /// see (https://doi.org/10.1016/0370-2693(90)90032-2)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct OverrelaxationSweepReverse {}
+pub struct OverrelaxationSweepReverse;
 
 impl OverrelaxationSweepReverse {
     
