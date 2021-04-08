@@ -5,7 +5,7 @@ use average_of_plaquette::{
     rng::*,
     observable,
  };
-use plotter_backend_text::*;
+//use plotter_backend_text::*;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use lattice_qcd_rs::{
@@ -69,7 +69,7 @@ static NUMBER_OF_MEASUREMENT: Lazy<usize> = Lazy::new(|| {
     ((1_f64 / DT) * 2_f64 / FFT_RESOLUTION_SIZE).ceil() as usize
 });
 
-const LATTICE_DIM: usize = 16;
+const LATTICE_DIM: usize = 24;
 const LATTICE_SIZE: f64 = 1_f64;
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -129,24 +129,24 @@ fn main_cross_with_e(simulation_index: usize) {
     hm.push_methods(&mut or2);
     */
     
-    let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs, &format!("_ecorr_{}", beta)).unwrap();
+    let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs, &"data/data_set_e_2/", &format!("ecorr_{}", beta)).unwrap();
     let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned()).unwrap();
-    let _ = save_data_any(&state, &format!("sim_bin_{}_th_e.bin", beta));
+    let _ = save_data_any(&state, &format!("data/data_set_e_2/sim_bin_{}_th_e.bin", beta));
     
     let (state, measure) = measure(state, *NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
     
-    let _ = save_data_any(&state, &format!("sim_bin_{}_e.bin", beta));
-    let _ = write_vec_to_file_csv(&measure, &format!("raw_measures_corr_e_{}.csv", beta));
-    let _ = plot_data(&measure, DT, &format!("e_corr_{}.svg", beta));
+    let _ = save_data_any(&state, &format!("data/data_set_e_2/sim_bin_{}_e.bin", beta));
+    let _ = write_vec_to_file_csv(&measure, &format!("data/data_set_e_2/mean_measures_corr_e_{}.csv", beta));
+    let _ = plot_data(&measure, DT, &format!("data/data_set_e_2/e_corr_{}.svg", beta));
     
-    let mut measure_fft = measure.iter().map(|el| statistics::mean(el).into()).collect::<Vec<Complex<f64>>>();
+    let mut measure_fft = measure.iter().map(|el| el[0].into()).collect::<Vec<Complex<f64>>>();
     
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(measure_fft.len());
     
     fft.process(&mut measure_fft);
-    let _ = plot_data_fft(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft.svg", beta));
-    let _ = plot_data_fft_2(&measure_fft[..measure_fft.len() / 2], DT, &format!("e_corr_{}_fft_2.svg", beta));
+    let _ = plot_data_fft(&measure_fft[..measure_fft.len() / 2], DT, &format!("data/data_set_e_2/e_corr_{}_fft.svg", beta));
+    let _ = plot_data_fft_2(&measure_fft[..measure_fft.len() / 2], DT, &format!("data/data_set_e_2/e_corr_{}_fft_2.svg", beta));
     pb.inc(1);
     
     pb.finish();
@@ -217,7 +217,7 @@ fn thermalize_with_e_field<D, Rng>(
     Ok((state_e, rng))
 }
 
-type ResultMeasure = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<Vec<f64>>);
+type ResultMeasure = (LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, Vec<[f64; 2]>);
 #[allow(clippy::useless_format)]
 fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
@@ -231,11 +231,12 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
     let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
     let mut vec = Vec::with_capacity(number_of_measurement + 1);
     
-    let vec_data = points.par_iter()
-        .map(|pt| {
-            observable::e_correletor(&state_initial, &state_initial, pt).unwrap()
-        })
-        .collect::<Vec<f64>>();
+    let vec_data = statistics::mean_and_variance_par_iter_val(
+        points.par_iter()
+            .map(|pt| {
+                observable::e_correletor(&state_initial, &state_initial, pt).unwrap()
+            })
+    );
     vec.push(vec_data);
     
     //let mut vec_plot = vec![];
@@ -261,11 +262,12 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
             */
             
         }
-        let vec_data = points.par_iter()
-            .map(|pt| {
-                observable::e_correletor(&state_initial, &state_new, pt).unwrap()
-            })
-            .collect::<Vec<f64>>();
+        let vec_data = statistics::mean_and_variance_par_iter_val(
+            points.par_iter()
+                .map(|pt| {
+                    observable::e_correletor(&state_initial, &state_new, pt).unwrap()
+                })
+        );
         vec.push(vec_data);
         
         /*
@@ -306,15 +308,15 @@ fn measure(state_initial: LatticeHamiltonianSimulationStateSyncDefault<LatticeSt
 
 const STEP_BY: usize = 1_000;
 
-fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn plot_data(data: &[[f64; 2]], delta_t: f64, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     
-    let data_mean = data.iter().map(|el| statistics::mean(el)).collect::<Vec<f64>>();
+    let data_mean = data;
     
-    let mut y_min = data_mean[0];
-    let mut y_max = data_mean[0];
-    for el in &data_mean {
-        y_min = y_min.min(*el);
-        y_max = y_max.max(*el);
+    let mut y_min = data_mean[0][0];
+    let mut y_max = data_mean[0][0];
+    for el in data_mean {
+        y_min = y_min.min(el[0]);
+        y_max = y_max.max(el[0]);
     }
     
     
@@ -344,7 +346,7 @@ fn plot_data(data: &[Vec<f64>], delta_t: f64, file_name: &str) -> Result<(), Box
     
     chart.draw_series(
         LineSeries::new(data_mean.iter().enumerate().step_by(STEP_BY).map(|(index, el)| {
-            (index as f64 * delta_t , *el)}),
+            (index as f64 * delta_t , el[0])}),
             BLACK.filled(),
     ))?;
     
@@ -441,14 +443,19 @@ fn plot_data_fft_2(data: &[Complex<f64>], delta_t: f64, file_name: &str) -> Resu
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
     
+    chart.draw_series(data.iter().take(max_step).enumerate().step_by(1).map(|(index, el)| {
+        Circle::new((index as f64 * step, el.modulus() / (data.len() as f64).sqrt()), 1, BLACK.filled())
+    }))?;
+    
+    /*
     chart.draw_series(
         LineSeries::new(
             data.iter().enumerate().take(max_step).step_by(1).map(|(index, el)| {
-                (index as f64 * step, el.modulus() / (data.len() as f64).sqrt())
+                
             }),
             &BLACK,
         )
     )?;
-    
+    */
     Ok(())
 }
