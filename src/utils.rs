@@ -3,6 +3,7 @@
 
 use std::convert::TryInto;
 use std::ops::{Neg, Mul, MulAssign};
+use std::cmp::Ordering;
 use approx::*;
 
 #[cfg(feature = "serde-serialize")]
@@ -170,15 +171,14 @@ impl Sign {
         }
     }
     
-}
-
-/// Retuns the sign of `a - b`, witah a and b are usize
-pub const fn sign_from_diff(a: usize, b: usize) -> Sign {
-    let (result, underflow) = a.overflowing_sub(b);
-    match (result, underflow) {
-        (0, false) => Sign::Zero,
-        (_, true) => Sign::Negative,
-        _ => Sign::Positive,
+    /// Retuns the sign of `a - b`, witah a and b are usize
+    pub const fn sign_from_diff(a: usize, b: usize) -> Self {
+        let (result, underflow) = a.overflowing_sub(b);
+        match (result, underflow) {
+            (0, false) => Sign::Zero,
+            (_, true) => Sign::Negative,
+            _ => Sign::Positive,
+        }
     }
 }
 
@@ -196,6 +196,7 @@ impl From<f64> for Sign {
 
 impl Neg for Sign {
     type Output = Self;
+    
     fn neg(self) -> Self::Output {
         match self {
             Sign::Positive => Sign::Negative,
@@ -223,6 +224,18 @@ impl MulAssign<Sign> for Sign {
     }
 }
 
+impl PartialOrd for Sign {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Sign {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_i8().cmp(&other.to_i8())
+    }
+}
+
 /// Return the levi civita symbol of the given index
 /// # Example
 /// ```
@@ -234,7 +247,7 @@ pub fn levi_civita(index: &[usize]) -> Sign {
     let mut prod = Sign::Positive;
     for (pos, el_1) in index.iter().enumerate() {
         for el_2 in index.iter().take(pos) {
-            prod *= sign_from_diff(*el_1, *el_2);
+            prod *= Sign::sign_from_diff(*el_1, *el_2);
         }
     }
     prod
@@ -290,9 +303,9 @@ mod test {
         assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
         assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3, 4]));
         
-        assert_eq!(Sign::Zero, sign_from_diff(0, 0));
-        assert_eq!(Sign::Zero, sign_from_diff(4, 4));
-        assert_eq!(Sign::Negative, sign_from_diff(1, 4));
-        assert_eq!(Sign::Positive, sign_from_diff(4, 1));
+        assert_eq!(Sign::Zero, Sign::sign_from_diff(0, 0));
+        assert_eq!(Sign::Zero, Sign::sign_from_diff(4, 4));
+        assert_eq!(Sign::Negative, Sign::sign_from_diff(1, 4));
+        assert_eq!(Sign::Positive, Sign::sign_from_diff(4, 1));
     }
 }

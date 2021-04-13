@@ -4,9 +4,12 @@ use lattice_qcd_rs::{
     ComplexField,
     lattice::{Direction, DirectionList, LatticePoint},
     utils::Sign,
-    dim::{U4, U3,DimName},
+    dim::{U4, U3, DimName},
     statistics,
     Real,
+    field::Su3Adjoint,
+    integrator::SymplecticEulerRayon,
+    error::{StateInitializationError, MultiIntegrationError},
 };
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use super::{
@@ -302,4 +305,69 @@ pub fn simulation_gather_measurement<D, MC, F>(
     }
     pb.finish_and_clear();
     Ok((state, vec))
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ThermalizeError {
+    HmcError(MultiIntegrationError<StateInitializationError>),
+    StateInitializationError(StateInitializationError),
+}
+
+impl From<MultiIntegrationError<StateInitializationError>> for ThermalizeError {
+    fn from(err: MultiIntegrationError<StateInitializationError>) -> Self{
+        Self::HmcError(err)
+    }
+}
+
+impl From<StateInitializationError> for ThermalizeError {
+    fn from(err: StateInitializationError) -> Self{
+        Self::StateInitializationError(err)
+    }
+}
+
+pub type ResultThermalizeE<D, Rng> = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, Rng);
+
+const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
+
+#[allow(clippy::useless_format)]
+pub fn thermalize_with_e_field<D, Rng>(
+    inital_state : LatticeStateDefault<D>,
+    mp : &MultiProgress,
+    rng: Rng,
+    dt: f64,
+) -> Result<ResultThermalizeE<D, Rng>, ThermalizeError>
+    where D: DimName + Eq,
+    DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
+    VectorN<usize, D>: Copy + Send + Sync,
+    Direction<D>: DirectionList,
+    VectorN<Su3Adjoint, D>: Sync + Send,
+    Rng: rand::Rng,
+{
+    
+    const STEPS: usize = 300;
+    const CYCLE: usize = 40;
+    
+    let pb = mp.add(ProgressBar::new((CYCLE) as u64));
+    pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
+        get_pb_template()
+    ));
+    pb.set_prefix(&format!("th - e"));
+    
+    let mut hmc = HybridMonteCarloDiagnostic::new(dt, STEPS, INTEGRATOR, rng);
+    
+    let mut state = inital_state;
+    for _ in 0..CYCLE {
+        state = state.monte_carlo_step(&mut hmc)?;
+        state.normalize_link_matrices();
+        pb.set_message(&format!("{:.6}   ", hmc.prob_replace_last()));
+        pb.inc(1);
+    }
+    
+    let mut rng = hmc.rng_owned();
+    let state_with_e = LatticeStateWithEFieldSyncDefault::new_random_e(state.lattice().clone(), state.beta(), state.link_matrix_owned(), &mut rng)?;
+    let state_e = state_with_e.simulate_symplectic(&INTEGRATOR, dt)?;
+    pb.inc(1);
+    pb.finish_and_clear();
+    //Ok((leap.simulate_leap_n(dt, &INTEGRATOR, STEPS)?, rng))
+    Ok((state_e, rng))
 }

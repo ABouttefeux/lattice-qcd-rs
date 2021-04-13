@@ -33,23 +33,7 @@ fn main() {
     main_cross_with_e(index);
 }
 
-#[cfg(test)]
-#[test]
-#[ignore]
-fn test_fft() {
-    let mut data = (0..163_840).map(|index| {
-        Complex::from(((index as f64) / 500_f64).cos())
-    }).collect::<Vec<_>>();
-    
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(data.len());
-    let _ = plot_data_fft(&data, DT, &"test_data.svg");
-    
-    fft.process(&mut data);
-    let _ = plot_data_fft(&data[0..data.len()/2], DT, &"test_fft.svg");
-}
-
-const DIRECTORY: &str = &"data/data_set_e_2/";
+const DIRECTORY: &str = &"data/data_set_b/";
 
 const BETA: [f64; 11] = [1_f64, 3_f64, 6_f64, 9_f64, 12_f64, 15_f64, 18_f64, 21_f64, 24_f64, 27_f64, 30_f64];
 //const CF: f64 = 1.333_333_333_333_333_3_f64; // = (Nc^2-1)/(2 * Nc) = 4/3
@@ -66,6 +50,7 @@ const LATTICE_SIZE: f64 = 1_f64;
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
+
 
 fn main_cross_with_e(simulation_index: usize) {
     fs::create_dir_all(DIRECTORY).unwrap();
@@ -148,6 +133,7 @@ fn main_cross_with_e(simulation_index: usize) {
 
 
 type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, Vec<[f64; 2]>);
+
 #[allow(clippy::useless_format)]
 fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
@@ -164,7 +150,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
     let vec_data = statistics::mean_and_variance_par_iter_val(
         points.par_iter()
             .map(|pt| {
-                observable::e_correletor(&state_initial, &state_initial, pt).unwrap()
+                observable::b_correletor(&state_initial, &state_initial, pt).unwrap()
             })
     );
     vec.push(vec_data);

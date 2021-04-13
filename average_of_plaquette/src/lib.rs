@@ -50,5 +50,6 @@ pub mod config_scan;
 pub mod data_analysis;
 pub mod rng;
 pub mod observable;
+pub mod plot_corr_e;
 #[cfg(test)]
 mod test;

@@ -57,3 +57,14 @@ pub fn e_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefaul
             .sum::<f64>() / (2_f64 * 3_f64)
     )
 }
+
+pub fn b_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+    Some(
+        state_new.link_matrix().get_magnetic_field_vec(pt, state_new.lattice())?.iter()
+            .zip(state.link_matrix().get_magnetic_field_vec(pt, state.lattice())?.iter())
+            .map(|(el1, el2)| {
+                (el1 * el2).trace().real()
+            })
+            .sum::<f64>() / (2_f64 * 3_f64)
+    )
+}
