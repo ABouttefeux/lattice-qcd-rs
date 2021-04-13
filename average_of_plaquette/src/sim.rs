@@ -2,7 +2,8 @@
 use lattice_qcd_rs::{
     simulation::*,
     ComplexField,
-    lattice::{Direction, DirectionList, LatticePoint, Sign},
+    lattice::{Direction, DirectionList, LatticePoint},
+    utils::Sign,
     dim::{U4, U3,DimName},
     statistics,
     Real,

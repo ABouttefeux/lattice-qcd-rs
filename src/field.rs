@@ -4,6 +4,7 @@
 
 use super::{
     Real,
+    Complex,
     CMatrix3,
     lattice::{
         LatticePoint,
@@ -23,6 +24,7 @@ use super::{
         ThreadError,
         run_pool_parallel_vec_with_initialisation_mutable,
     },
+    utils::levi_civita,
 };
 use na::{
     Matrix3,
@@ -651,6 +653,60 @@ impl LinkMatrix {
         let number_of_directions = (D::dim() * (D::dim() - 1)) / 2;
         let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
+    }
+    
+    /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
+    /// See arXive:1512.02374.
+    pub fn get_f_mu_nu<D>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        let p_ij = self.get_pij(point, &dir_i.to_positive(), &dir_j.to_positive(), lattice)?;
+        let p_ij_real = p_ij.map(|el| Complex::from(el.real()));
+        Some((p_ij_real * Complex::from(0.5_f64) - Matrix3::identity() * p_ij.trace() / Complex::from(3_f64)) / Complex::from(lattice.size() * lattice.size()))
+    }
+    
+    /// Get the chromomagentic field at a given point
+    pub fn get_magnetic_field_vec<D>(&self, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<VectorN<CMatrix3, D>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3> + Allocator<CMatrix3, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        let mut vec = VectorN::<CMatrix3, D>::zeros();
+        for dir in Direction::<D>::get_all_positive_directions() {
+            vec[dir.to_index()] = self.get_magnetic_field(point, dir, lattice)?;
+        }
+        Some(vec)
+    }
+    
+    /// Get the chromomagentic field at a given point alongisde a given direction
+    pub fn get_magnetic_field<D>(&self, point: &LatticePoint<D>, dir: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        let sum = Direction::<D>::get_all_positive_directions().iter().map(|dir_i| {
+            Direction::<D>::get_all_positive_directions().iter().map(|dir_j| {
+                let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
+                let lc = Complex::from(levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()]).to_f64());
+                Some(f_mn * lc)
+            }).sum::<Option<CMatrix3>>()
+        }).sum::<Option<CMatrix3>>()?;
+        Some(sum / Complex::from(2_f64))
+    }
+    
+    /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
+    pub fn get_magnetic_field_link<D>(&self, link: &LatticeLink<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
+        where D: DimName,
+        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        self.get_magnetic_field(link.pos(), link.dir(), lattice)
     }
     
     /// Return the number of elements.

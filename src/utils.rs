@@ -2,6 +2,11 @@
 //! Utils function and structure
 
 use std::convert::TryInto;
+use std::ops::{Neg, Mul, MulAssign};
+use approx::*;
+
+#[cfg(feature = "serde-serialize")]
+use serde::{Serialize, Deserialize};
 
 type FactorialNumber = u128;
 
@@ -118,6 +123,124 @@ impl FactorialStorageDyn {
     }
 }
 
+/// Represent a sing
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub enum Sign {
+    /// Stricly negative number (non zero)
+    Negative,
+    /// Stricly positive number ( non zero)
+    Positive,
+    /// Zero (or very close to zero)
+    Zero
+}
+
+impl Sign {
+    /// return a f64 form the sign `(-1_f64, 0_f64, 1_f64)`.
+    pub const fn to_f64(self) -> f64 {
+        match self {
+            Sign::Negative => -1_f64,
+            Sign::Positive => 1_f64,
+            Sign::Zero => 0_f64,
+        }
+    }
+    
+    /// Get the sign form a f64.
+    ///
+    /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
+    pub fn sign(f: f64) -> Self {
+        // TODO manage NaN
+        if relative_eq!(f, 0_f64) {
+            Sign::Zero
+        }
+        else if f > 0_f64 {
+            Sign::Positive
+        }
+        else {
+            Sign::Negative
+        }
+    }
+    
+    /// Convert the sign to an i8.
+    pub const fn to_i8(self) -> i8 {
+        match self {
+            Sign::Negative => -1_i8,
+            Sign::Positive => 1_i8,
+            Sign::Zero => 0_i8,
+        }
+    }
+    
+}
+
+/// Retuns the sign of `a - b`, witah a and b are usize
+pub const fn sign_from_diff(a: usize, b: usize) -> Sign {
+    let (result, underflow) = a.overflowing_sub(b);
+    match (result, underflow) {
+        (0, false) => Sign::Zero,
+        (_, true) => Sign::Negative,
+        _ => Sign::Positive,
+    }
+}
+
+impl From<Sign> for f64 {
+    fn from(s : Sign) -> f64 {
+        s.to_f64()
+    }
+}
+
+impl From<f64> for Sign {
+    fn from(f : f64) -> Sign {
+        Sign::sign(f)
+    }
+}
+
+impl Neg for Sign {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        match self {
+            Sign::Positive => Sign::Negative,
+            Sign::Zero => Sign::Zero,
+            Sign::Negative => Sign::Positive,
+        }
+    }
+}
+
+impl Mul for Sign {
+    type Output = Self;
+    
+    fn mul(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Sign::Negative, Sign::Negative) | (Sign::Positive, Sign::Positive) => Sign::Positive,
+            (Sign::Zero, _) | (_, Sign::Zero) => Sign::Zero,
+            (Sign::Positive, Sign::Negative) | (Sign::Negative, Sign::Positive) => Sign::Negative
+        }
+    }
+}
+
+impl MulAssign<Sign> for Sign {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+/// Return the levi civita symbol of the given index
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::utils::{Sign, levi_civita};
+/// assert_eq!(Sign::Positive, levi_civita(&[1, 2, 3]));
+/// assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
+/// ```
+pub fn levi_civita(index: &[usize]) -> Sign {
+    let mut prod = Sign::Positive;
+    for (pos, el_1) in index.iter().enumerate() {
+        for el_2 in index.iter().take(pos) {
+            prod *= sign_from_diff(*el_1, *el_2);
+        }
+    }
+    prod
+}
+
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -144,5 +267,32 @@ mod test {
         let (_, overflowed) = n.overflowing_mul(MAX_NUMBER_FACTORIAL as u128 + 1);
         assert!(!overflowed);
     }
-
+    
+    #[test]
+    fn levi_civita_test(){
+        assert_eq!(Sign::Positive, levi_civita(&[]));
+        assert_eq!(Sign::Positive, levi_civita(&[1, 2]));
+        assert_eq!(Sign::Positive, levi_civita(&[0, 1]));
+        assert_eq!(Sign::Positive, levi_civita(&[1, 2, 3]));
+        assert_eq!(Sign::Positive, levi_civita(&[0, 1, 2]));
+        assert_eq!(Sign::Positive, levi_civita(&[3, 1, 2]));
+        assert_eq!(Sign::Positive, levi_civita(&[2, 3, 1]));
+        assert_eq!(Sign::Positive, levi_civita(&[3, 1, 2, 4]));
+        assert_eq!(Sign::Positive, levi_civita(&[1, 3, 4, 2]));
+        assert_eq!(Sign::Zero, levi_civita(&[3, 3, 1]));
+        assert_eq!(Sign::Zero, levi_civita(&[1, 1, 1]));
+        assert_eq!(Sign::Zero, levi_civita(&[1, 1]));
+        assert_eq!(Sign::Zero, levi_civita(&[2, 2]));
+        assert_eq!(Sign::Negative, levi_civita(&[2, 1]));
+        assert_eq!(Sign::Negative, levi_civita(&[1, 0]));
+        assert_eq!(Sign::Negative, levi_civita(&[1, 3, 2]));
+        assert_eq!(Sign::Negative, levi_civita(&[3, 2, 1]));
+        assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
+        assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3, 4]));
+        
+        assert_eq!(Sign::Zero, sign_from_diff(0, 0));
+        assert_eq!(Sign::Zero, sign_from_diff(4, 4));
+        assert_eq!(Sign::Negative, sign_from_diff(1, 4));
+        assert_eq!(Sign::Positive, sign_from_diff(4, 1));
+    }
 }

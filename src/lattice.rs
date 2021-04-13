@@ -21,7 +21,6 @@ use na::{
     base::allocator::Allocator,
     DefaultAllocator,
 };
-use approx::*;
 use super::{
     Real,
     dim::*,
@@ -961,82 +960,7 @@ impl<D> LatticeLink<D>
     }
 }
 
-/* removed for being potentially confusing
-impl PartialEq<LatticeLink> for LatticeLinkCanonical {
-    fn eq(&self, other: &LatticeLink) -> bool {
-        *self.pos() == *other.pos() && *self.dir() == *other.dir()
-    }
-}
 
-impl PartialEq<LatticeLinkCanonical> for LatticeLink{
-    fn eq(&self, other: &LatticeLinkCanonical) -> bool {
-        *other == *self
-    }
-}
-*/
-
-/// Represent a sing
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
-#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub enum Sign {
-    /// Stricly negative number (non zero)
-    Negative,
-    /// Stricly positive number ( non zero)
-    Positive,
-    /// Zero (or very close to zero)
-    Zero
-}
-
-impl Sign {
-    /// return a f64 form the sign `(-1_f64, 0_f64, 1_f64)`.
-    pub const fn to_f64(self) -> f64 {
-        match self {
-            Sign::Negative => -1_f64,
-            Sign::Positive => 1_f64,
-            Sign::Zero => 0_f64,
-        }
-    }
-    
-    /// Get the sign form a f64.
-    ///
-    /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
-    pub fn sign(f: f64) -> Self {
-        // TODO manage NaN
-        if relative_eq!(f, 0_f64) {
-            Sign::Zero
-        }
-        else if f > 0_f64 {
-            Sign::Positive
-        }
-        else {
-            Sign::Negative
-        }
-    }
-    
-}
-
-impl From<Sign> for f64 {
-    fn from(s : Sign) -> f64 {
-        s.to_f64()
-    }
-}
-
-impl From<f64> for Sign {
-    fn from(f : f64) -> Sign {
-        Sign::sign(f)
-    }
-}
-
-impl Neg for Sign {
-    type Output = Self;
-    fn neg(self) -> Self::Output {
-        match self {
-            Sign::Positive => Sign::Negative,
-            Sign::Zero => Sign::Zero,
-            Sign::Negative => Sign::Positive,
-        }
-    }
-}
 
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
