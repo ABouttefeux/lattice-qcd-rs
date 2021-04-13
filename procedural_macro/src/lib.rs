@@ -1,5 +1,8 @@
 
 //! Procedural macro for lattice_qcd_rs
+//!
+//! For internal use only. Mainly it has macro for implementation of
+//! [`lattice_qcd_rs::lattice::Direction`]
 
 #![allow(clippy::needless_return)]
 #![warn(clippy::cast_sign_loss)]
@@ -41,7 +44,8 @@ use proc_macro::TokenStream;
 
 const MAX_DIM: usize = 127;
 
-/// Implement `DirectionList` for `Direction` of `U1` to `U127`
+/// Implement `DirectionList` for `Direction` of `U1` to `U127`.
+/// Using const generics might render this unecessary.
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
     let mut implem = vec![];
@@ -89,15 +93,16 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
 const MAX_DIM_FROM_IMPLEM: usize = 10;
 
 
-/// Implement trait From for directions
+/// Implement trait [`From`] and [`std::convert::TryFrom`] and for directions
 #[proc_macro]
 pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
+    // implementation of the error returned by the TryFrom trait.
     let mut implem = vec![quote!{
         use std::convert::TryFrom;
         
         /// Error return by try from for Directions
         #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-        pub enum ErrorDirectionConversion{
+        pub enum ErrorDirectionConversion {
             /// the index is out of bound
             IndexOutOfBound,
         }
@@ -110,6 +115,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
         
         impl std::error::Error for ErrorDirectionConversion {}
     }];
+    
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
         for j in i+1..=MAX_DIM_FROM_IMPLEM {
             let u_ident_from = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());

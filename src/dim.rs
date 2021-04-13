@@ -1,5 +1,27 @@
 
-//! module for dimension
+//! module for dimension.
+//!
+//! In this library I use the nalgebra=0.24.0 system of dimension. As of writing this, nalgebra
+//! does not use const generics. The main idea is that types encore number. For example the type
+//! [`U0`] encode `0`, [`U1`] encode `1` etc... I use the trait DimName, which is implemented for [`U0`]
+//! to [`U127`]. If you want to you can implement this trait for your own type but it probably won't
+//! be compatible for most element of this library.
+//!
+//! # Note on trait bound parameters.
+//! you might notice that some of the type with generic dimension has a very long list of trait bound.
+//! This come from requirement of nalgebra. Most of the bound can be ingored.
+//!
+//! Let us explain the different bound
+//! - `D: DimName`, This means that D is the dimension and you can use any of the reexported U,
+//! - `DefaultAllocator: Allocator<usize, D>`, This mean that a matrix of size `N x 1` ( a vector) of usize,
+//! this is the case for the U0 to U127
+//! - `DefaultAllocator: Allocator<Su3Adjoint, D>`, Matrix of Su3Adjoint can be allocated this is true also for U0 to U127
+//! - `DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>`, This means that `3 X 3`
+//! of Complex can be allocated. This is always true
+//! - `VectorN<usize, D>: Copy + Send + Sync`, The vector of usize can be copied and sahre between thread safely.
+//! This shoud be true for at least up to U32.
+//! - `VectorN<Su3Adjoint, D>: Sync + Send`, this is always true.
+//! - `Direction<D>: DirectionList`, this is true for U1 to U127.
 
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {
