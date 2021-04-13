@@ -1,7 +1,7 @@
 
 //! Numerical integrators to carry out simulations.
 //!
-//! See [`SymplecticIntegrator`]. The simulations are done on [`LatticeHamiltonianSimulationState`]
+//! See [`SymplecticIntegrator`]. The simulations are done on [`LatticeStateWithEField`]
 //! It also require a notion of [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
 //!
 //! Even thought it is effortless to implement both [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
@@ -15,8 +15,8 @@
 //! ```
 //! extern crate rand;
 //! extern crate rand_distr;
-//! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSyncDefault;
-//! use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
+//! use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
+//! use lattice_qcd_rs::simulation::LatticeStateWithEField;
 //! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
@@ -26,7 +26,7 @@
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! ```
@@ -34,8 +34,8 @@
 //! ```
 //! # extern crate rand;
 //! # extern crate rand_distr;
-//! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationStateSyncDefault;
-//! # use lattice_qcd_rs::simulation::LatticeHamiltonianSimulationState;
+//! # use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
+//! # use lattice_qcd_rs::simulation::LatticeStateWithEField;
 //! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! # use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
@@ -45,7 +45,7 @@
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeHamiltonianSimulationStateSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! # let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! # let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! # let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! let h = state1.get_hamiltonian_total();
@@ -55,7 +55,7 @@
 
 use super::{
     simulation::{
-        LatticeHamiltonianSimulationState,
+        LatticeStateWithEField,
         SimulationStateLeapFrog,
         SimulationStateSynchrone,
     },
@@ -92,8 +92,8 @@ pub use symplectic_euler_rayon::SymplecticEulerRayon;
 /*
 /// Define an numerical integrator
 pub trait Integrator<State, State2>
-    where State: LatticeHamiltonianSimulationState,
-    State2: LatticeHamiltonianSimulationState,
+    where State: LatticeStateWithEField,
+    State2: LatticeStateWithEField,
 {
     /// Do one simulation step
     fn integrate(&self, l: &State, delta_t: Real) -> Result<State2, SimulationError>;
@@ -161,7 +161,7 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
 /// # Panic
 /// It panics if a out of bound link is passed.
 fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
-    where State: LatticeHamiltonianSimulationState<D>,
+    where State: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,
@@ -179,7 +179,7 @@ fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMa
 /// # Panics
 /// It panics if a out of bound link is passed.
 fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> VectorN<Su3Adjoint, D>
-    where State: LatticeHamiltonianSimulationState<D>,
+    where State: LatticeStateWithEField<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Send + Sync,

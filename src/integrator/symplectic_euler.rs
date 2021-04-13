@@ -23,10 +23,10 @@ use super::{
         CMatrix3,
         Real,
         simulation::{
-            LatticeHamiltonianSimulationState,
+            LatticeStateWithEField,
             SimulationStateSynchrone,
             LatticeState,
-            LatticeHamiltonianSimulationStateNew,
+            LatticeStateWithEFieldNew,
             SimulationStateLeap,
         },
         lattice::{
@@ -100,7 +100,7 @@ impl SymplecticEuler {
     );
     
     fn get_link_matrix_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
-        where State: LatticeHamiltonianSimulationState<D>,
+        where State: LatticeStateWithEField<D>,
         D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Sync + Send,
@@ -121,7 +121,7 @@ impl SymplecticEuler {
     }
     
     fn get_e_field_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<VectorN<Su3Adjoint, D>>, ThreadError>
-        where State: LatticeHamiltonianSimulationState<D>,
+        where State: LatticeStateWithEField<D>,
         D: DimName,
         DefaultAllocator: Allocator<usize, D>,
         VectorN<usize, D>: Copy + Sync + Send,
@@ -151,7 +151,7 @@ impl Default for SymplecticEuler {
 }
 
 impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
-    where State: SimulationStateSynchrone<D> + LatticeHamiltonianSimulationState<D> + LatticeHamiltonianSimulationStateNew<D>,
+    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
     D: DimName,
     DefaultAllocator: Allocator<usize, D>,
     VectorN<usize, D>: Copy + Sync + Send,

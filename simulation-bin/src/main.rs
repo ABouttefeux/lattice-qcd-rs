@@ -108,7 +108,7 @@ fn test_leap_frog() {
     let beta = 1_f64;
     let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
     println!("h_l {}", state.get_hamiltonian_links());
-    let state_hmc = LatticeHamiltonianSimulationStateSyncDefault::<LatticeStateDefault<U4>, _>::new_random_e_state(state, &mut rng);
+    let state_hmc = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, _>::new_random_e_state(state, &mut rng);
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01, 1).unwrap();
@@ -296,9 +296,8 @@ fn sim_dmh() {
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.5;
-    let number_of_rand = 1;
     //let mut mh = MCWrapper::new(MetropolisHastings::new(number_of_rand, spread_parameter).unwrap(), rng);
-    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
     let number_of_sims = 1000;
     let sub_block = 100;
     
@@ -327,8 +326,7 @@ fn sim_dmh_hmc() {
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
     let spread_parameter = 0.1;
-    let number_of_rand = 1;
-    let mut mh = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+    let mut mh = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
     let number_of_sims = 10_000;
     let sub_block = 1_000;
     

@@ -50,9 +50,8 @@
 //!
 //! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
-//! let number_of_rand = 1;
 //! let spread_parameter = 0.1_f64;
-//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
 //!
 //! for _ in 0..100 {
 //!     for _ in 0..1_000 {
@@ -78,7 +77,7 @@
 //!
 //! If you want to use your own state with the [hybride Monte Carlo](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/hybride_monte_carlo/struct.HybridMonteCarloDiagnostic.html)
 //! you will have to implement
-//! [`LatticeHamiltonianSimulationState`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeHamiltonianSimulationState.html) for [`LatticeHamiltonianSimulationStateSyncDefault<YourState>`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/struct.LatticeHamiltonianSimulationStateSyncDefault.html)
+//! [`LatticeStateWithEField`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeStateWithEField.html) for [`LatticeStateWithEFieldSyncDefault<YourState>`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/struct.LatticeStateWithEFieldSyncDefault.html)
 //!
 //! #### I want to use my own Monte Carlo algorithm.
 //!
@@ -138,9 +137,8 @@
 //! let beta = 2_f64;
 //! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
-//! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
-//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(number_of_rand, spread_parameter, rng).unwrap();
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
 //!
 //! let number_of_sims = 100;
 //! for _ in 0..number_of_sims / 10 {

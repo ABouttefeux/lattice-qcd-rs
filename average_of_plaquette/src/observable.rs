@@ -45,7 +45,7 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
 }
 
 
-pub fn e_correletor(state: &LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeHamiltonianSimulationStateSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+pub fn e_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
     Some(
         state_new.e_field().get_e_vec(pt, state_new.lattice())?.iter()
             .zip(state.e_field().get_e_vec(pt, state.lattice())?.iter())
