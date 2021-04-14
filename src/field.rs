@@ -593,7 +593,7 @@ impl LinkMatrix {
         Direction<D>: DirectionList,
     {
         let link_c = l.get_canonical(*link);
-        let matrix = self.data.get(link_c.to_index(l))? ;
+        let matrix = self.data.get(link_c.to_index(l))?;
         if link.is_dir_negative() {
             // that means the the link was in the negative direction
             Some(matrix.adjoint())
@@ -655,6 +655,16 @@ impl LinkMatrix {
         Some(sum / number_of_plaquette)
     }
     
+    /// Get the clover, used for F_mu_nu tensor
+    pub fn get_clover<D>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
+    where D: DimName,
+        DefaultAllocator: Allocator<usize, D>,
+        VectorN<usize, D>: Copy + Send + Sync,
+        Direction<D>: DirectionList,
+    {
+        Some(self.get_pij(point, dir_i, dir_j, lattice)? + self.get_pij(point, dir_j, &-dir_i, lattice)? + self.get_pij(point, &-dir_i, &-dir_j, lattice)? + self.get_pij(point, &-dir_j, dir_i, lattice)?)
+    }
+    
     /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
     /// See arXive:1512.02374.
     pub fn get_f_mu_nu<D>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
@@ -663,9 +673,8 @@ impl LinkMatrix {
         VectorN<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
-        let p_ij = self.get_pij(point, &dir_i.to_positive(), &dir_j.to_positive(), lattice)?;
-        let p_ij_real = p_ij.map(|el| Complex::from(el.real()));
-        Some((p_ij_real * Complex::from(0.5_f64) - Matrix3::identity() * p_ij.trace() / Complex::from(3_f64)) / Complex::from(lattice.size() * lattice.size()))
+        let m = self.get_clover(point, dir_i, dir_j, lattice)? - self.get_clover(point, dir_j, dir_i, lattice)?;
+        Some(m / Complex::from(8_f64 * lattice.size() * lattice.size()))
     }
     
     /// Get the chromomagentic field at a given point
@@ -696,7 +705,7 @@ impl LinkMatrix {
                 Some(f_mn * lc)
             }).sum::<Option<CMatrix3>>()
         }).sum::<Option<CMatrix3>>()?;
-        Some(sum / Complex::from(2_f64))
+        Some(sum / Complex::new(0_f64, 2_f64))
     }
     
     /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
@@ -1016,7 +1025,12 @@ mod test{
     use super::*;
     use rand::SeedableRng;
     use approx::*;
-    use super::super::Complex;
+    use super::super::{
+        Complex,
+        dim::U3,
+        lattice::*,
+    };
+    
     
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
@@ -1044,5 +1058,47 @@ mod test{
             assert_eq_complex!(v.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant(), EPSILON);
             assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
         }
+    }
+    
+    #[test]
+    fn mangetic_field() {
+        let lattice = LatticeCyclique::<U3>::new(1_f64, 4).unwrap();
+        let mut link_matrix = LinkMatrix::new_cold(&lattice);
+        let point = LatticePoint::from([0, 0, 0]);
+        let dir_x = Direction::new(0, true).unwrap();
+        let dir_y = Direction::new(1, true).unwrap();
+        let dir_z = Direction::new(2, true).unwrap();
+        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::from(4_f64), clover, EPSILON);
+        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::zeros(), f, EPSILON);
+        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        // ---
+        link_matrix[0] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
+        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(2_f64, 0_f64), clover, EPSILON);
+        let clover = link_matrix.get_clover(&point, &dir_y, &dir_x, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(2_f64, 0_f64), clover, EPSILON);
+        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(0_f64, 0_f64), f, EPSILON);
+        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        //--
+        let mut link_matrix = LinkMatrix::new_cold(&lattice);
+        let link = LatticeLinkCanonical::new([1, 0 , 0].into(), dir_y).unwrap();
+        link_matrix[link.to_index(&lattice)] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
+        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(3_f64, 1_f64), clover, EPSILON);
+        let clover = link_matrix.get_clover(&point, &dir_y, &dir_x, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(3_f64, -1_f64), clover, EPSILON);
+        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new(0_f64, 0.25_f64), f, EPSILON);
+        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        let b = link_matrix.get_magnetic_field(&point, &dir_z, &lattice).unwrap();
+        assert_eq_matrix!(CMatrix3::identity() * Complex::new( 0.25_f64, 0_f64), b, EPSILON);
+        let b_2 = link_matrix.get_magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice).unwrap();
+        assert_eq_matrix!(b, b_2, EPSILON);
     }
 }

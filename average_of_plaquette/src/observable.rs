@@ -65,6 +65,6 @@ pub fn b_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefaul
             .map(|(el1, el2)| {
                 (el1 * el2).trace().real()
             })
-            .sum::<f64>() / (2_f64 * 3_f64)
+            .sum::<f64>() / (3_f64)
     )
 }
