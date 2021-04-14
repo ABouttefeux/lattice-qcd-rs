@@ -55,23 +55,23 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         for j in 0..i {
             array_direction.push(
                 quote!{
-                    Direction{index_dir: #j, is_positive: true, _phantom: PhantomData},
-                    Direction{index_dir: #j, is_positive: false, _phantom: PhantomData}
+                    Direction{index_dir: #j, is_positive: true},
+                    Direction{index_dir: #j, is_positive: false}
                 }
             );
             array_direction_positives.push(
                 quote!{
-                    Direction{index_dir: #j, is_positive: true, _phantom: PhantomData}
+                    Direction{index_dir: #j, is_positive: true}
                 }
             );
         }
-        let u_ident = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
+        //let u_ident = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
         let u_dir_ident = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
         let u_dir_pos_ident = syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
         let s = quote!{
-            const #u_dir_ident: [Direction<#u_ident>; #i * 2] = [ #(#array_direction),* ];
-            const #u_dir_pos_ident: [Direction<#u_ident>; #i] = [ #(#array_direction_positives),* ];
-            impl DirectionList for Direction<#u_ident> {
+            const #u_dir_ident: [Direction<#i>; #i * 2] = [ #(#array_direction),* ];
+            const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
+            impl DirectionList for Direction<#i> {
                 #[inline]
                 fn get_all_directions() -> & 'static [Self] {
                     &#u_dir_ident
@@ -118,32 +118,32 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
         for j in i+1..=MAX_DIM_FROM_IMPLEM {
-            let u_ident_from = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
-            let u_ident_to = syn::Ident::new(&format!("U{}", j), proc_macro2::Span::call_site());
+            //let u_ident_from = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
+            //let u_ident_to = syn::Ident::new(&format!("U{}", j), proc_macro2::Span::call_site());
             implem.push(quote!{
-                impl From<Direction<#u_ident_from>> for Direction<#u_ident_to> {
-                    fn from(from: Direction<#u_ident_from>) -> Self {
+                impl From<Direction<#i>> for Direction<#j> {
+                    fn from(from: Direction<#i>) -> Self {
                         Self::new(from.to_index(), from.is_positive()).unwrap()
                     }
                 }
                 
-                impl From<&Direction<#u_ident_from>> for Direction<#u_ident_to> {
-                    fn from(from: &Direction<#u_ident_from>) -> Self {
+                impl From<&Direction<#i>> for Direction<#j> {
+                    fn from(from: &Direction<#i>) -> Self {
                         Self::new(from.to_index(), from.is_positive()).unwrap()
                     }
                 }
                 
-                impl TryFrom<Direction<#u_ident_to>> for Direction<#u_ident_from> {
+                impl TryFrom<Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
-                    fn try_from(from: Direction<#u_ident_to>) -> Result<Self, Self::Error> {
+                    fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.to_index(), from.is_positive())
                             .ok_or(ErrorDirectionConversion::IndexOutOfBound)
                     }
                 }
                 
-                impl TryFrom<&Direction<#u_ident_to>> for Direction<#u_ident_from> {
+                impl TryFrom<&Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
-                    fn try_from(from: &Direction<#u_ident_to>) -> Result<Self, Self::Error> {
+                    fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.to_index(), from.is_positive())
                             .ok_or(ErrorDirectionConversion::IndexOutOfBound)
                     }

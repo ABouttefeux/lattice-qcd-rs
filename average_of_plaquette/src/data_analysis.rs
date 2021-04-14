@@ -4,7 +4,6 @@
 use lattice_qcd_rs::{
     Real,
     lattice::{Direction, DirectionList},
-    dim::DimName,
 };
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
@@ -15,9 +14,7 @@ use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
 use na::{
-    DefaultAllocator,
-    VectorN,
-    base::allocator::Allocator,
+    SVector,
 };
 
 
@@ -208,10 +205,9 @@ pub fn plot_data_auto_corr(auto_corr: &[f64], name: &str) -> Result<(), Box<dyn 
 
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
-pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
-    where D: DimName + Serialize,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+pub fn save_data<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
+    where
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
@@ -220,10 +216,9 @@ pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Re
     Ok(())
 }
 
-pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()>
-    where D: DimName + Serialize,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+pub fn save_data_n<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()>
+    where
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();

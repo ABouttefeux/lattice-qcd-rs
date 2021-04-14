@@ -35,10 +35,7 @@ use super::{
 };
 use std::vec::Vec;
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
@@ -61,14 +58,10 @@ impl SymplecticEulerRayon {
     /// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
     /// In debug panic if the lattice has not the same number link as link_matrix
     /// or not the same number of point as e_field.
-    fn get_link_matrix_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
+    fn get_link_matrix_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
         where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Send + Sync,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Sync + Send,
-        D: Eq,
+        SVector<usize, D>: Copy + Send + Sync,
+        SVector<Su3Adjoint, D>: Sync + Send,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
@@ -83,14 +76,10 @@ impl SymplecticEulerRayon {
     /// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
     /// In debug panic if the lattice has not the same number link as link_matrix
     /// or not the same number of point as e_field.
-    fn get_e_field_integrate<State, D> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<VectorN<Su3Adjoint, D>>
+    fn get_e_field_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<SVector<Su3Adjoint, D>>
         where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Send + Sync,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Sync + Send,
-        D: Eq,
+        SVector<usize, D>: Copy + Send + Sync,
+        SVector<Su3Adjoint, D>: Sync + Send,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
@@ -108,14 +97,10 @@ impl Default for SymplecticEulerRayon {
     }
 }
 
-impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEulerRayon
+impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEulerRayon
     where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    D: Eq,
+    SVector<usize, D>: Copy + Send + Sync,
+    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     type Error = State::Error;

@@ -30,10 +30,7 @@ use super::{
 };
 use rand_distr::Distribution;
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
@@ -89,16 +86,14 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
     
     #[inline]
-    fn get_delta_s<D>(
+    fn get_delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
     ) -> Real
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+        where na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
@@ -106,10 +101,9 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
     
     #[inline]
-    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let index = link.to_index(state.lattice());
@@ -124,10 +118,9 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
     
     #[inline]
-    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         self.prob_replace_mean = 0_f64;
@@ -148,11 +141,9 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
 }
 
-impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
+impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
     where Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = Never;

@@ -4,10 +4,7 @@
 //! See [`SymplecticEuler`]
 
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 use super::{
     super::{
@@ -99,14 +96,10 @@ impl SymplecticEuler {
         number_of_thread, usize
     );
     
-    fn get_link_matrix_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
+    fn get_link_matrix_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
         where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Sync + Send,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Sync + Send,
-        D: Eq,
+        SVector<usize, D>: Copy + Sync + Send,
+        SVector<Su3Adjoint, D>: Sync + Send,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
@@ -120,14 +113,10 @@ impl SymplecticEuler {
         )
     }
     
-    fn get_e_field_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<VectorN<Su3Adjoint, D>>, ThreadError>
+    fn get_e_field_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
         where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Sync + Send,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Send + Sync,
-        D: Eq,
+        SVector<usize, D>: Copy + Sync + Send,
+        SVector<Su3Adjoint, D>: Send + Sync,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
@@ -137,7 +126,7 @@ impl SymplecticEuler {
             self.number_of_thread,
             lattice.get_number_of_points(),
             lattice,
-            &VectorN::<_, D>::from_element(Su3Adjoint::default()),
+            &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
     }
 }
@@ -150,14 +139,10 @@ impl Default for SymplecticEuler {
     }
 }
 
-impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
+impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
     where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Sync + Send,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Send + Sync,
-    D: Eq,
+    SVector<usize, D>: Copy + Sync + Send,
+    SVector<Su3Adjoint, D>: Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = SymplecticEulerError<State::Error>;

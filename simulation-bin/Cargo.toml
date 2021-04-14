@@ -7,13 +7,13 @@ publish = false
 
 
 [dependencies]
-indicatif = "0.15.0"
-nalgebra = "0.24.0"
-rand = "0.8.2"
+indicatif = "0.15"
+nalgebra = "0.26"
+rand = "0.8.3"
 rand_distr = "0.4.0"
 lattice-qcd-rs = { path = "..", features = ["serde-serialize"] }
 dialoguer = "0.7.1"
 serde = { version = "1.0", features = ["derive"] }
 bincode = "1.3"
 rand_xoshiro = { version = "0.6", features = ["serde1"] }
-rayon = "1.5.0"
+rayon = "1.5"

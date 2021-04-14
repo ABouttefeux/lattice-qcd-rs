@@ -48,7 +48,7 @@
 //! let number_of_pts = 10;
 //! let beta = 1_f64;
 //!
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let spread_parameter = 0.1_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
@@ -127,7 +127,6 @@
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::{MetropolisHastingsDeltaDiagnostic},
 //!    ComplexField,
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -135,7 +134,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let spread_parameter = 1E-5_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
@@ -154,7 +153,6 @@
 //! use lattice_qcd_rs::{
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -162,7 +160,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
@@ -183,7 +181,6 @@
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::HybridMonteCarloDiagnostic,
 //!    integrator::SymplecticEulerRayon,
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -191,7 +188,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let delta_t = 1E-3_f64;
 //! let number_of_step = 10;
@@ -276,8 +273,8 @@ mod test;
 pub type Real = f64;
 /// easy to use allias for [`nalgebra::Complex::<Real>`]
 pub type Complex = na::Complex<Real>;
-/// alias for [`nalgebra::VectorN::<N, nalgebra::U8>`]
-pub type Vector8<N> = na::VectorN<N, na::U8>;
+/// alias for [`nalgebra::SVector::<N, nalgebra::U8>`]
+pub type Vector8<N> = na::SVector<N, 8>;
 /// alias for [`nalgebra::Matrix3<nalgebra::Complex>`]
 pub type CMatrix3 = na::Matrix3<Complex>;
 /// alias for [`nalgebra::Matrix2<nalgebra::Complex>`]

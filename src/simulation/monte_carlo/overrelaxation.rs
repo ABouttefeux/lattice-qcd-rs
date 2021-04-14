@@ -25,10 +25,7 @@ use super::{
     },
 };
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 
 #[cfg(feature = "serde-serialize")]
@@ -53,10 +50,9 @@ impl OverrelaxationSweepRotation {
     }
     
     #[inline]
-    fn get_modif<D>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
@@ -67,10 +63,9 @@ impl OverrelaxationSweepRotation {
     }
     
     #[inline]
-    fn get_next_element_default<D>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let lattice = state.lattice().clone();
@@ -88,10 +83,9 @@ impl Default for OverrelaxationSweepRotation {
     }
 }
 
-impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
+    where
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = Never;
@@ -120,10 +114,9 @@ impl OverrelaxationSweepReverse {
     }
     
     #[inline]
-    fn get_modif<D>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D> + Allocator<Complex, na::U3, na::U3>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
@@ -133,10 +126,9 @@ impl OverrelaxationSweepReverse {
     }
     
     #[inline]
-    fn get_next_element_default<D>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
+    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
+        where
+        na::SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         let lattice = state.lattice().clone();
@@ -154,10 +146,9 @@ impl Default for OverrelaxationSweepReverse {
     }
 }
 
-impl<D> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
+    where
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = Never;
@@ -180,10 +171,10 @@ mod test {
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
     
     fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng)
-        where MC: MonteCarlo<LatticeStateDefault<na::U3>, na::U3>,
+        where MC: MonteCarlo<LatticeStateDefault<3>, 3>,
         MC::Error: core::fmt::Debug,
     {
-        let state = LatticeStateDefault::<na::U3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
+        let state = LatticeStateDefault::<3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
         let h = state.get_hamiltonian_links();
         let state2 = mc.get_next_element(state).unwrap();
         let h2 = state2.get_hamiltonian_links();

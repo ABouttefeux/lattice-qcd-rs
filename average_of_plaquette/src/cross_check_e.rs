@@ -13,7 +13,6 @@ use lattice_qcd_rs::{
     simulation::*,
     lattice::{LatticePoint},
     integrator::SymplecticEulerRayon,
-    dim::U3,
     statistics,
     error::StateInitializationError,
 };
@@ -147,9 +146,9 @@ fn main_cross_with_e(simulation_index: usize) {
 }
 
 
-type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, Vec<[f64; 2]>);
+type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, Vec<[f64; 2]>);
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
+fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -158,7 +157,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
     pb.set_prefix(&format!("simulating"));
     
     let mut state = state_initial.clone();
-    let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
+    let points = state.lattice().get_points().collect::<Vec<LatticePoint<3>>>();
     let mut vec = Vec::with_capacity(number_of_measurement + 1);
     
     let vec_data = statistics::mean_and_variance_par_iter_val(

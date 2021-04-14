@@ -20,13 +20,12 @@
 //! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! use lattice_qcd_rs::integrator::SymplecticEuler;
-//! use lattice_qcd_rs::dim::U3;
 //!
 //! let mut rng = rand::thread_rng();
 //! let distribution = rand::distributions::Uniform::from(
 //!     -std::f64::consts::PI..std::f64::consts::PI
 //! );
-//! let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! ```
@@ -39,13 +38,12 @@
 //! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
 //! # use lattice_qcd_rs::simulation::LatticeStateDefault;
 //! # use lattice_qcd_rs::integrator::SymplecticEuler;
-//! # use lattice_qcd_rs::dim::U3;
 //! #
 //! # let mut rng = rand::thread_rng();
 //! # let distribution = rand::distributions::Uniform::from(
 //! #    -std::f64::consts::PI..std::f64::consts::PI
 //! # );
-//! # let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<U3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
+//! # let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
 //! # let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! # let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
 //! let h = state1.get_hamiltonian_total();
@@ -77,10 +75,7 @@ use super::{
     },
 };
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 
 pub mod symplectic_euler;
@@ -107,14 +102,11 @@ pub trait Integrator<State, State2>
 /// The integrator should be capable of switching between Sync state
 /// (q (or link matrices) at time T , p (or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
-pub trait SymplecticIntegrator<StateSync, StateLeap, D>
+pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
     where StateSync: SimulationStateSynchrone<D>,
     StateLeap: SimulationStateLeapFrog<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
+    SVector<usize, D>: Copy + Send + Sync,
+    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// Type of error returned by the Integrator.
@@ -160,13 +152,10 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, D>
 /// As it can panic if a out of bound link is passed it needs to stay private.
 /// # Panic
 /// It panics if a out of bound link is passed.
-fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
+fn integrate_link<State, const D: usize>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
     where State: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
+    SVector<usize, D>: Copy + Send + Sync,
+    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     let canonical_link = LatticeLink::from(*link);
@@ -178,13 +167,10 @@ fn integrate_link<State, D>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMa
 /// Like [`integrate_link`] this must suceed.
 /// # Panics
 /// It panics if a out of bound link is passed.
-fn integrate_efield<State, D>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> VectorN<Su3Adjoint, D>
+fn integrate_efield<State, const D: usize>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> SVector<Su3Adjoint, D>
     where State: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
+    SVector<usize, D>: Copy + Send + Sync,
+    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     let initial_value = e_field.get_e_vec(point, lattice).expect("E Field not found");

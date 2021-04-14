@@ -18,9 +18,9 @@
 //! - `DefaultAllocator: Allocator<Su3Adjoint, D>`, Matrix of Su3Adjoint can be allocated this is true also for U0 to U127
 //! - `DefaultAllocator: Allocator<na::Complex<f64>, na::U3, na::U3>`, This means that `3 X 3`
 //! of Complex can be allocated. This is always true
-//! - `VectorN<usize, D>: Copy + Send + Sync`, The vector of usize can be copied and sahre between thread safely.
+//! - `SVector<usize, D>: Copy + Send + Sync`, The vector of usize can be copied and sahre between thread safely.
 //! This shoud be true for at least up to U32.
-//! - `VectorN<Su3Adjoint, D>: Sync + Send`, this is always true.
+//! - `SVector<Su3Adjoint, D>: Sync + Send`, this is always true.
 //! - `Direction<D>: DirectionList`, this is true for U1 to U127.
 
 macro_rules! reexport_name_dim{

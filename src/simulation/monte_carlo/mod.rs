@@ -22,10 +22,7 @@ use super::{
 use std::marker::PhantomData;
 use rand_distr::Distribution;
 use na::{
-    DimName,
-    DefaultAllocator,
-    VectorN,
-    base::allocator::Allocator,
+    SVector,
     ComplexField,
 };
 
@@ -46,11 +43,9 @@ pub use hybride::*;
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
 /// It is also a Markov chain
-pub trait MonteCarlo<State, D>
+pub trait MonteCarlo<State, const D: usize>
     where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
@@ -66,11 +61,9 @@ pub trait MonteCarlo<State, D>
 /// Some times is is esayer to just implement a potential next element, the rest is done automatically.
 ///
 /// To get an [`MonteCarlo`] use the wrapper [`McWrapper`]
-pub trait MonteCarloDefault<State, D>
+pub trait MonteCarloDefault<State, const D: usize>
     where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
@@ -110,27 +103,23 @@ pub trait MonteCarloDefault<State, D>
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug)]
-pub struct McWrapper<MCD, State, D, Rng>
+pub struct McWrapper<MCD, State, Rng, const D: usize>
     where MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     mcd: MCD,
     rng: Rng,
-    _phantom: PhantomData<(State, D)>,
+    _phantom: PhantomData<State>,
 }
 
-impl<MCD, State, Rng, D> McWrapper<MCD, State, D, Rng>
+impl<MCD, State, Rng, const D: usize> McWrapper<MCD, State, Rng, D>
     where MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Create the wrapper.
@@ -149,13 +138,11 @@ impl<MCD, State, Rng, D> McWrapper<MCD, State, D, Rng>
     }
 }
 
-impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
+impl<T, State, Rng, const D: usize> MonteCarlo<State, D> for McWrapper<T, State, Rng, D>
     where T: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = T::Error;
@@ -166,7 +153,7 @@ impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
 }
 
 #[inline]
-fn get_delta_s_old_new_cmp<D>(
+fn get_delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
@@ -174,9 +161,7 @@ fn get_delta_s_old_new_cmp<D>(
     beta : Real,
     old_matrix: &na::Matrix3<Complex>,
 ) -> Real
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
+    where na::SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     let a = get_staple(link_matrix, lattice, link);
@@ -184,14 +169,13 @@ fn get_delta_s_old_new_cmp<D>(
 }
 
 // TODO move in state
-fn get_staple<D>(
+fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
 ) -> na::Matrix3<Complex>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
+    where
+    na::SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     let dir_j = link.dir();

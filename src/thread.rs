@@ -22,11 +22,6 @@ use super::lattice::{
 };
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
-use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-};
 
 /// Multithreading error.
 #[derive(Debug)]
@@ -180,9 +175,8 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 /// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_with_initialisation_mutable(
 ///     l.get_links(),
@@ -275,14 +269,13 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let c = 5_usize;
 /// let result = run_pool_parallel_vec(
 ///     l.get_points(),
 ///     &c,
-///     &|i: &LatticePoint<_>, c: &usize| i[0] * c,
+///     &|i: &LatticePoint<4>, c: &usize| i[0] * c,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
@@ -291,7 +284,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
 /// let point = LatticePoint::new([3, 0, 5, 0].into());
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
-pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
+pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
@@ -304,9 +297,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
     Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
     Data: Send + Clone,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
+    na::SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
@@ -334,15 +325,14 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// ```
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
-/// use lattice_qcd_rs::dim::U4;
-/// let l = LatticeCyclique::<U4>::new(1_f64, 25).unwrap();
+/// let l = LatticeCyclique::<4>::new(1_f64, 25).unwrap();
 /// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
 ///     iter,
 ///     &c,
-///     &|has_greeted: &mut bool, i: &LatticePoint<_>, c: &usize| {
+///     &|has_greeted: &mut bool, i: &LatticePoint<4>, c: &usize| {
 ///          if ! *has_greeted {
 ///              *has_greeted = true;
 ///              println!("Hello from the thread");
@@ -366,9 +356,8 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::dim::U4;
 ///
-/// let l = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
+/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
 ///     l.get_links(),
@@ -383,7 +372,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, D>(
 /// ```
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_return)] // for lisibiliy
-pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit, D>(
+pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit, const D: usize>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
@@ -399,9 +388,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
     FInit: Send + Clone + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
+    na::SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     if number_of_thread == 0 {

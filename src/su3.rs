@@ -5,7 +5,7 @@
 
 use na::{
     ComplexField,
-    MatrixN,
+    OMatrix,
     base::allocator::Allocator,
     DefaultAllocator,
 };
@@ -138,16 +138,16 @@ pub trait MatrixExp<T> {
 /// Basic implementation of matrix exponential for complex matrices.
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
-impl<T, D> MatrixExp<MatrixN<T, D>> for MatrixN<T, D>
+impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
     where T: ComplexField + Copy,
     D: na::DimName + na::DimSub<na::U1>,
     DefaultAllocator: Allocator<T, D, na::DimDiff<D, na::U1>>
         + Allocator<T, na::DimDiff<D, na::U1>>
         + Allocator<T, D, D>
         + Allocator<T, D>,
-    MatrixN<T, D> : Clone,
+    OMatrix<T, D, D> : Clone,
 {
-    fn exp(&self) -> MatrixN<T, D> {
+    fn exp(&self) -> OMatrix<T, D, D> {
         let decomposition = self.clone().schur();
         // a complex matrix is always diagonalisable
         let eigens = decomposition.eigenvalues().unwrap();

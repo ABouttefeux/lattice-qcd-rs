@@ -9,7 +9,6 @@ use lattice_qcd_rs::{
     integrator::*,
     simulation::*,
     Complex,
-    dim::{U4, U3},
 };
 use std::{
     f64,
@@ -24,7 +23,7 @@ fn bench_simulation_creation_deterministe(
     rng: &mut rand::rngs::ThreadRng,
     d: &impl rand_distr::Distribution<Real>,
 ) {
-    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
+    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, size, rng, d).unwrap();
 }
 
 fn bench_simulation_creation_threaded<D>(
@@ -34,7 +33,7 @@ fn bench_simulation_creation_threaded<D>(
 )
     where D: rand_distr::Distribution<Real> + Sync,
 {
-    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
+    let _simulation = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(1_f64, 1_f64, size, d, number_of_thread).unwrap();
 }
 
 
@@ -79,11 +78,11 @@ fn create_hash_map(rng: &mut rand::rngs::ThreadRng, d: &impl rand_distr::Distrib
     }
 }
 
-fn simulate_euler(simulation: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U4>, U4>, number_of_thread: usize) {
+fn simulate_euler(simulation: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<4>, 4>, number_of_thread: usize) {
     *simulation = simulation.simulate_sync(&SymplecticEuler::new(number_of_thread), 0.00001).unwrap();
 }
 
-fn simulate_euler_rayon(simulation: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U4>, U4>) {
+fn simulate_euler_rayon(simulation: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<4>, 4>) {
     *simulation = simulation.simulate_sync(&SymplecticEulerRayon::new(), 0.00001).unwrap();
 }
 
@@ -132,13 +131,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     groupe_sim.sample_size(10);
     let thread_count: [usize; 5] = [1, 2, 4, 6, 8];
     for n in thread_count.iter(){
-        let mut sim = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
+        let mut sim = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
         groupe_sim.bench_with_input(BenchmarkId::new("thread", n), n,
             |b,i| b.iter(|| simulate_euler(&mut sim, *i))
         );
     }
     
-    let mut sim = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
+    let mut sim = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(1_f64, 1_f64, 5, &d, 4).unwrap();
     groupe_sim.bench_function("simulate(20) rayon", |b| {
         b.iter(|| simulate_euler_rayon(&mut sim))
     });
@@ -149,14 +148,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     
     let mut mc = MetropolisHastingsSweep::new(1, 0.1_f64, rand::thread_rng()).unwrap();
     
-    groupe_mc.bench_function("simulate 20 U3 Metropolis Hastings Sweep", |b| {
-        b.iter_batched(|| LatticeStateDefault::<U3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mc), BatchSize::LargeInput)
+    groupe_mc.bench_function("simulate 20 D3 Metropolis Hastings Sweep", |b| {
+        b.iter_batched(|| LatticeStateDefault::<3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mc), BatchSize::LargeInput)
     });
     
     let mut mch = HybridMonteCarloDiagnostic::new(0.01, 100, SymplecticEulerRayon::new(), rand::thread_rng());
     
-    groupe_mc.bench_function("simulate 20 U3 hybrid monteCarlo 100", |b| {
-        b.iter_batched(|| LatticeStateDefault::<U3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mch), BatchSize::LargeInput)
+    groupe_mc.bench_function("simulate 20 D3 hybrid monteCarlo 100", |b| {
+        b.iter_batched(|| LatticeStateDefault::<3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(), |state_in| state_in.monte_carlo_step(&mut mch), BatchSize::LargeInput)
     });
     groupe_mc.finish();
     
@@ -167,7 +166,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for n in array_size.iter() {
         groupe_gauss_proj.bench_with_input(BenchmarkId::new("size", n), n,
             |b,i| b.iter(|| {
-                let state = LatticeStateDefault::<U4>::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
+                let state = LatticeStateDefault::<4>::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
                 let d = rand_distr::Normal::new(0.0, 0.5_f64).unwrap();
                 let e_field = EField::new_deterministe(state.lattice(), &mut rng, &d);
                 e_field.project_to_gauss(state.link_matrix(), state.lattice());
