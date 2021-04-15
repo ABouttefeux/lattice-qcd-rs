@@ -34,7 +34,7 @@ use lattice_qcd_rs_procedural_macro::{
 
 /// A cyclique lattice in space. Does not store point and links but is used to generate them.
 ///
-/// The generic parameter `D` is the dimension. For now this is a type that encode a number.
+/// The generic parameter `D` is the dimension.
 ///
 /// This lattice is cyclique more precisely if the lattice has N poits in each direction.
 /// Then we can mouve alongisde a direction going though point 0, 1, ... N-1. The next step in
@@ -367,7 +367,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> IteratorDirection<D, IS_
     }
     
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] the element just after the one given
-    /// or the first ellement if [`IteratorDirection::FirstElement`] is given.
+    /// or the first ellement if [`IteratorElement::FirstElement`] is given.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
@@ -509,14 +509,13 @@ where
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint<const D: usize> {
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<usize, D>: Serialize", deserialize = "SVector<usize, D>: Deserialize<'de>")) )]
     data: na::SVector<usize, D>
 }
 
 impl<const D: usize> LatticePoint<D> {
     /// Create a new lattice point.
     ///
-    ///(It can be outside a lattice).
+    /// It can be outside a lattice.
     pub const fn new(data: SVector<usize, D>) -> Self {
         Self {data}
     }
@@ -535,9 +534,12 @@ impl<const D: usize> LatticePoint<D> {
         Self::new(SVector::from_fn(|index, _| f(index) ))
     }
     
-    /// Number of elements in [`LatticePoint`].
-    pub fn len(&self) -> usize {
-        self.data.len()
+    /// Number of elements in [`LatticePoint`]. This is `D`.
+    #[allow(clippy::unused_self)]
+    pub const fn len(&self) -> usize {
+        // this is in order to have a const function.
+        // we could have called self.data.len()
+        D
     }
     
     /// Return if LatticePoint contain no data. True when the dimension is 0, false otherwise.
@@ -621,20 +623,13 @@ where
     }
 }
 
-// implement conversions from [`LatticePoint`] to [usize; N].
-macro_rules! implement_from_lattice_point{
-    ($($l:literal) ,+) => {
-        $(
-            impl From<LatticePoint<$l>> for [usize; $l] {
-                fn  from(data: LatticePoint<$l>) -> [usize; $l] {
-                    data.data.into()
-                }
-            }
-        )*
+impl<const D: usize> From<LatticePoint<D>> for [usize; D]
+    where SVector<usize, D>: Into<[usize; D]>
+{
+    fn  from(data: LatticePoint<D>) -> [usize; D] {
+        data.data.into()
     }
 }
-
-implement_from_lattice_point!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
 /// Trait to convert an element on a lattice to an [`usize`].
 ///
@@ -678,6 +673,10 @@ where
     }
 }
 
+/// This is juste the identity.
+///
+/// It is implemented for compatibility reason
+/// such that function that require a [`LatticeElementToIndex`] can also accept [`usize`].
 impl<const D: usize> LatticeElementToIndex<D> for usize
 where
     Direction<D>: DirectionList,
@@ -835,8 +834,6 @@ impl<const D: usize> LatticeLink<D> {
     }
 }
 
-
-
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -855,7 +852,7 @@ impl<const D: usize> Direction<D> {
     }
     
     /// List of all positives directions.
-    /// This is very slow use [`DirectionList::get_all_positive_directions`] instead
+    /// This is very slow use [`Self::positive_directions`] instead
     pub fn positives_vec() -> Vec<Self> {
         let mut x = Vec::with_capacity(D);
         for i in 0..D {
@@ -879,9 +876,9 @@ impl<const D: usize> Direction<D> {
     /// Get all direction with the sign `IS_POSITIVE`
     pub const fn get_directions<const IS_POSITIVE : bool>() -> [Self; D] {
         let mut i = 0;
-        let mut array = [Direction {index_dir: 0, is_positive : IS_POSITIVE}; D];
+        let mut array = [Direction {index_dir: 0, is_positive: IS_POSITIVE}; D];
         while i < D {
-            array[i] = Direction {index_dir: i, is_positive : IS_POSITIVE};
+            array[i] = Direction {index_dir: i, is_positive: IS_POSITIVE};
             i += 1;
         }
         array
@@ -957,8 +954,6 @@ impl<const D: usize> Direction<D>
 where
     Direction<D>: DirectionList,
 {
-    
-    
     
     /// Find the direction the vector point the most.
     /// For a zero vector return [`DirectionEnum::XPos`].
@@ -1296,11 +1291,11 @@ impl DirectionEnum {
 
 impl DirectionList for DirectionEnum {
     
-    fn get_all_directions()->& 'static [Self] {
+    fn get_all_directions() -> &'static [Self] {
         &Self::DIRECTIONS
     }
     
-    fn get_all_positive_directions()->& 'static [Self] {
+    fn get_all_positive_directions() -> &'static [Self] {
         &Self::POSITIVES
     }
 }

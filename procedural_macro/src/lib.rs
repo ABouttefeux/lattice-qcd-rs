@@ -2,7 +2,7 @@
 //! Procedural macro for lattice_qcd_rs
 //!
 //! For internal use only. Mainly it has macro for implementation of
-//! [`lattice_qcd_rs::lattice::Direction`]
+//! `lattice_qcd_rs::lattice::Direction`
 
 #![allow(clippy::needless_return)]
 #![warn(clippy::cast_sign_loss)]

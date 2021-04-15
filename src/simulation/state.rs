@@ -53,7 +53,7 @@ pub type LeapFrogStateDefault<const D: usize> = SimulationStateLeap<LatticeState
 
 /// trait to represent a pure gauge lattice state.
 ///
-/// It defines only one field link_matrix.
+/// It defines only one field: `link_matrix` of type [`LinkMatrix`].
 pub trait LatticeState<const D: usize>
 where
     Self: Sync + Sized + core::fmt::Debug,
@@ -160,6 +160,7 @@ where
     
     /// get the derivative \partial_t U(link)
     fn get_derivative_u(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>;
+    
     /// get the derivative \partial_t E(point)
     fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>>;
     
@@ -171,7 +172,6 @@ where
     fn get_hamiltonian_total(&self) -> Real {
         self.get_hamiltonian_links() + self.get_hamiltonian_efield()
     }
-    
     
 }
 
@@ -191,7 +191,7 @@ where
     /// and `e_field` does not correspond to `lattice`
     fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error>;
     
-    /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
+    /// Create a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
     /// Gives an error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     /// or propagate the error from [`LatticeStateWithEFieldNew::new`]

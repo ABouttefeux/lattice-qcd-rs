@@ -752,10 +752,7 @@ impl IndexMut<usize> for LinkMatrix {
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct EField<const D: usize>
-    where SVector<usize, D>: Copy,
-    SVector<Su3Adjoint, D>: Sync + Send,
-{
+pub struct EField<const D: usize> {
     data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 

@@ -40,7 +40,7 @@ use rand_distr::Distribution;
 /// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
 pub struct MetropolisHastings {
     number_of_update: usize,
     spread: Real,
@@ -85,7 +85,7 @@ where
 /// Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
 pub struct MetropolisHastingsDiagnostic {
     number_of_update: usize,
     spread: Real,
@@ -160,7 +160,7 @@ where
 /// Metropolis Hastings algorithm with diagnostics.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
 pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
     spread: Real,
     has_replace_last: bool,
