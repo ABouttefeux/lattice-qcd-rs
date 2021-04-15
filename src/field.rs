@@ -519,8 +519,7 @@ impl LinkMatrix {
         l: &LatticeCyclique<D>,
         rng: &mut impl rand::Rng,
     ) -> Self
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
@@ -544,8 +543,7 @@ impl LinkMatrix {
         l: &LatticeCyclique<D>,
         number_of_thread: usize,
     ) -> Result<Self, ThreadError>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         if number_of_thread == 0 {
@@ -570,8 +568,7 @@ impl LinkMatrix {
     
     /// Create a cold configuration ( where the link matrices is set to 1).
     pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
@@ -580,8 +577,7 @@ impl LinkMatrix {
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
     pub fn get_matrix<const D: usize>(&self, link: &LatticeLink<D>, l: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let link_c = l.get_canonical(*link);
@@ -597,8 +593,7 @@ impl LinkMatrix {
     
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
     pub fn get_sij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
@@ -611,8 +606,7 @@ impl LinkMatrix {
     
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
     pub fn get_pij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
@@ -623,8 +617,7 @@ impl LinkMatrix {
     /// Take the average of the trace of all plaquettes
     #[allow(clippy::as_conversions)] // no try into for f64
     pub fn average_trace_plaquette<const D: usize>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         if lattice.get_number_of_canonical_links_space() != self.len() {
@@ -647,7 +640,6 @@ impl LinkMatrix {
     /// Get the clover, used for F_mu_nu tensor
     pub fn get_clover<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
     where
-        SVector<usize, D>: Copy + Send + Sync,
         Direction<D>: DirectionList,
     {
         Some(self.get_pij(point, dir_i, dir_j, lattice)? + self.get_pij(point, dir_j, &-dir_i, lattice)? + self.get_pij(point, &-dir_i, &-dir_j, lattice)? + self.get_pij(point, &-dir_j, dir_i, lattice)?)
@@ -656,8 +648,7 @@ impl LinkMatrix {
     /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
     /// See arXive:1512.02374.
     pub fn get_f_mu_nu<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let m = self.get_clover(point, dir_i, dir_j, lattice)? - self.get_clover(point, dir_j, dir_i, lattice)?;
@@ -666,8 +657,7 @@ impl LinkMatrix {
     
     /// Get the chromomagentic field at a given point
     pub fn get_magnetic_field_vec<const D: usize>(&self, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<CMatrix3, D>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let mut vec = SVector::<CMatrix3, D>::zeros();
@@ -679,8 +669,7 @@ impl LinkMatrix {
     
     /// Get the chromomagentic field at a given point alongisde a given direction
     pub fn get_magnetic_field<const D: usize>(&self, point: &LatticePoint<D>, dir: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let sum = Direction::<D>::get_all_positive_directions().iter().map(|dir_i| {
@@ -695,8 +684,7 @@ impl LinkMatrix {
     
     /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
     pub fn get_magnetic_field_link<const D: usize>(&self, link: &LatticeLink<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-        where
-        SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         self.get_magnetic_field(link.pos(), link.dir(), lattice)
@@ -768,14 +756,11 @@ pub struct EField<const D: usize>
     where SVector<usize, D>: Copy,
     SVector<Su3Adjoint, D>: Sync + Send,
 {
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<Su3Adjoint, D>: Serialize", deserialize = "SVector<Su3Adjoint, D>: Deserialize<'de>")) )]
     data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 
 impl<const D: usize> EField<D>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
     Direction<D>: DirectionList,
 {
     
@@ -942,8 +927,7 @@ impl<const D: usize> EField<D>
 }
 
 impl<'a, const D: usize> IntoIterator for &'a EField<D>
-    where SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
     Direction<D>: DirectionList,
 {
     type Item = &'a SVector<Su3Adjoint, D>;
@@ -955,9 +939,7 @@ impl<'a, const D: usize> IntoIterator for &'a EField<D>
 }
 
 impl<'a, const D: usize> IntoIterator for &'a mut EField<D>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
     Direction<D>: DirectionList,
 {
     type Item = &'a mut SVector<Su3Adjoint, D>;
@@ -968,22 +950,14 @@ impl<'a, const D: usize> IntoIterator for &'a mut EField<D>
     }
 }
 
-impl<const D: usize> Index<usize> for EField<D>
-    where
-    SVector<usize, D>: Copy,
-    SVector<Su3Adjoint, D>: Sync + Send,
-{
+impl<const D: usize> Index<usize> for EField<D> {
     type Output = SVector<Su3Adjoint, D>;
     fn index(&self, pos: usize) -> &Self::Output{
         &self.data[pos]
     }
 }
 
-impl<const D: usize> IndexMut<usize> for EField<D>
-    where
-    SVector<usize, D>: Copy,
-    SVector<Su3Adjoint, D>: Sync + Send,
-{
+impl<const D: usize> IndexMut<usize> for EField<D> {
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
         &mut self.data[pos]
     }

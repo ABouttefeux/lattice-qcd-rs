@@ -17,9 +17,6 @@ use super::{
         },
     },
 };
-use na::{
-    SVector,
-};
 use std::vec::Vec;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -62,10 +59,10 @@ impl<E: Display + Debug + Error + 'static> Error for HybrideMethodeVecError<E> {
 /// Adaptator used to convert the error to another type. It is intented to use with [`HybrideMethodeVec`].
 #[derive(PartialEq, Eq, Debug)]
 pub struct AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, const D: usize>
-    where MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     data: &'a mut MC,
@@ -73,10 +70,10 @@ pub struct AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, const D: usize>
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-    where MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Create the Self using a mutable reference
@@ -91,10 +88,10 @@ impl<'a, MC, State, ErrorBase, Error, const D: usize> AdaptatorErrorMethod<'a, M
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> Deref for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-    where MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Target = MC;
@@ -105,10 +102,10 @@ impl<'a, MC, State, ErrorBase, Error, const D: usize> Deref for AdaptatorErrorMe
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> DerefMut for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-    where MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -117,10 +114,10 @@ impl<'a, MC, State, ErrorBase, Error, const D: usize> DerefMut for AdaptatorErro
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> MonteCarlo<State, D> for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-    where MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = Error;
@@ -135,16 +132,16 @@ impl<'a, MC, State, ErrorBase, Error, const D: usize> MonteCarlo<State, D> for A
 /// You can use [`AdaptatorErrorMethod`] to convert the error.
 /// If you want type with different error you can use [`HybrideMethodeCouple`].
 pub struct HybrideMethodeVec<'a, State, E, const D: usize>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     methods: Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>
 }
 
 impl<'a, State, E, const D: usize> HybrideMethodeVec<'a, State, E, D>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     /// Create an empty Self.
@@ -194,8 +191,8 @@ impl<'a, State, E, const D: usize> HybrideMethodeVec<'a, State, E, D>
 }
 
 impl<'a, State, E, const D: usize> Default for HybrideMethodeVec<'a, State, E, D>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     fn default() -> Self {
@@ -204,8 +201,8 @@ impl<'a, State, E, const D: usize> Default for HybrideMethodeVec<'a, State, E, D
 }
 
 impl<'a, State, E, const D: usize> MonteCarlo<State, D> for HybrideMethodeVec<'a, State, E, D>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     type Error = HybrideMethodeVecError<E>;
@@ -258,10 +255,10 @@ impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
 /// Couples for a large number of methods.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, const D: usize>
-    where MC1: MonteCarlo<State, D, Error = Error1>,
+where
+    MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     method_1: MC1,
@@ -270,10 +267,10 @@ pub struct HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, const D: usize>
 }
 
 impl<MC1, Error1, MC2, Error2, State, const D: usize> HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, D>
-    where MC1: MonteCarlo<State, D, Error = Error1>,
+where
+    MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Create a new Self from two methods
@@ -299,10 +296,10 @@ impl<MC1, Error1, MC2, Error2, State, const D: usize> HybrideMethodeCouple<MC1, 
 
 
 impl<MC1, Error1, MC2, Error2, State, const D: usize> MonteCarlo<State, D> for HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, D>
-    where MC1: MonteCarlo<State, D, Error = Error1>,
+where
+    MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = HybrideMethodeCoupleError<Error1, Error2>;

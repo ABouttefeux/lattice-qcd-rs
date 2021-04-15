@@ -24,9 +24,6 @@ use super::{
         },
     },
 };
-use na::{
-    SVector,
-};
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
@@ -51,8 +48,7 @@ impl OverrelaxationSweepRotation {
     
     #[inline]
     fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
@@ -64,8 +60,7 @@ impl OverrelaxationSweepRotation {
     
     #[inline]
     fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let lattice = state.lattice().clone();
@@ -84,8 +79,7 @@ impl Default for OverrelaxationSweepRotation {
 }
 
 impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     type Error = Never;
@@ -115,8 +109,7 @@ impl OverrelaxationSweepReverse {
     
     #[inline]
     fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
@@ -127,8 +120,7 @@ impl OverrelaxationSweepReverse {
     
     #[inline]
     fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let lattice = state.lattice().clone();
@@ -147,8 +139,7 @@ impl Default for OverrelaxationSweepReverse {
 }
 
 impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     type Error = Never;

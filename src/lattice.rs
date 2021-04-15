@@ -60,7 +60,8 @@ pub struct LatticeCyclique<const D: usize> {
 
 
 impl<const D: usize> LatticeCyclique<D>
-    where Direction<D>: DirectionList,
+where
+    Direction<D>: DirectionList,
 {
     
     /// Number space + time dimension.
@@ -204,7 +205,8 @@ impl<const D: usize> LatticeCyclique<D>
 }
 
 impl<const D: usize> LatticeCyclique<D>
-    where Direction<D>: DirectionList,
+where
+    Direction<D>: DirectionList,
 {
     /// Returns wether the number of point is the same as the length of `e_field`
     pub fn has_compatible_lenght_e_field(&self, e_field: &EField<D>) -> bool {
@@ -220,15 +222,13 @@ impl<const D: usize> LatticeCyclique<D>
 
 /// Iterator over [`LatticeLinkCanonical`] associated to a particular [`LatticeCyclique`].
 #[derive(Clone, Debug)]
-pub struct IteratorLatticeLinkCanonical<'a, const D: usize>
-    where SVector<usize, D>: Copy + Send + Sync,
-{
+pub struct IteratorLatticeLinkCanonical<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticeLinkCanonical<D>>,
 }
 
 impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] will return `first_el`.
@@ -249,7 +249,7 @@ impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D>
 }
 
 impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     type Item = LatticeLinkCanonical<D>;
@@ -290,12 +290,12 @@ impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D>
 }
 
 impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {}
 
 impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {}
 
@@ -430,15 +430,13 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::ExactSizeIter
 
 /// Iterator over [`LatticePoint`]
 #[derive(Clone, Debug)]
-pub struct IteratorLatticePoint<'a, const D: usize>
-    where SVector<usize, D>: Copy + Send + Sync,
-{
+pub struct IteratorLatticePoint<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticePoint<D>>,
 }
 
 impl<'a, const D: usize> IteratorLatticePoint<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     /// create a new iterator. The first [`IteratorLatticePoint::next()`] will return `first_el`.
@@ -460,7 +458,7 @@ impl<'a, const D: usize> IteratorLatticePoint<'a, D>
 
 
 impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     type Item = LatticePoint<D>;
@@ -498,28 +496,24 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D>
 }
 
 impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticePoint<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {}
 
 impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {}
 
 /// Represents point on a (any) lattice.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticePoint<const D: usize>
-    where SVector<usize, D> : Copy,
-{
+pub struct LatticePoint<const D: usize> {
     #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<usize, D>: Serialize", deserialize = "SVector<usize, D>: Deserialize<'de>")) )]
     data: na::SVector<usize, D>
 }
 
-impl<const D: usize> LatticePoint<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> LatticePoint<D> {
     /// Create a new lattice point.
     ///
     ///(It can be outside a lattice).
@@ -563,17 +557,13 @@ impl<const D: usize> LatticePoint<D>
     }
 }
 
-impl<const D: usize> Default for LatticePoint<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> Default for LatticePoint<D> {
     fn default() -> Self {
         Self::new_zero()
     }
 }
 
-impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D>
-    where SVector<usize, D> : Copy,
-{
+impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D> {
     type Item = &'a usize;
     type IntoIter = <&'a SVector<usize, D> as IntoIterator>::IntoIter;
     
@@ -582,9 +572,7 @@ impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D>
     }
 }
 
-impl<'a, const D: usize> IntoIterator for &'a mut LatticePoint<D>
-    where SVector<usize, D> : Copy,
-{
+impl<'a, const D: usize> IntoIterator for &'a mut LatticePoint<D> {
     type Item = &'a mut usize;
     type IntoIter = <&'a mut SVector<usize, D> as IntoIterator>::IntoIter;
     
@@ -593,9 +581,7 @@ impl<'a, const D: usize> IntoIterator for &'a mut LatticePoint<D>
     }
 }
 
-impl<const D: usize> Index<usize> for LatticePoint<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> Index<usize> for LatticePoint<D> {
     type Output = usize;
     
     /// Get the element at position `pos`
@@ -611,9 +597,7 @@ impl<const D: usize> Index<usize> for LatticePoint<D>
     }
 }
 
-impl<const D: usize> IndexMut<usize> for LatticePoint<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> IndexMut<usize> for LatticePoint<D> {
     
     /// Get the element at position `pos`
     /// # Panic
@@ -629,7 +613,8 @@ impl<const D: usize> IndexMut<usize> for LatticePoint<D>
 }
 
 impl<T, const D: usize> From<T> for LatticePoint<D>
-    where SVector<usize, D>: Copy + From<T>,
+where
+    SVector<usize, D>: From<T>,
 {
     fn from(data: T) -> Self {
         LatticePoint::new(SVector::from(data))
@@ -656,7 +641,7 @@ implement_from_lattice_point!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 /// Used mainly to index field on the lattice using [`std::vec::Vec`]
 // TODO change name ? make it less confusing
 pub trait LatticeElementToIndex<const D: usize>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     /// Given a lattice return an index from the element
@@ -664,7 +649,7 @@ pub trait LatticeElementToIndex<const D: usize>
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
@@ -675,7 +660,7 @@ impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D>
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for Direction<D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     /// equivalent to [`Direction::to_index()`]
@@ -685,7 +670,7 @@ impl<const D: usize> LatticeElementToIndex<D> for Direction<D>
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D>
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
@@ -694,7 +679,7 @@ impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D>
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for usize
-    where SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     /// return self
@@ -713,18 +698,13 @@ impl<const D: usize> LatticeElementToIndex<D> for usize
 /// This object can be used to safly index in a [`std::collections::HashMap`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeLinkCanonical<const D: usize>
-    where SVector<usize, D>: Copy,
-{
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<usize, D>: Serialize", deserialize = "SVector<usize, D>: Deserialize<'de>")) )]
+pub struct LatticeLinkCanonical<const D: usize> {
     from: LatticePoint<D>,
     dir: Direction<D>,
 }
 
 
-impl<const D: usize> LatticeLinkCanonical<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> LatticeLinkCanonical<D> {
     /// Try create a LatticeLinkCanonical. If the dir is negative it fails.
     ///
     /// To guaranty creating an element see [LatticeCyclique::get_link_canonical].
@@ -791,17 +771,13 @@ impl<const D: usize> LatticeLinkCanonical<D>
     }
 }
 
-impl<const D: usize> From<LatticeLinkCanonical<D>> for LatticeLink<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> From<LatticeLinkCanonical<D>> for LatticeLink<D> {
     fn from(l : LatticeLinkCanonical<D>) -> Self {
         LatticeLink::new(l.from, l.dir)
     }
 }
 
-impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D> {
     fn from(l : &LatticeLinkCanonical<D>) -> Self {
         LatticeLink::new(l.from, l.dir)
     }
@@ -817,17 +793,12 @@ impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D>
 /// You can use modulus over the elements to use inside a lattice.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeLink<const D: usize>
-    where SVector<usize, D>: Copy,
-{
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<usize, D>: Serialize", deserialize = "SVector<usize, D>: Deserialize<'de>")) )]
+pub struct LatticeLink<const D: usize> {
     from: LatticePoint<D>,
     dir: Direction<D>,
 }
 
-impl<const D: usize> LatticeLink<D>
-    where SVector<usize, D>: Copy,
-{
+impl<const D: usize> LatticeLink<D> {
     /// Create a link from position `from` and direction `dir`.
     pub const fn new (from: LatticePoint<D>, dir: Direction<D>) -> Self {
         Self {from, dir}
@@ -1078,7 +1049,8 @@ impl<const D: usize> From<&Direction<D>> for usize {
 
 /// Return [`DirectionEnum::from_vector`].
 impl<const D: usize> From<SVector<Real, D>> for Direction<D>
-    where Direction<D>: DirectionList,
+where
+    Direction<D>: DirectionList,
 {
     fn from(v: SVector<Real, D>) -> Self {
         Direction::from_vector(&v)
@@ -1087,7 +1059,8 @@ impl<const D: usize> From<SVector<Real, D>> for Direction<D>
 
 /// Return [`DirectionEnum::from_vector`].
 impl<const D: usize> From<&SVector<Real, D>> for Direction<D>
-    where Direction<D>: DirectionList,
+where
+    Direction<D>: DirectionList,
 {
     fn from(v: &SVector<Real, D>) -> Self {
         Direction::<D>::from_vector(v)

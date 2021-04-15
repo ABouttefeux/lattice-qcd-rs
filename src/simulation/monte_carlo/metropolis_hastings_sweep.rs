@@ -29,18 +29,13 @@ use super::{
     },
 };
 use rand_distr::Distribution;
-use na::{
-    SVector,
-};
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
 /// Metropolis Hastings methode by doing a pass on all points
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-{
+pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
     number_of_update: usize,
     spread: Real,
     number_replace_last: usize,
@@ -48,9 +43,7 @@ pub struct MetropolisHastingsSweep<Rng>
     rng: Rng
 }
 
-impl<Rng> MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-{
+impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -93,7 +86,7 @@ impl<Rng> MetropolisHastingsSweep<Rng>
         new_link: &na::Matrix3<Complex>,
         beta : Real,
     ) -> Real
-        where na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
@@ -102,8 +95,7 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     
     #[inline]
     fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let index = link.to_index(state.lattice());
@@ -119,8 +111,7 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     
     #[inline]
     fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         self.prob_replace_mean = 0_f64;
@@ -142,8 +133,8 @@ impl<Rng> MetropolisHastingsSweep<Rng>
 }
 
 impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    Rng: rand::Rng,
     Direction<D>: DirectionList,
 {
     type Error = Never;

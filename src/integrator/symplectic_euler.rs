@@ -97,9 +97,8 @@ impl SymplecticEuler {
     );
     
     fn get_link_matrix_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
-        where State: LatticeStateWithEField<D>,
-        SVector<usize, D>: Copy + Sync + Send,
-        SVector<Su3Adjoint, D>: Sync + Send,
+    where
+        State: LatticeStateWithEField<D>,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
@@ -114,9 +113,8 @@ impl SymplecticEuler {
     }
     
     fn get_e_field_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
-        where State: LatticeStateWithEField<D>,
-        SVector<usize, D>: Copy + Sync + Send,
-        SVector<Su3Adjoint, D>: Send + Sync,
+    where
+        State: LatticeStateWithEField<D>,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
@@ -140,9 +138,8 @@ impl Default for SymplecticEuler {
 }
 
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
-    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    SVector<usize, D>: Copy + Sync + Send,
-    SVector<Su3Adjoint, D>: Send + Sync,
+where
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
     Direction<D>: DirectionList,
 {
     type Error = SymplecticEulerError<State::Error>;

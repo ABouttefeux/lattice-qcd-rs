@@ -11,7 +11,8 @@ pub use distribution::*;
 
 /// Compute the mean from a [rayon::iter::IndexedParallelIterator].
 pub fn mean_par_iter<'a ,It , T>(data: It) -> T
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send +'a + Sync,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send +'a + Sync,
     It: IndexedParallelIterator<Item = &'a T>,
 {
     mean_par_iter_val(data.cloned())
@@ -19,7 +20,8 @@ pub fn mean_par_iter<'a ,It , T>(data: It) -> T
 
 /// Compute the mean from a [rayon::iter::IndexedParallelIterator] by value.
 pub fn mean_par_iter_val <It , T>(data: It) -> T
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send,
     It: IndexedParallelIterator<Item = T>,
 {
     let len = data.len();
@@ -31,7 +33,8 @@ pub fn mean_par_iter_val <It , T>(data: It) -> T
 
 /// Compute the variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator].
 pub fn variance_par_iter<'a, It,  T>(data: It) -> T
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sync + 'a + Sub<T, Output = T>,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sync + 'a + Sub<T, Output = T>,
     T: Mul<T, Output = T>,
     T: Zero,
     It: IndexedParallelIterator<Item = &'a T> + Clone,
@@ -41,7 +44,8 @@ pub fn variance_par_iter<'a, It,  T>(data: It) -> T
 
 /// Compute the variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator] by value.
 pub fn variance_par_iter_val<It,  T>(data: It) -> T
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sub<T, Output = T>,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sub<T, Output = T>,
     T: Mul<T, Output = T>,
     T: Zero,
     It: IndexedParallelIterator<Item = T> + Clone,
@@ -52,7 +56,8 @@ pub fn variance_par_iter_val<It,  T>(data: It) -> T
 
 /// Compute the mean and variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator].
 pub fn mean_and_variance_par_iter<'a, It, T>(data: It) -> [T; 2]
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sync + 'a + Sub<T, Output = T>,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sync + 'a + Sub<T, Output = T>,
     T: Mul<T, Output = T>,
     It: IndexedParallelIterator<Item = &'a T> + Clone,
     T: Zero,
@@ -62,7 +67,8 @@ pub fn mean_and_variance_par_iter<'a, It, T>(data: It) -> [T; 2]
 
 /// Compute the mean and variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator] by value.
 pub fn mean_and_variance_par_iter_val<It, T>(data: It) -> [T; 2]
-    where T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sub<T, Output = T>,
+where
+    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It::Item> + Send + Sub<T, Output = T>,
     T: Mul<T, Output = T>,
     It: IndexedParallelIterator<Item = T> + Clone,
     T: Zero,
@@ -92,7 +98,8 @@ pub fn mean_with_error_par_iter_val<It: IndexedParallelIterator<Item = f64> + Cl
 /// compute the covariance between two [rayon::iter::IndexedParallelIterator].
 /// Return `None` if the par iters are not of the same length
 pub fn covariance_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
-    where T: 'a + Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It1::Item> + Send + Sync + Mul<T, Output = T> + Sub<T, Output = T>,
+where
+    T: 'a + Clone + Div<f64, Output = T> + std::iter::Sum<T> +std::iter::Sum<It1::Item> + Send + Sync + Mul<T, Output = T> + Sub<T, Output = T>,
     It1: IndexedParallelIterator<Item = &'a T> + Clone,
     It2: IndexedParallelIterator<Item = &'a T> + Clone,
     T: Zero,
@@ -123,7 +130,8 @@ pub fn covariance_par_iter_val<It1, It2, T>(data_1: It1, data_2: It2) -> Option<
 
 /// compute the mean from a slice
 pub fn mean<'a, T>(data: &'a [T]) -> T
-    where T: Div<f64, Output = T> + std::iter::Sum<&'a T>,
+where
+    T: Div<f64, Output = T> + std::iter::Sum<&'a T>,
 {
     let mean: T = data.iter().sum();
     mean / data.len() as f64
@@ -131,7 +139,8 @@ pub fn mean<'a, T>(data: &'a [T]) -> T
 
 /// compute the variance (squared of standard deviation) from a slice
 pub fn variance<'a, T>(data: &'a [T]) -> T
-    where T: Div<f64, Output = T> +std::iter::Sum<&'a T> + std::iter::Sum<T> + Mul<T, Output = T> + Clone + Sub<T, Output = T>,
+where
+    T: Div<f64, Output = T> +std::iter::Sum<&'a T> + std::iter::Sum<T> + Mul<T, Output = T> + Clone + Sub<T, Output = T>,
 {
     let [_, variance] = mean_and_variance(data);
     variance
@@ -157,7 +166,8 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2]
 /// compute the covariance between two slices.
 /// Return `None` if the slices are not of the same length
 pub fn covariance<'a, T>(data_1: &'a [T],data_2: &'a [T]) -> Option<T>
-    where T: Div<f64, Output = T> + std::iter::Sum<&'a T> + std::iter::Sum<T> + Mul<T, Output = T> + Clone + Sub<T, Output = T>,
+where
+    T: Div<f64, Output = T> + std::iter::Sum<&'a T> + std::iter::Sum<T> + Mul<T, Output = T> + Clone + Sub<T, Output = T>,
 {
     if data_1.len() == data_2.len() {
         let mean_prod = data_1.iter().zip(data_2.iter()).map(|(el1, el2)| el1.clone() * el2.clone() ).sum::<T>() / data_2.len() as f64;

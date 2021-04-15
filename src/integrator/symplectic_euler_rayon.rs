@@ -59,9 +59,8 @@ impl SymplecticEulerRayon {
     /// In debug panic if the lattice has not the same number link as link_matrix
     /// or not the same number of point as e_field.
     fn get_link_matrix_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
-        where State: LatticeStateWithEField<D>,
-        SVector<usize, D>: Copy + Send + Sync,
-        SVector<Su3Adjoint, D>: Sync + Send,
+    where
+        State: LatticeStateWithEField<D>,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
@@ -77,9 +76,8 @@ impl SymplecticEulerRayon {
     /// In debug panic if the lattice has not the same number link as link_matrix
     /// or not the same number of point as e_field.
     fn get_e_field_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<SVector<Su3Adjoint, D>>
-        where State: LatticeStateWithEField<D>,
-        SVector<usize, D>: Copy + Send + Sync,
-        SVector<Su3Adjoint, D>: Sync + Send,
+    where
+        State: LatticeStateWithEField<D>,
         Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
@@ -98,9 +96,8 @@ impl Default for SymplecticEulerRayon {
 }
 
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEulerRayon
-    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
     Direction<D>: DirectionList,
 {
     type Error = State::Error;

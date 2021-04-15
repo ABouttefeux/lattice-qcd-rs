@@ -29,7 +29,6 @@ use std::{
 
 use na::{
     ComplexField,
-    SVector,
 };
 
 use rand::{
@@ -117,8 +116,7 @@ fn test_leap_frog() {
 }
 
 fn generate_state_with_logs<const D: usize>(rng: &mut impl rand::Rng) -> LatticeStateDefault<D>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     let size = 1000_f64;
@@ -139,7 +137,8 @@ fn generate_state_with_logs<const D: usize>(rng: &mut impl rand::Rng) -> Lattice
 
 #[allow(dead_code)]
 fn simulate_with_log_subblock<MC>(mut simulation: LatticeStateDefault<4>, mc: &mut MC, number_of_sims: u64) -> LatticeStateDefault<4>
-    where MC: MonteCarlo<LatticeStateDefault<4>, 4>,
+where
+    MC: MonteCarlo<LatticeStateDefault<4>, 4>,
     MC::Error: core::fmt::Debug,
 {
     let pb = ProgressBar::new(number_of_sims);
@@ -172,8 +171,8 @@ fn simulate_loop_with_input<MC, const D: usize>(
     sub_block: u64,
     closure_message : &dyn Fn(&LatticeStateDefault<D>, &MC) -> String
 ) -> LatticeStateDefault<D>
-    where MC: MonteCarlo<LatticeStateDefault<D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    MC: MonteCarlo<LatticeStateDefault<D>, D>,
     Direction<D>: DirectionList,
     MC::Error: core::fmt::Debug,
 {

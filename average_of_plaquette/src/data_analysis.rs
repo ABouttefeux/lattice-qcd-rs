@@ -13,9 +13,6 @@ use super::config::Config;
 use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
-use na::{
-    SVector,
-};
 
 
 /// Data point for an average
@@ -206,8 +203,7 @@ pub fn plot_data_auto_corr(auto_corr: &[f64], name: &str) -> Result<(), Box<dyn 
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
 pub fn save_data<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
@@ -217,8 +213,7 @@ pub fn save_data<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>) -
 }
 
 pub fn save_data_n<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
@@ -228,7 +223,8 @@ pub fn save_data_n<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>,
 }
 
 pub fn save_data_any<T>(state: &T, file_name: &str) -> std::io::Result<()>
-    where T: Serialize,
+where
+    T: Serialize,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(file_name)?;

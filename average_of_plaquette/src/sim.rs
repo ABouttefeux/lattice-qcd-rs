@@ -29,8 +29,7 @@ pub const fn get_pb_template() -> &'static str {
 
 /// Generate a hot configuration with the given config
 pub fn generate_state_default<Rng: rand::Rng, const D: usize>(cfg: &LatticeConfig, rng: &mut Rng) -> LatticeStateDefault<D>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).expect("Invalide Configuration")
@@ -38,14 +37,16 @@ pub fn generate_state_default<Rng: rand::Rng, const D: usize>(cfg: &LatticeConfi
 
 /// Generate a [`MetropolisHastingsDeltaDiagnostic`] from a config
 pub fn get_mc_from_config<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsDeltaDiagnostic<Rng>
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     MetropolisHastingsDeltaDiagnostic::new(cfg.spread(), rng).expect("Invalide Configuration")
 }
 
 /// Generate a [`MetropolisHastingsSweep`] from a config
 pub fn get_mc_from_config_sweep<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     MetropolisHastingsSweep::new(cfg.number_of_rand(), cfg.spread(), rng).expect("Invalide Configuration")
 }
@@ -56,7 +57,8 @@ pub fn run_simulation_with_progress_bar_average<Rng>(
     mp : &MultiProgress,
     rng: Rng,
 ) -> (AverageData, LatticeStateDefault<4>, Rng)
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         simulation.average_trace_plaquette().unwrap().real() / 3.0
@@ -69,7 +71,8 @@ pub fn run_simulation_with_progress_bar_volume<Rng>(
     mp : &MultiProgress,
     rng: Rng,
 ) -> (AverageData, LatticeStateDefault<3>, Rng)
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         observable::volume_obs_mean(simulation)
@@ -84,8 +87,8 @@ fn run_simulation_with_progress_bar<Rng, const D: usize>(
     rng: Rng,
     closure: &dyn Fn(&LatticeStateDefault<D>) -> f64,
 ) -> (AverageData, LatticeStateDefault<D>, Rng)
-    where Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    Rng: rand::Rng,
     Direction<D>: DirectionList,
 {
     
@@ -157,8 +160,7 @@ pub fn thermalize_state<MC, F, const D: usize>(
     prefix: &str,
     sufix: &str,
 ) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError<MC::Error>>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
     MC: MonteCarlo<LatticeStateDefault<D>, D>,
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
@@ -265,8 +267,7 @@ pub fn simulation_gather_measurement<MC, F, const D: usize>(
     number_of_discard: usize,
     number_of_measurement: usize,
 ) -> Result<MesurementAndLattice<D>, ThermalisationSimumlationError<MC::Error>>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
     MC: MonteCarlo<LatticeStateDefault<D>, D>,
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
@@ -328,8 +329,7 @@ pub fn thermalize_with_e_field<Rng, const D: usize>(
     rng: Rng,
     dt: f64,
 ) -> Result<ResultThermalizeE<Rng, D>, ThermalizeError>
-    where
-    SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
     SVector<Su3Adjoint, D>: Sync + Send,
     Rng: rand::Rng,

@@ -119,7 +119,7 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
     number_of_thread: usize,
     capacity: usize,
 ) -> Result<HashMap<Key, Data>, ThreadError>
-    where //Builder: BuildHasher + Default,
+where
     CommonData: Sync,
     Key: Eq + Hash + Send + Clone + Sync,
     Data: Send,
@@ -196,7 +196,7 @@ pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, Init
     number_of_thread: usize,
     capacity: usize,
 ) -> Result<HashMap<Key, Data>, ThreadError>
-    where //Builder: BuildHasher + Default,
+where
     CommonData: Sync,
     Key: Eq + Hash + Send + Clone + Sync,
     Data: Send,
@@ -293,7 +293,8 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
     l: &LatticeCyclique<D>,
     default_data: &Data,
 ) -> Result<Vec<Data>, ThreadError>
-    where CommonData: Sync,
+where
+    CommonData: Sync,
     Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
     Data: Send + Clone,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
@@ -382,7 +383,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
     l: &LatticeCyclique<D>,
     default_data: &Data,
 ) -> Result<Vec<Data>, ThreadError>
-    where CommonData: Sync,
+where
+    CommonData: Sync,
     Key: Eq + Send + Clone + Sync,
     Data: Send + Clone,
     F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
@@ -460,7 +462,8 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, 
 /// assert_eq!(vec, vec![1, 3, 0, 9, 1, 10]);
 /// ```
 pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_data: &Data)
-    where Data: Clone,
+where
+    Data: Clone,
 {
     if pos < vec.len() {
         vec[pos] = data;
@@ -497,7 +500,8 @@ pub fn run_pool_parallel_rayon<Key, Data, CommonData, F>(
     common_data: &CommonData,
     closure: F,
 ) -> Vec<Data>
-    where CommonData: Sync,
+where
+    CommonData: Sync,
     Key: Eq + Send,
     Data: Send,
     F: Sync + Fn(&Key, &CommonData) -> Data,

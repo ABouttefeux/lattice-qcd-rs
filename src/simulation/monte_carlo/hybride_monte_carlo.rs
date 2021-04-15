@@ -8,7 +8,6 @@ use super::{
         super::{
             Real,
             integrator::SymplecticIntegrator,
-            field::Su3Adjoint,
             lattice::{
                 Direction,
                 DirectionList,
@@ -27,9 +26,6 @@ use super::{
 };
 use std::marker::PhantomData;
 use rand_distr::Distribution;
-use na::{
-    SVector,
-};
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
@@ -45,12 +41,11 @@ use serde::{Serialize, Deserialize};
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarlo<State, Rng, I, const D: usize>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternal<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
@@ -58,12 +53,11 @@ pub struct HybridMonteCarlo<State, Rng, I, const D: usize>
 }
 
 impl<State, Rng, I, const D: usize> HybridMonteCarlo<State, Rng, I, D>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
@@ -95,12 +89,11 @@ impl<State, Rng, I, const D: usize> HybridMonteCarlo<State, Rng, I, D>
 }
 
 impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State ,D> ,D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;
@@ -116,10 +109,9 @@ impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarlo<St
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, const D: usize>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     delta_t: Real,
@@ -130,10 +122,9 @@ struct HybridMonteCarloInternal<State, I, const D: usize>
 }
 
 impl<State, I, const D: usize> HybridMonteCarloInternal<State, I, D>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
@@ -152,10 +143,9 @@ impl<State, I, const D: usize> HybridMonteCarloInternal<State, I, D>
 }
 
 impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State, I, D>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;
@@ -183,12 +173,11 @@ impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloI
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarloDiagnostic<State, Rng, I, const D: usize>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternalDiagnostics<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
@@ -196,12 +185,11 @@ pub struct HybridMonteCarloDiagnostic<State, Rng, I, const D: usize>
 }
 
 impl<State, Rng, I, const D: usize> HybridMonteCarloDiagnostic<State, Rng, I, D>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
@@ -243,12 +231,11 @@ impl<State, Rng, I, const D: usize> HybridMonteCarloDiagnostic<State, Rng, I, D>
 }
 
 impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarloDiagnostic<State, Rng, I, D>
-    where State: LatticeState<D> + Clone,
+where
+    State: LatticeState<D> + Clone,
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     
@@ -265,10 +252,9 @@ impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarloDia
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     delta_t: Real,
@@ -281,10 +267,9 @@ struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>
 }
 
 impl<State, I, const D: usize> HybridMonteCarloInternalDiagnostics<State, I, D>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
@@ -315,10 +300,9 @@ impl<State, I, const D: usize> HybridMonteCarloInternalDiagnostics<State, I, D>
 }
 
 impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloInternalDiagnostics<State, I, D>
-    where State: SimulationStateSynchrone<D>,
+where
+    State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;

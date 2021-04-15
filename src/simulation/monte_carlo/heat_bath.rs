@@ -25,7 +25,6 @@ use super::{
     },
 };
 use na::{
-    SVector,
     ComplexField,
 };
 #[cfg(feature = "serde-serialize")]
@@ -35,15 +34,11 @@ use serde::{Serialize, Deserialize};
 /// Pseudo heat bath algorithm
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-{
+pub struct HeatBathSweep<Rng: rand::Rng> {
     rng: Rng
 }
 
-impl<Rng> HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-{
+impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     /// Create a new Self form a rng.
     pub fn new(rng: Rng) -> Self {
         Self {rng}
@@ -76,8 +71,7 @@ impl<Rng> HeatBathSweep<Rng>
     
     #[inline]
     fn get_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
@@ -93,8 +87,7 @@ impl<Rng> HeatBathSweep<Rng>
     #[inline]
     // TODO improve error handeling
     fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where
-        na::SVector<usize, D>: Copy + Send + Sync,
+    where
         Direction<D>: DirectionList,
     {
         let lattice = state.lattice().clone();
@@ -107,8 +100,8 @@ impl<Rng> HeatBathSweep<Rng>
 }
 
 impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    Rng: rand::Rng,
     Direction<D>: DirectionList,
 {
     type Error = Never;

@@ -22,7 +22,6 @@ use super::{
 use std::marker::PhantomData;
 use rand_distr::Distribution;
 use na::{
-    SVector,
     ComplexField,
 };
 
@@ -44,8 +43,8 @@ pub use hybride::*;
 /// Monte-Carlo algorithm, giving the next element in the simulation.
 /// It is also a Markov chain
 pub trait MonteCarlo<State, const D: usize>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
@@ -62,8 +61,8 @@ pub trait MonteCarlo<State, const D: usize>
 ///
 /// To get an [`MonteCarlo`] use the wrapper [`McWrapper`]
 pub trait MonteCarloDefault<State, const D: usize>
-    where State: LatticeState<D>,
-    SVector<usize, D>: Copy + Send + Sync,
+where
+    State: LatticeState<D>,
     Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
@@ -104,10 +103,10 @@ pub trait MonteCarloDefault<State, const D: usize>
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug)]
 pub struct McWrapper<MCD, State, Rng, const D: usize>
-    where MCD: MonteCarloDefault<State, D>,
+where
+    MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     mcd: MCD,
@@ -116,10 +115,10 @@ pub struct McWrapper<MCD, State, Rng, const D: usize>
 }
 
 impl<MCD, State, Rng, const D: usize> McWrapper<MCD, State, Rng, D>
-    where MCD: MonteCarloDefault<State, D>,
+where
+    MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     /// Create the wrapper.
@@ -139,10 +138,10 @@ impl<MCD, State, Rng, const D: usize> McWrapper<MCD, State, Rng, D>
 }
 
 impl<T, State, Rng, const D: usize> MonteCarlo<State, D> for McWrapper<T, State, Rng, D>
-    where T: MonteCarloDefault<State, D>,
+where
+    T: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    SVector<usize, D>: Copy + Send + Sync,
     Direction<D>: DirectionList,
 {
     type Error = T::Error;
@@ -161,7 +160,7 @@ fn get_delta_s_old_new_cmp<const D: usize>(
     beta : Real,
     old_matrix: &na::Matrix3<Complex>,
 ) -> Real
-    where na::SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     let a = get_staple(link_matrix, lattice, link);
@@ -174,8 +173,7 @@ fn get_staple<const D: usize>(
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
 ) -> na::Matrix3<Complex>
-    where
-    na::SVector<usize, D>: Copy + Send + Sync,
+where
     Direction<D>: DirectionList,
 {
     let dir_j = link.dir();

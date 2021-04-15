@@ -31,7 +31,7 @@ const EPSILON: f64 = 0.000000001_f64;
 const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
 /// test the size of iterators
-fn test_itrerator(points: usize){
+fn test_itrerator(points: usize) {
     let l = LatticeCyclique::<4>::new(1_f64, points).unwrap();
     let array: Vec<LatticeLinkCanonical<4>> = l.get_links().collect();
     assert_eq!(array.len(), 4 * points * points * points * points);
@@ -43,14 +43,14 @@ fn test_itrerator(points: usize){
 
 #[test]
 /// test the size of iterators
-fn test_itrerator_length(){
+fn test_itrerator_length() {
     test_itrerator(2);
     test_itrerator(10);
     test_itrerator(26);
 }
 
 /// test the exponential of matrix
-fn test_exp(factor : Complex){
+fn test_exp(factor : Complex) {
     let m_g1_exp = CMatrix3::new(
         factor.cosh(), factor.sinh(), ZERO,
         factor.sinh(), factor.cosh(), ZERO,

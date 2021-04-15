@@ -139,7 +139,8 @@ pub trait MatrixExp<T> {
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
 impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
-    where T: ComplexField + Copy,
+where
+    T: ComplexField + Copy,
     D: na::DimName + na::DimSub<na::U1>,
     DefaultAllocator: Allocator<T, D, na::DimDiff<D, na::U1>>
         + Allocator<T, na::DimDiff<D, na::U1>>

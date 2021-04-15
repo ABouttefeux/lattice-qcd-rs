@@ -282,7 +282,7 @@ mod test {
     }
     
     #[test]
-    fn levi_civita_test(){
+    fn levi_civita_test() {
         assert_eq!(Sign::Positive, levi_civita(&[]));
         assert_eq!(Sign::Positive, levi_civita(&[1, 2]));
         assert_eq!(Sign::Positive, levi_civita(&[0, 1]));

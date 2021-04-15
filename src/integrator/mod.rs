@@ -103,10 +103,9 @@ pub trait Integrator<State, State2>
 /// (q (or link matrices) at time T , p (or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
 pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
-    where StateSync: SimulationStateSynchrone<D>,
+where
+    StateSync: SimulationStateSynchrone<D>,
     StateLeap: SimulationStateLeapFrog<D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
     Direction<D>: DirectionList,
 {
     /// Type of error returned by the Integrator.
@@ -153,9 +152,8 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
 /// # Panic
 /// It panics if a out of bound link is passed.
 fn integrate_link<State, const D: usize>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
-    where State: LatticeStateWithEField<D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
+    State: LatticeStateWithEField<D>,
     Direction<D>: DirectionList,
 {
     let canonical_link = LatticeLink::from(*link);
@@ -168,9 +166,8 @@ fn integrate_link<State, const D: usize>(link: &LatticeLinkCanonical<D>, link_ma
 /// # Panics
 /// It panics if a out of bound link is passed.
 fn integrate_efield<State, const D: usize>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> SVector<Su3Adjoint, D>
-    where State: LatticeStateWithEField<D>,
-    SVector<usize, D>: Copy + Send + Sync,
-    SVector<Su3Adjoint, D>: Sync + Send,
+where
+    State: LatticeStateWithEField<D>,
     Direction<D>: DirectionList,
 {
     let initial_value = e_field.get_e_vec(point, lattice).expect("E Field not found");
