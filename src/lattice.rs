@@ -875,6 +875,27 @@ impl<const D: usize> Direction<D> {
         x
     }
     
+    // TODO add const function for all direction once operation on const generic are added
+    /// Get all direction with the sign `IS_POSITIVE`
+    pub const fn get_directions<const IS_POSITIVE : bool>() -> [Self; D] {
+        let mut i = 0;
+        let mut array = [Direction {index_dir: 0, is_positive : IS_POSITIVE}; D];
+        while i < D {
+            array[i] = Direction {index_dir: i, is_positive : IS_POSITIVE};
+            i += 1;
+        }
+        array
+    }
+    
+    /// Get all negative direction
+    pub const fn negative_directions() -> [Self; D] {
+        Self::get_directions::<false>()
+    }
+    
+    /// Get all positive direction
+    pub const fn positive_directions() -> [Self; D] {
+        Self::get_directions::<true>()
+    }
     
     /// Get if the position is positive.
     pub const fn is_positive(&self) -> bool {
@@ -933,7 +954,8 @@ impl<const D: usize> Direction<D> {
 
 
 impl<const D: usize> Direction<D>
-    where Direction<D>: DirectionList,
+where
+    Direction<D>: DirectionList,
 {
     
     
@@ -1363,5 +1385,45 @@ impl From<DirectionEnum> for Vector4<Real> {
 impl From<&DirectionEnum> for Vector4<Real> {
     fn from(d: &DirectionEnum) -> Self {
         d.to_unit_vector()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    
+    #[test]
+    fn directions_list_cst() {
+        let dirs = Direction::<3>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<3>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
+        
+        let dirs = Direction::<8>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<8>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
+        
+        let dirs = Direction::<0>::positive_directions();
+        assert_eq!(dirs.len(), 0);
+        let dirs = Direction::<0>::negative_directions();
+        assert_eq!(dirs.len(), 0);
+        
+        let dirs = Direction::<128>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<128>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
     }
 }
