@@ -171,13 +171,31 @@ impl Sign {
         }
     }
     
+    /// Get the sign of the given [`i8`]
+    #[allow(clippy::comparison_chain)] // Cannot use cmp in const function
+    pub const fn sign_i8(n: i8) -> Self {
+        if n == 0 {
+            Sign::Zero
+        }
+        else if n > 0 {
+            Sign::Positive
+        }
+        else {
+            Sign::Negative
+        }
+    }
+    
     /// Retuns the sign of `a - b`, witah a and b are usize
+    #[allow(clippy::comparison_chain)]
     pub const fn sign_from_diff(a: usize, b: usize) -> Self {
-        let (result, underflow) = a.overflowing_sub(b);
-        match (result, underflow) {
-            (0, false) => Sign::Zero,
-            (_, true) => Sign::Negative,
-            _ => Sign::Positive,
+        if a == b {
+            Sign::Zero
+        }
+        else if a > b {
+            Sign::Positive
+        }
+        else {
+            Sign::Negative
         }
     }
 }
@@ -243,14 +261,18 @@ impl Ord for Sign {
 /// assert_eq!(Sign::Positive, levi_civita(&[1, 2, 3]));
 /// assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
 /// ```
-pub fn levi_civita(index: &[usize]) -> Sign {
-    let mut prod = Sign::Positive;
-    for (pos, el_1) in index.iter().enumerate() {
-        for el_2 in index.iter().take(pos) {
-            prod *= Sign::sign_from_diff(*el_1, *el_2);
+pub const fn levi_civita(index: &[usize]) -> Sign {
+    let mut prod = 1_i8;
+    let mut i = 0_usize;
+    while i < index.len() {
+        let mut j = 0_usize;
+        while j < i {
+            prod *= Sign::sign_from_diff(index[i], index[j]).to_i8();
+            j += 1;
         }
+        i += 1;
     }
-    prod
+    Sign::sign_i8(prod)
 }
 
 
@@ -279,6 +301,16 @@ mod test {
         let n = factorial(MAX_NUMBER_FACTORIAL);
         let (_, overflowed) = n.overflowing_mul(MAX_NUMBER_FACTORIAL as u128 + 1);
         assert!(!overflowed);
+    }
+    
+    #[test]
+    fn sign_i8() {
+        assert_eq!(Sign::sign_i8(0), Sign::Zero);
+        assert_eq!(Sign::sign_i8(-1), Sign::Negative);
+        assert_eq!(Sign::sign_i8(1), Sign::Positive);
+        assert_eq!(0, Sign::Zero.to_i8());
+        assert_eq!(-1, Sign::Negative.to_i8());
+        assert_eq!(1, Sign::Positive.to_i8());
     }
     
     #[test]

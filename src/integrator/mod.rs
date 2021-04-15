@@ -139,6 +139,8 @@ where
     /// Integrate a Sync state by going to leap and then back to sync.
     /// This is the symplectic methode of integration, which should conserve the hamiltonian
     ///
+    /// Note that you might want to override this method as it can save you from a clone.
+    ///
     /// # Errors
     /// Return an error if the integration encounter a problem
     fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error> {

@@ -92,6 +92,7 @@ where
     ///     LatticeLinkCanonical::new(LatticePoint::new([1, 3, 2, 0].into()), DirectionEnum::YPos.into()).unwrap()
     /// );
     /// ```
+    // TODO const fn ?
     pub fn get_link_canonical(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLinkCanonical<D> {
         let mut pos_link = pos;
         if ! dir.is_positive() {
@@ -107,6 +108,7 @@ where
     ///
     /// It is similar to [`LatticeLink::new`]. It however enforce that the point is inside the bounds.
     /// If it is not, it will use the modulus of the bound.
+    // TODO const fn ?
     pub fn get_link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
@@ -875,7 +877,7 @@ impl<const D: usize> Direction<D> {
     // TODO add const function for all direction once operation on const generic are added
     /// Get all direction with the sign `IS_POSITIVE`
     pub const fn get_directions<const IS_POSITIVE : bool>() -> [Self; D] {
-        let mut i = 0;
+        let mut i = 0_usize;
         let mut array = [Direction {index_dir: 0, is_positive: IS_POSITIVE}; D];
         while i < D {
             array[i] = Direction {index_dir: i, is_positive: IS_POSITIVE};

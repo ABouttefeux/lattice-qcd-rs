@@ -94,7 +94,7 @@ where
         if d.sample(rng) {
             Ok(potential_next)
         }
-        else{
+        else {
             Ok(state)
         }
     }
