@@ -45,13 +45,13 @@ pub const fn factorial(n: usize) -> FactorialNumber {
 
 /// Dynamical size factorial store
 pub struct FactorialStorageDyn {
-    data: Vec<FactorialNumber>
+    data: Vec<FactorialNumber>,
 }
 
 impl FactorialStorageDyn {
     /// Create a new object with an empty storage
     pub const fn new() -> Self {
-        Self{data : Vec::new()}
+        Self { data: Vec::new() }
     }
     
     /// Build the storage up to and including `value`.
@@ -82,10 +82,10 @@ impl FactorialStorageDyn {
             self.data.push(1);
             len = 1;
         }
-        if len > value{
+        if len > value {
             return self.data[value];
         }
-        for i in len..value + 1{
+        for i in len..value + 1 {
             self.data.push(self.data[i - 1] * TryInto::<FactorialNumber>::try_into(i).unwrap());
         }
         self.data[value]
@@ -116,8 +116,8 @@ impl FactorialStorageDyn {
     /// assert_eq!(f.try_get_factorial(6), None);
     /// ```
     pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
-        let mut value_m : FactorialNumber = self.data[value.min(self.data.len() -1 )];
-        for i in self.data.len() - 1..value{
+        let mut value_m: FactorialNumber = self.data[value.min(self.data.len() - 1)];
+        for i in self.data.len() - 1..value {
             value_m *= TryInto::<FactorialNumber>::try_into(i + 1).unwrap();
         }
         value_m
@@ -201,13 +201,13 @@ impl Sign {
 }
 
 impl From<Sign> for f64 {
-    fn from(s : Sign) -> f64 {
+    fn from(s: Sign) -> f64 {
         s.to_f64()
     }
 }
 
 impl From<f64> for Sign {
-    fn from(f : f64) -> Sign {
+    fn from(f: f64) -> Sign {
         Sign::sign(f)
     }
 }
@@ -231,7 +231,7 @@ impl Mul for Sign {
         match (self, rhs) {
             (Sign::Negative, Sign::Negative) | (Sign::Positive, Sign::Positive) => Sign::Positive,
             (Sign::Zero, _) | (_, Sign::Zero) => Sign::Zero,
-            (Sign::Positive, Sign::Negative) | (Sign::Negative, Sign::Positive) => Sign::Negative
+            (Sign::Positive, Sign::Negative) | (Sign::Negative, Sign::Positive) => Sign::Negative,
         }
     }
 }
