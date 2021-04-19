@@ -22,7 +22,6 @@ use super::{
     su2,
 };
 use rand_distr::Distribution;
-use once_cell::sync::Lazy;
 
 /// SU(3) generator
 /// ```textrust
@@ -30,11 +29,11 @@ use once_cell::sync::Lazy;
 /// 0.5  0    0
 /// 0    0    0
 /// ```
-pub static GENERATOR_1: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        ZERO, ONE, ZERO,
-        ONE, ZERO, ZERO,
+pub const GENERATOR_1: CMatrix3 = CMatrix3::new(
+        ZERO, Complex::new(0.5_f64, 0_f64), ZERO,
+        Complex::new(0.5_f64, 0_f64), ZERO, ZERO,
         ZERO, ZERO, ZERO,
-) * Complex::from(0.5_f64));
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -42,11 +41,11 @@ pub static GENERATOR_1: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// i/2  0     0
 /// 0    0     0
 /// ```
-pub static GENERATOR_2: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        ZERO, -I, ZERO,
-        I, ZERO, ZERO,
+pub const GENERATOR_2: CMatrix3 = CMatrix3::new(
+        ZERO, Complex::new(0_f64, -0.5_f64), ZERO,
+        Complex::new(0_f64, 0.5_f64), ZERO, ZERO,
         ZERO, ZERO, ZERO,
-) * Complex::from(0.5_f64));
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -54,11 +53,11 @@ pub static GENERATOR_2: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0   -0.5  0
 /// 0    0    0
 /// ```
-pub static GENERATOR_3: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        ONE, ZERO, ZERO,
-        ZERO, -ONE, ZERO,
+pub const GENERATOR_3: CMatrix3 = CMatrix3::new(
+        Complex::new(0.5_f64, 0_f64), ZERO, ZERO,
+        ZERO, Complex::new(-0.5_f64, 0_f64), ZERO,
         ZERO, ZERO, ZERO,
-) * Complex::from(0.5_f64));
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -66,11 +65,11 @@ pub static GENERATOR_3: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0    0    0
 /// 0.5  0    0
 /// ```
-pub static GENERATOR_4: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        ZERO, ZERO, ONE,
+pub const GENERATOR_4: CMatrix3 = CMatrix3::new(
+        ZERO, ZERO, Complex::new(0.5_f64, 0_f64),
         ZERO, ZERO, ZERO,
-        ONE, ZERO, ZERO,
-) * Complex::from(0.5_f64));
+        Complex::new(0.5_f64, 0_f64), ZERO, ZERO,
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -78,11 +77,11 @@ pub static GENERATOR_4: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0    0    0
 /// i/2  0    0
 /// ```
-pub static GENERATOR_5: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        ZERO, ZERO, -I,
+pub const GENERATOR_5: CMatrix3 = CMatrix3::new(
+        ZERO, ZERO, Complex::new(0_f64, -0.5_f64),
         ZERO, ZERO, ZERO,
-        I, ZERO, ZERO,
-) * Complex::from(0.5_f64));
+        Complex::new(0_f64, 0.5_f64), ZERO, ZERO,
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -90,11 +89,11 @@ pub static GENERATOR_5: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0    0    0.5
 /// 0    0.5  0
 /// ```
-pub static GENERATOR_6: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
+pub const GENERATOR_6: CMatrix3 = CMatrix3::new(
         ZERO, ZERO, ZERO,
-        ZERO, ZERO, ONE,
-        ZERO, ONE, ZERO,
-) * Complex::from(0.5_f64));
+        ZERO, ZERO, Complex::new(0.5_f64, 0_f64),
+        ZERO, Complex::new(0.5_f64, 0_f64), ZERO,
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -102,11 +101,11 @@ pub static GENERATOR_6: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0    0   -i/2
 /// 0    i/2  0
 /// ```
-pub static GENERATOR_7: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
+pub const GENERATOR_7: CMatrix3 = CMatrix3::new(
         ZERO, ZERO, ZERO,
-        ZERO, ZERO, -I,
-        ZERO, I, ZERO,
-) * Complex::from(0.5_f64));
+        ZERO, ZERO, Complex::new(0_f64, -0.5_f64),
+        ZERO, Complex::new(0_f64, 0.5_f64), ZERO,
+);
 
 /// SU(3) generator
 /// ```textrust
@@ -114,17 +113,27 @@ pub static GENERATOR_7: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
 /// 0            0.5/sqrt(3)  0
 /// 0            0           -1/sqrt(3)
 /// ```
-pub static GENERATOR_8: Lazy<CMatrix3> = Lazy::new(|| CMatrix3::new(
-        Complex::new(1_f64, 0_f64), ZERO, ZERO,
-        ZERO, Complex::new(1_f64, 0_f64), ZERO,
-        ZERO, ZERO, Complex::new(-2_f64, 0_f64),
-) * Complex::from(0.5_f64 / 3_f64.sqrt()));
+pub const GENERATOR_8: CMatrix3 = CMatrix3::new(
+        Complex::new(ONE_OVER_2_SQRT_3, 0_f64), ZERO, ZERO,
+        ZERO, Complex::new(ONE_OVER_2_SQRT_3, 0_f64), ZERO,
+        ZERO, ZERO, Complex::new(MINUS_ONE_OVER_SQRT_3, 0_f64),
+);
+
+const MINUS_ONE_OVER_SQRT_3: f64 = -0.577_350_269_189_625_8_f64;
+const ONE_OVER_2_SQRT_3: f64 = 0.288_675_134_594_812_9_f64;
 
 /// list of SU(3) generators
 /// they are normalize such that `Tr(T^a T^b) = \frac{1}{2}\delta^{ab}`
-pub static GENERATORS: Lazy<[&CMatrix3; 8]> = Lazy::new(||
-    [&GENERATOR_1, &GENERATOR_2, &GENERATOR_3, &GENERATOR_4, &GENERATOR_5, &GENERATOR_6, &GENERATOR_7, &GENERATOR_8]
-);
+pub const GENERATORS: [&CMatrix3; 8] = [
+    &GENERATOR_1,
+    &GENERATOR_2,
+    &GENERATOR_3,
+    &GENERATOR_4,
+    &GENERATOR_5,
+    &GENERATOR_6,
+    &GENERATOR_7,
+    &GENERATOR_8
+];
 
 
 /// Exponential of matrices.
@@ -638,7 +647,7 @@ mod test {
     fn exp_matrix() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for m in &*GENERATORS {
+        for m in &GENERATORS {
             let output_r = matrix_su3_exp_r(**m);
             assert_eq_matrix!(output_r, m.exp(), EPSILON);
             let output_i = matrix_su3_exp_i(**m);
@@ -657,7 +666,7 @@ mod test {
     fn test_is_matrix_su3_lie() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for m in &*GENERATORS{
+        for m in &GENERATORS {
             assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
         }
         for _ in 0..100 {
@@ -665,5 +674,17 @@ mod test {
             let m = v.to_matrix();
             assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
         }
+    }
+    
+    #[test]
+    fn test_gen() {
+        assert_eq!(
+            CMatrix3::new(
+                Complex::new(1_f64, 0_f64), ZERO, ZERO,
+                ZERO, Complex::new(1_f64, 0_f64), ZERO,
+                ZERO, ZERO, Complex::new(-2_f64, 0_f64),
+            ) * Complex::from(0.5_f64 / 3_f64.sqrt()),
+            GENERATOR_8
+        );
     }
 }

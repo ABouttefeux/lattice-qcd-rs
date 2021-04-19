@@ -59,14 +59,11 @@ pub struct LatticeCyclique<const D: usize> {
 }
 
 
-impl<const D: usize> LatticeCyclique<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeCyclique<D> {
     
-    /// Number space + time dimension.
+    /// Number space + time dimension, this is the `D` parameter.
     ///
-    /// Not to confuse with [`LatticeCyclique::dim`]. This is the dimension of space-time.
+    /// Not to confuse with [`LatticeCyclique::dim`] which is the number of point per dimension.
     pub const fn dim_st() -> usize {
         D
     }
@@ -92,7 +89,6 @@ where
     ///     LatticeLinkCanonical::new(LatticePoint::new([1, 3, 2, 0].into()), DirectionEnum::YPos.into()).unwrap()
     /// );
     /// ```
-    // TODO const fn ?
     pub fn get_link_canonical(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLinkCanonical<D> {
         let mut pos_link = pos;
         if ! dir.is_positive() {
@@ -108,7 +104,6 @@ where
     ///
     /// It is similar to [`LatticeLink::new`]. It however enforce that the point is inside the bounds.
     /// If it is not, it will use the modulus of the bound.
-    // TODO const fn ?
     pub fn get_link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
@@ -127,14 +122,9 @@ where
     /// Get the number of points in a single direction.
     ///
     /// use [`LatticeCyclique::get_number_of_points`] for the total number of points.
-    /// Not to confuse with [`LatticeCyclique::dim_st`]. This is the dimension of space-time.
+    /// Not to confuse with [`LatticeCyclique::dim_st`] which is the dimension of space-time.
     pub const fn dim(&self) -> usize {
         self.dim
-    }
-    
-    /// Get an Iterator over all canonical link of the lattice.
-    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
-        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::get_all_positive_directions().first().unwrap()));
     }
     
     /// Get an Iterator over all points of the lattice.
@@ -147,6 +137,9 @@ where
     /// # Errors
     /// Size should be greater than 0 and dim greater or equal to 2, otherwise return an error.
     pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError>{
+        if D == 0 {
+            return Err(LatticeInitializationError::ZeroDimension);
+        }
         if size <= 0_f64 || size.is_nan() || size.is_infinite() {
             return Err(LatticeInitializationError::NonPositiveSize);
         }
@@ -208,8 +201,14 @@ where
 
 impl<const D: usize> LatticeCyclique<D>
 where
-    Direction<D>: DirectionList,
+    Direction<D>: DirectionList
 {
+    
+    /// Get an Iterator over all canonical link of the lattice.
+    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
+        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::get_all_positive_directions().first().unwrap()));
+    }
+    
     /// Returns wether the number of point is the same as the length of `e_field`
     pub fn has_compatible_lenght_e_field(&self, e_field: &EField<D>) -> bool {
         self.get_number_of_points() == e_field.len()
@@ -229,10 +228,7 @@ pub struct IteratorLatticeLinkCanonical<'a, const D: usize> {
     element: Option<LatticeLinkCanonical<D>>,
 }
 
-impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D> {
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] will return `first_el`.
     /// # Example
     /// ```
@@ -250,10 +246,7 @@ where
     }
 }
 
-impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D> {
     type Item = LatticeLinkCanonical<D>;
     
     // TODO improve
@@ -291,15 +284,9 @@ where
     }
 }
 
-impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D>
-where
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
-impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D>
-where
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
 /// Enum for internal use of interator. It store the previous element returned by `next`
 #[derive(Clone, Debug, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -437,10 +424,7 @@ pub struct IteratorLatticePoint<'a, const D: usize> {
     element: Option<LatticePoint<D>>,
 }
 
-impl<'a, const D: usize> IteratorLatticePoint<'a, D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IteratorLatticePoint<'a, D> {
     /// create a new iterator. The first [`IteratorLatticePoint::next()`] will return `first_el`.
     /// # Example
     /// ```
@@ -459,10 +443,7 @@ where
 }
 
 
-impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
     type Item = LatticePoint<D>;
     
     // TODO improve
@@ -497,15 +478,9 @@ where
     }
 }
 
-impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticePoint<'a, D>
-where
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticePoint<'a, D> {}
 
-impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D>
-where
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D> {}
 
 /// Represents point on a (any) lattice.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -515,6 +490,7 @@ pub struct LatticePoint<const D: usize> {
 }
 
 impl<const D: usize> LatticePoint<D> {
+    
     /// Create a new lattice point.
     ///
     /// It can be outside a lattice.
@@ -637,18 +613,12 @@ impl<const D: usize> From<LatticePoint<D>> for [usize; D]
 ///
 /// Used mainly to index field on the lattice using [`std::vec::Vec`]
 // TODO change name ? make it less confusing
-pub trait LatticeElementToIndex<const D: usize>
-where
-    Direction<D>: DirectionList,
-{
+pub trait LatticeElementToIndex<const D: usize> {
     /// Given a lattice return an index from the element
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize;
 }
 
-impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D> {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
         self.iter().enumerate().map(|(index, pos)| {
             (pos % l.dim()) * l.dim().pow(index.try_into().unwrap())
@@ -656,20 +626,14 @@ where
     }
 }
 
-impl<const D: usize> LatticeElementToIndex<D> for Direction<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for Direction<D> {
     /// equivalent to [`Direction::to_index()`]
     fn to_index(&self, _: &LatticeCyclique<D>) -> usize {
         self.to_index()
     }
 }
 
-impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
         self.pos().to_index(l) * D + self.dir().to_index()
     }
@@ -679,10 +643,7 @@ where
 ///
 /// It is implemented for compatibility reason
 /// such that function that require a [`LatticeElementToIndex`] can also accept [`usize`].
-impl<const D: usize> LatticeElementToIndex<D> for usize
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for usize {
     /// return self
     fn to_index(&self, _l: &LatticeCyclique<D>) -> usize {
         *self
@@ -876,7 +837,7 @@ impl<const D: usize> Direction<D> {
     
     // TODO add const function for all direction once operation on const generic are added
     /// Get all direction with the sign `IS_POSITIVE`
-    pub const fn get_directions<const IS_POSITIVE : bool>() -> [Self; D] {
+    pub const fn get_directions<const IS_POSITIVE: bool>() -> [Self; D] {
         let mut i = 0_usize;
         let mut array = [Direction {index_dir: 0, is_positive: IS_POSITIVE}; D];
         while i < D {
@@ -928,9 +889,6 @@ impl<const D: usize> Direction<D> {
     pub const fn to_index(&self) -> usize {
         self.index_dir
     }
-}
-
-impl<const D: usize> Direction<D> {
     
     /// Convert the direction into a vector of norm `a`;
     pub fn to_vector(&self, a: f64) -> SVector<Real, D> {

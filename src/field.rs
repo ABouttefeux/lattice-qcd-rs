@@ -576,10 +576,7 @@ impl LinkMatrix {
     
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
-    pub fn get_matrix<const D: usize>(&self, link: &LatticeLink<D>, l: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_matrix<const D: usize>(&self, link: &LatticeLink<D>, l: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))?;
         if link.is_dir_negative() {
@@ -592,10 +589,7 @@ impl LinkMatrix {
     }
     
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
-    pub fn get_sij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_sij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
         let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
         let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
@@ -605,10 +599,7 @@ impl LinkMatrix {
     }
     
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
-    pub fn get_pij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_pij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
@@ -638,19 +629,13 @@ impl LinkMatrix {
     }
     
     /// Get the clover, used for F_mu_nu tensor
-    pub fn get_clover<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_clover<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         Some(self.get_pij(point, dir_i, dir_j, lattice)? + self.get_pij(point, dir_j, &-dir_i, lattice)? + self.get_pij(point, &-dir_i, &-dir_j, lattice)? + self.get_pij(point, &-dir_j, dir_i, lattice)?)
     }
     
     /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
     /// See arXive:1512.02374.
-    pub fn get_f_mu_nu<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_f_mu_nu<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
         let m = self.get_clover(point, dir_i, dir_j, lattice)? - self.get_clover(point, dir_j, dir_i, lattice)?;
         Some(m / Complex::from(8_f64 * lattice.size() * lattice.size()))
     }
@@ -923,10 +908,7 @@ where
     }
 }
 
-impl<'a, const D: usize> IntoIterator for &'a EField<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IntoIterator for &'a EField<D> {
     type Item = &'a SVector<Su3Adjoint, D>;
     type IntoIter = <&'a Vec<SVector<Su3Adjoint, D>> as IntoIterator>::IntoIter;
     
@@ -935,10 +917,7 @@ where
     }
 }
 
-impl<'a, const D: usize> IntoIterator for &'a mut EField<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IntoIterator for &'a mut EField<D> {
     type Item = &'a mut SVector<Su3Adjoint, D>;
     type IntoIter = <&'a mut Vec<SVector<Su3Adjoint, D>> as IntoIterator>::IntoIter;
     

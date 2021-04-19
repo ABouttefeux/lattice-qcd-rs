@@ -56,10 +56,10 @@ fn test_exp(factor : Complex) {
         factor.sinh(), factor.cosh(), ZERO,
         ZERO, ZERO, ONE
     );
-    assert_eq_matrix!((*GENERATOR_1 * factor * Complex::from(2_f64)).exp(), m_g1_exp, EPSILON);
+    assert_eq_matrix!((GENERATOR_1 * factor * Complex::from(2_f64)).exp(), m_g1_exp, EPSILON);
     let factor_i = factor * I;
     assert_eq_matrix!(
-        (*GENERATOR_2 * factor * Complex::from(2_f64)).exp(),
+        (GENERATOR_2 * factor * Complex::from(2_f64)).exp(),
         CMatrix3::new(
             factor_i.cos(), - factor_i.sin(), ZERO,
             factor_i.sin(), factor_i.cos(), ZERO,
@@ -188,7 +188,7 @@ fn test_generators() {
     for i in 0..7{
         assert_eq!( GENERATORS[i].determinant(), ZERO);
     }
-    for i in &*GENERATORS {
+    for i in &GENERATORS {
         assert_eq!( i.trace(), ZERO);
         assert_eq!( (i.adjoint() - **i).norm(), 0_f64);
     }
@@ -429,4 +429,5 @@ fn lattice_init_error() {
     assert_eq!(LatticeCyclique::<3>::new(1_f64, 1), Err(LatticeInitializationError::DimTooSmall));
     assert_eq!(LatticeCyclique::<3>::new(1_f64, 1), Err(LatticeInitializationError::DimTooSmall));
     assert!(LatticeCyclique::<3>::new(1_f64, 2).is_ok());
+    assert_eq!(LatticeCyclique::<0>::new(1_f64, 2), Err(LatticeInitializationError::ZeroDimension));
 }
