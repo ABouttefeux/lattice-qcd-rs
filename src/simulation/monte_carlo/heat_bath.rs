@@ -12,8 +12,6 @@ use super::{
             su3,
             lattice::{
                 LatticeLinkCanonical,
-                Direction,
-                DirectionList,
             },
             error::Never,
             su2,
@@ -70,10 +68,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     }
     
     #[inline]
-    fn get_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link);
         
@@ -86,10 +81,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     
     #[inline]
     // TODO improve error handeling
-    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.get_modif(&state, &link);
@@ -102,7 +94,6 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
 impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for HeatBathSweep<Rng>
 where
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     type Error = Never;
     

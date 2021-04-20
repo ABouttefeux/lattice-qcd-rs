@@ -6,12 +6,6 @@
 use super::{
     MonteCarlo,
     super::{
-        super::{
-            lattice::{
-                Direction,
-                DirectionList,
-            },
-        },
         state::{
             LatticeState,
         },
@@ -63,7 +57,6 @@ where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     data: &'a mut MC,
     _phantom : PhantomData<(&'a State, &'a ErrorBase, &'a Error)>,
@@ -74,7 +67,6 @@ where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Create the Self using a mutable reference
     pub fn new(data: &'a mut MC) -> Self {
@@ -92,7 +84,6 @@ where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     type Target = MC;
     
@@ -106,7 +97,6 @@ where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
        self.data
@@ -118,7 +108,6 @@ where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     type Error = Error;
     
@@ -134,7 +123,6 @@ where
 pub struct HybrideMethodeVec<'a, State, E, const D: usize>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     methods: Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>
 }
@@ -142,7 +130,6 @@ where
 impl<'a, State, E, const D: usize> HybrideMethodeVec<'a, State, E, D>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Create an empty Self.
     pub fn new_empty() -> Self {
@@ -193,7 +180,6 @@ where
 impl<'a, State, E, const D: usize> Default for HybrideMethodeVec<'a, State, E, D>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     fn default() -> Self {
         Self::new_empty()
@@ -203,7 +189,6 @@ where
 impl<'a, State, E, const D: usize> MonteCarlo<State, D> for HybrideMethodeVec<'a, State, E, D>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     type Error = HybrideMethodeVecError<E>;
     
@@ -259,7 +244,6 @@ where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     method_1: MC1,
     method_2: MC2,
@@ -271,7 +255,6 @@ where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Create a new Self from two methods
     pub fn new(method_1: MC1, method_2: MC2) -> Self{
@@ -300,7 +283,6 @@ where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     type Error = HybrideMethodeCoupleError<Error1, Error2>;
     

@@ -24,8 +24,6 @@ use super::{
         },
         lattice::{
             LatticeCyclique,
-            Direction,
-            DirectionList,
         },
     },
     SymplecticIntegrator,
@@ -61,7 +59,6 @@ impl SymplecticEulerRayon {
     fn get_link_matrix_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<CMatrix3>
     where
         State: LatticeStateWithEField<D>,
-        Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
             lattice.get_links(),
@@ -78,7 +75,6 @@ impl SymplecticEulerRayon {
     fn get_e_field_integrate<State, const D: usize> (link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Vec<SVector<Su3Adjoint, D>>
     where
         State: LatticeStateWithEField<D>,
-        Direction<D>: DirectionList,
     {
         run_pool_parallel_rayon(
             lattice.get_points(),
@@ -98,7 +94,6 @@ impl Default for SymplecticEulerRayon {
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEulerRayon
 where
     State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    Direction<D>: DirectionList,
 {
     type Error = State::Error;
     

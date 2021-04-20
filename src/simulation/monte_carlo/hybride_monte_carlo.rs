@@ -8,10 +8,6 @@ use super::{
         super::{
             Real,
             integrator::SymplecticIntegrator,
-            lattice::{
-                Direction,
-                DirectionList,
-            },
             error::{
                 MultiIntegrationError,
             },
@@ -46,7 +42,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternal<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
     rng: Rng,
@@ -58,7 +53,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -94,7 +88,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State ,D> ,D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;
     
@@ -112,7 +105,6 @@ struct HybridMonteCarloInternal<State, I, const D: usize>
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     delta_t: Real,
     number_of_steps: usize,
@@ -125,7 +117,6 @@ impl<State, I, const D: usize> HybridMonteCarloInternal<State, I, D>
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -146,7 +137,6 @@ impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloI
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;
     
@@ -178,7 +168,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     internal: HybridMonteCarloInternalDiagnostics<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
     rng: Rng,
@@ -190,7 +179,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
@@ -236,7 +224,6 @@ where
     LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<LatticeStateWithEFieldSyncDefault<State, D>, SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>, D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     
     type Error = MultiIntegrationError<I::Error>;
@@ -255,7 +242,6 @@ struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     delta_t: Real,
     number_of_steps: usize,
@@ -270,7 +256,6 @@ impl<State, I, const D: usize> HybridMonteCarloInternalDiagnostics<State, I, D>
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     /// see [HybridMonteCarlo::new]
     pub fn new(
@@ -303,7 +288,6 @@ impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloI
 where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
-    Direction<D>: DirectionList,
 {
     type Error = MultiIntegrationError<I::Error>;
     

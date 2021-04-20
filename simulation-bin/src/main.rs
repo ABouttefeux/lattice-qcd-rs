@@ -115,10 +115,7 @@ fn test_leap_frog() {
     assert!((h1-h2).abs() < 0.000_01);
 }
 
-fn generate_state_with_logs<const D: usize>(rng: &mut impl rand::Rng) -> LatticeStateDefault<D>
-where
-    Direction<D>: DirectionList,
-{
+fn generate_state_with_logs<const D: usize>(rng: &mut impl rand::Rng) -> LatticeStateDefault<D> {
     let size = 1000_f64;
     let number_of_pts = NB_OF_PTS;
     let beta = BETA;
@@ -173,7 +170,6 @@ fn simulate_loop_with_input<MC, const D: usize>(
 ) -> LatticeStateDefault<D>
 where
     MC: MonteCarlo<LatticeStateDefault<D>, D>,
-    Direction<D>: DirectionList,
     MC::Error: core::fmt::Debug,
 {
     
@@ -324,14 +320,14 @@ fn sim_dmh_hmc() {
     let sub_block = 1_000;
     
     let initial_data = simulation.lattice().get_points().par_bridge().map(|point| {
-        simulation.link_matrix().get_pij(&point, &Direction::<3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+        simulation.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
     }).collect::<Vec<f64>>();
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
         &|sim: &LatticeStateDefault<DIM_USE>, _mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             //let average = sim.average_trace_plaquette().unwrap().real();
             let vec = sim.lattice().get_points().par_bridge().map(|point| {
-                sim.link_matrix().get_pij(&point, &Direction::<3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+                sim.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
             }).collect::<Vec<f64>>();
             
             let sum = vec.iter().sum::<f64>();
@@ -356,7 +352,7 @@ fn sim_dmh_hmc() {
         &|sim: &LatticeStateDefault<DIM_USE>, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<DIM_USE>, Xoshiro256PlusPlus, SymplecticEulerRayon, DIM_USE>| {
             //let average = sim.average_trace_plaquette().unwrap().real();
             let sum = sim.lattice().get_points().par_bridge().map(|point| {
-                sim.link_matrix().get_pij(&point, &Direction::<3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
+                sim.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
             }).sum::<Option<f64>>().unwrap();
             let number_of_plaquette = sim.lattice().get_number_of_points() as f64;
             let c1 = 8_f64 / 3_f64;

@@ -57,7 +57,6 @@ pub type LeapFrogStateDefault<const D: usize> = SimulationStateLeap<LatticeState
 pub trait LatticeState<const D: usize>
 where
     Self: Sync + Sized + core::fmt::Debug,
-    Direction<D>: DirectionList,
 {
     
     /// The link matrices of this state.
@@ -105,7 +104,6 @@ where
 pub trait LatticeStateNew<const D: usize>
 where
     Self: LatticeState<D> + Sized,
-    Direction<D>: DirectionList,
 {
     /// Error type
     type Error;
@@ -130,7 +128,6 @@ where
 pub trait LatticeStateWithEField<const D: usize>
 where
     Self: Sized + Sync + LatticeState<D> + core::fmt::Debug,
-    Direction<D>: DirectionList,
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
     /// # Errors
@@ -179,7 +176,6 @@ where
 pub trait LatticeStateWithEFieldNew<const D: usize>
 where
     Self: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {
     /// Error type
     type Error : From<rand_distr::NormalError>;
@@ -219,7 +215,6 @@ where
 pub trait SimulationStateSynchrone<const D: usize>
 where
     Self: LatticeStateWithEField<D> + Clone,
-    Direction<D>: DirectionList,
 {
     /// does half a step for the conjugate momenta.
     ///
@@ -387,7 +382,6 @@ where
 pub trait SimulationStateLeapFrog<const D: usize>
 where
     Self: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {
     /// Simulate the state to synchrone by finishing the half setp.
     ///
@@ -440,19 +434,13 @@ where
 /// It has the default pure gauge hamiltonian
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeStateDefault<const D: usize>
-where
-    Direction<D>: DirectionList,
-{
+pub struct LatticeStateDefault<const D: usize> {
     lattice : LatticeCyclique<D>,
     beta: Real,
     link_matrix: LinkMatrix,
 }
 
-impl<const D: usize> LatticeStateDefault<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeStateDefault<D> {
     /// Create a cold configuration. i.e. all the links are set to the unit matrix.
     ///
     /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
@@ -531,10 +519,7 @@ where
     }
 }
 
-impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D> {
     
     type Error = StateInitializationError;
     
@@ -546,10 +531,7 @@ where
     }
 }
 
-impl<const D: usize> LatticeState<D> for LatticeStateDefault<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     const CA: Real = 3_f64;
     
     getter_trait!(
@@ -574,8 +556,8 @@ where
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
-                Direction::get_all_positive_directions().iter()
+            Direction::positive_directions().iter().map(|dir_i| {
+                Direction::positive_directions().iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -593,7 +575,6 @@ where
 pub struct SimulationStateLeap<State, const D: usize>
 where
     State: SimulationStateSynchrone<D>,
-    Direction<D>: DirectionList,
 {
     state: State,
 }
@@ -601,7 +582,6 @@ where
 impl<State, const D: usize> SimulationStateLeap<State, D>
 where
     State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {
     getter!(/// get a reference to the state
         state, State
@@ -632,14 +612,12 @@ where
 impl<State, const D: usize> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
 where
     State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {}
 
 /// We just transmit the function of `State`, there is nothing new.
 impl<State, const D: usize> LatticeState<D> for SimulationStateLeap<State, D>
 where
     State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
-    Direction<D>: DirectionList,
 {
     const CA: Real = State::CA;
     
@@ -669,7 +647,6 @@ where
 impl<State, const D: usize> LatticeStateWithEFieldNew<D> for SimulationStateLeap<State, D>
 where
     State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + LatticeStateWithEFieldNew<D>,
-    Direction<D>: DirectionList,
 {
     type Error = State::Error;
     
@@ -683,7 +660,6 @@ where
 impl<State, const D: usize> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
 where
     State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
-    Direction<D>: DirectionList,
 {
     
     project!(get_hamiltonian_efield, state, Real);
@@ -723,7 +699,6 @@ where
 pub struct LatticeStateWithEFieldSyncDefault<State, const D: usize>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     lattice_state: State,
     #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<Su3Adjoint, D>: Serialize", deserialize = "SVector<Su3Adjoint, D>: Deserialize<'de>")) )]
@@ -735,7 +710,6 @@ where
 impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Absorbe self and return the state as owned.
     /// It essentialy deconstruct the structure.
@@ -773,7 +747,6 @@ impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
 where
     Self: LatticeStateWithEField<D>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
@@ -786,7 +759,6 @@ where
     Self: LatticeStateWithEFieldNew<D>,
     <Self as LatticeStateWithEFieldNew<D>>::Error: From<LatticeInitializationError>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Generate a hot (i.e. random) initial state.
     ///
@@ -870,7 +842,6 @@ impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
 where
     Self: LatticeStateWithEFieldNew<D, Error = StateInitializationError>,
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Generate a hot (i.e. random) initial state.
     ///
@@ -922,13 +893,11 @@ impl<State, const D: usize> SimulationStateSynchrone<D> for LatticeStateWithEFie
 where
     State: LatticeState<D> + Clone,
     Self: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {}
 
 impl<State, const D: usize> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     
     fn link_matrix(&self) -> &LinkMatrix{
@@ -960,7 +929,6 @@ impl<State, const D: usize> LatticeStateWithEFieldNew<D> for LatticeStateWithEFi
     where
     State: LatticeState<D> + LatticeStateNew<D>,
     Self: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
     StateInitializationError: Into<State::Error>,
     State::Error: From<rand_distr::NormalError>,
 {
@@ -987,7 +955,7 @@ where
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
+            Direction::positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap();
                 e_i.trace_squared()
             }).sum::<Real>()
@@ -1022,9 +990,10 @@ where
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, _e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>> {
+    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, _e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>>
+    {
         let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::<D>::get_all_positive_directions();
+        let dir_pos = Direction::<D>::positive_directions();
         let iterator = dir_pos.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
             let sum_s: CMatrix3 = Direction::<D>::get_all_directions().iter()

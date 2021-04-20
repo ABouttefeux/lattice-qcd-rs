@@ -12,7 +12,6 @@ use super::{
         LatticeLink,
         Direction,
         LatticeElementToIndex,
-        DirectionList,
     },
     Vector8,
     su3,
@@ -518,10 +517,7 @@ impl LinkMatrix {
     pub fn new_deterministe<const D: usize>(
         l: &LatticeCyclique<D>,
         rng: &mut impl rand::Rng,
-    ) -> Self
-    where
-        Direction<D>: DirectionList,
-    {
+    ) -> Self {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
         let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
@@ -542,10 +538,7 @@ impl LinkMatrix {
     pub fn new_random_threaded<const D: usize>(
         l: &LatticeCyclique<D>,
         number_of_thread: usize,
-    ) -> Result<Self, ThreadError>
-    where
-        Direction<D>: DirectionList,
-    {
+    ) -> Result<Self, ThreadError> {
         if number_of_thread == 0 {
             return Err(ThreadError::ThreadNumberIncorect);
         }
@@ -567,10 +560,7 @@ impl LinkMatrix {
     }
     
     /// Create a cold configuration ( where the link matrices is set to 1).
-    pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
         Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
     }
     
@@ -607,17 +597,14 @@ impl LinkMatrix {
     
     /// Take the average of the trace of all plaquettes
     #[allow(clippy::as_conversions)] // no try into for f64
-    pub fn average_trace_plaquette<const D: usize>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn average_trace_plaquette<const D: usize>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>> {
         if lattice.get_number_of_canonical_links_space() != self.len() {
             return None;
         }
         // the order does not matter as we sum
         let sum = lattice.get_points().par_bridge().map(|point| {
-            Direction::get_all_positive_directions().iter().map( |dir_i|{
-                Direction::get_all_positive_directions().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+            Direction::positive_directions().iter().map( |dir_i|{
+                Direction::positive_directions().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j|{
                         self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                     }).sum::<Option<na::Complex<Real>>>()
@@ -641,24 +628,18 @@ impl LinkMatrix {
     }
     
     /// Get the chromomagentic field at a given point
-    pub fn get_magnetic_field_vec<const D: usize>(&self, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<CMatrix3, D>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_magnetic_field_vec<const D: usize>(&self, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
-        for dir in Direction::<D>::get_all_positive_directions() {
+        for dir in &Direction::<D>::positive_directions() {
             vec[dir.to_index()] = self.get_magnetic_field(point, dir, lattice)?;
         }
         Some(vec)
     }
     
     /// Get the chromomagentic field at a given point alongisde a given direction
-    pub fn get_magnetic_field<const D: usize>(&self, point: &LatticePoint<D>, dir: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>
-    where
-        Direction<D>: DirectionList,
-    {
-        let sum = Direction::<D>::get_all_positive_directions().iter().map(|dir_i| {
-            Direction::<D>::get_all_positive_directions().iter().map(|dir_j| {
+    pub fn get_magnetic_field<const D: usize>(&self, point: &LatticePoint<D>, dir: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
+        let sum = Direction::<D>::positive_directions().iter().map(|dir_i| {
+            Direction::<D>::positive_directions().iter().map(|dir_j| {
                 let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
                 let lc = Complex::from(levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()]).to_f64());
                 Some(f_mn * lc)
@@ -668,10 +649,7 @@ impl LinkMatrix {
     }
     
     /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
-    pub fn get_magnetic_field_link<const D: usize>(&self, link: &LatticeLink<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>>
-    where
-        Direction<D>: DirectionList,
-    {
+    pub fn get_magnetic_field_link<const D: usize>(&self, link: &LatticeLink<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
         self.get_magnetic_field(link.pos(), link.dir(), lattice)
     }
     
@@ -741,10 +719,7 @@ pub struct EField<const D: usize> {
     data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
 }
 
-impl<const D: usize> EField<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> EField<D> {
     
     /// Create a new "Electrical" field.
     pub fn new (data: Vec<SVector<Su3Adjoint, D>>) -> Self {
@@ -835,7 +810,7 @@ where
         if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
             return None;
         }
-        Direction::get_all_positive_directions().iter().map(|dir| {
+        Direction::positive_directions().iter().map(|dir| {
             let e_i = self.get_e_field(point, dir, lattice)?;
             let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, - *dir), lattice)?;
             let p_mi = lattice.add_point_direction(*point, &- dir);
@@ -895,7 +870,7 @@ where
         let data = lattice.get_points().collect::<Vec<LatticePoint<D>>>().par_iter().map(|point| {
             let e = self.get_e_vec(&point, lattice).unwrap();
             SVector::<_, D>::from_fn(|index_dir, _| {
-                let dir = Direction::<D>::get_all_positive_directions()[index_dir];
+                let dir = Direction::<D>::positive_directions()[index_dir];
                 let u = link_matrix.get_matrix(&LatticeLink::new(*point, dir), lattice).unwrap();
                 let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
                 let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, &dir), lattice).unwrap();

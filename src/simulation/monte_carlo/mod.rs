@@ -7,7 +7,6 @@ use super::{
         Complex,
         lattice::{
             Direction,
-            DirectionList,
             LatticeCyclique,
             LatticeLinkCanonical,
             LatticeLink,
@@ -45,7 +44,6 @@ pub use hybride::*;
 pub trait MonteCarlo<State, const D: usize>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
     type Error;
@@ -63,7 +61,6 @@ where
 pub trait MonteCarloDefault<State, const D: usize>
 where
     State: LatticeState<D>,
-    Direction<D>: DirectionList,
 {
     /// Error returned while getting the next ellement.
     type Error;
@@ -107,7 +104,6 @@ where
     MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     mcd: MCD,
     rng: Rng,
@@ -119,7 +115,6 @@ where
     MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self{
@@ -142,7 +137,6 @@ where
     T: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     type Error = T::Error;
     
@@ -159,12 +153,9 @@ fn get_delta_s_old_new_cmp<const D: usize>(
     new_link: &na::Matrix3<Complex>,
     beta : Real,
     old_matrix: &na::Matrix3<Complex>,
-) -> Real
-where
-    Direction<D>: DirectionList,
-{
+) -> Real {
     let a = get_staple(link_matrix, lattice, link);
-    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::<D>::CA
 }
 
 // TODO move in state
@@ -172,12 +163,9 @@ fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
-) -> na::Matrix3<Complex>
-where
-    Direction<D>: DirectionList,
-{
+) -> na::Matrix3<Complex> {
     let dir_j = link.dir();
-    Direction::<D>::get_all_positive_directions().iter()
+    Direction::<D>::positive_directions().iter()
         .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
             let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
             let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);

@@ -20,7 +20,6 @@ use super::{
                 LatticeElementToIndex,
                 LatticeLink,
                 LatticeCyclique,
-                DirectionList,
             },
             error::{
                 Never,
@@ -67,7 +66,6 @@ impl MetropolisHastings {
 impl<State, const D: usize> MonteCarloDefault<State, D> for MetropolisHastings
 where
     State: LatticeState<D> + LatticeStateNew<D>,
-    Direction<D>: DirectionList,
 {
     type Error = State::Error;
     
@@ -126,7 +124,6 @@ impl MetropolisHastingsDiagnostic {
 impl<State, const D: usize> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic
 where
     State: LatticeState<D> + LatticeStateNew<D>,
-    Direction<D>: DirectionList,
 {
     
     type Error = State::Error;
@@ -208,24 +205,18 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-    ) -> Real
-    where
-        Direction<D>: DirectionList,
-    {
+    ) -> Real {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     
     #[inline]
-    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>)
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>) {
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
         let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<D>::dim_st());
         
         let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
-        let direction = Direction::get_all_positive_directions()[d_d.sample(&mut self.rng)];
+        let direction = Direction::positive_directions()[d_d.sample(&mut self.rng)];
         let link = LatticeLinkCanonical::new(point, direction).unwrap();
         let index = link.to_index(state.lattice());
         
@@ -236,10 +227,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     }
     
     #[inline]
-    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let (link, matrix) = self.get_potential_modif(&state);
         let delta_s = Self::get_delta_s(state.link_matrix(), state.lattice(), &link, &matrix, state.beta());
         let proba = (-delta_s).exp().min(1_f64).max(0_f64);
@@ -260,7 +248,6 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
 impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDiagnostic<Rng>
 where
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     type Error = Never;
     

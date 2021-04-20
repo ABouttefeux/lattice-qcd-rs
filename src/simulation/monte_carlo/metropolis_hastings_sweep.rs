@@ -14,11 +14,9 @@ use super::{
             su3,
             lattice::{
                 LatticeLinkCanonical,
-                Direction,
                 LatticeElementToIndex,
                 LatticeLink,
                 LatticeCyclique,
-                DirectionList,
             },
             error::Never,
         },
@@ -85,19 +83,13 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-    ) -> Real
-    where
-        Direction<D>: DirectionList,
-    {
+    ) -> Real {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     
     #[inline]
-    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let index = link.to_index(state.lattice());
         let old_link_m = state.link_matrix()[index];
         let mut new_link = old_link_m;
@@ -110,10 +102,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     }
     
     #[inline]
-    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         self.prob_replace_mean = 0_f64;
         self.number_replace_last += 0;
         let lattice = state.lattice().clone();
@@ -135,7 +124,6 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
 impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
 where
     Rng: rand::Rng,
-    Direction<D>: DirectionList,
 {
     type Error = Never;
     #[inline]

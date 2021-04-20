@@ -64,8 +64,6 @@ use super::{
         LatticeLink,
         LatticePoint,
         LatticeCyclique,
-        Direction,
-        DirectionList,
     },
     CMatrix3,
     field::{
@@ -106,7 +104,6 @@ pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
 where
     StateSync: SimulationStateSynchrone<D>,
     StateLeap: SimulationStateLeapFrog<D>,
-    Direction<D>: DirectionList,
 {
     /// Type of error returned by the Integrator.
     type Error;
@@ -156,7 +153,6 @@ where
 fn integrate_link<State, const D: usize>(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> CMatrix3
 where
     State: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = link_matrix.get_matrix(&canonical_link, lattice).expect("Link matrix not found");
@@ -170,7 +166,6 @@ where
 fn integrate_efield<State, const D: usize>(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> SVector<Su3Adjoint, D>
 where
     State: LatticeStateWithEField<D>,
-    Direction<D>: DirectionList,
 {
     let initial_value = e_field.get_e_vec(point, lattice).expect("E Field not found");
     let deriv = State::get_derivative_e(point, link_matrix, e_field, lattice).expect("Derivative not found");

@@ -13,8 +13,6 @@ use super::{
             su3,
             lattice::{
                 LatticeLinkCanonical,
-                Direction,
-                DirectionList,
             },
             error::Never,
         },
@@ -47,10 +45,7 @@ impl OverrelaxationSweepRotation {
     }
     
     #[inline]
-    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
@@ -59,10 +54,7 @@ impl OverrelaxationSweepRotation {
     }
     
     #[inline]
-    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
@@ -78,10 +70,7 @@ impl Default for OverrelaxationSweepRotation {
     }
 }
 
-impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation {
     type Error = Never;
     #[inline]
     fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
@@ -108,10 +97,7 @@ impl OverrelaxationSweepReverse {
     }
     
     #[inline]
-    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
@@ -119,10 +105,7 @@ impl OverrelaxationSweepReverse {
     }
     
     #[inline]
-    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-    where
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
@@ -138,10 +121,7 @@ impl Default for OverrelaxationSweepReverse {
     }
 }
 
-impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse {
     type Error = Never;
     
     #[inline]

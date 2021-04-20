@@ -17,8 +17,6 @@ use crossbeam::thread;
 use super::lattice::{
     LatticeCyclique,
     LatticeElementToIndex,
-    Direction,
-    DirectionList,
 };
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
@@ -299,7 +297,6 @@ where
     Data: Send + Clone,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
     na::SVector<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
@@ -391,7 +388,6 @@ where
     FInit: Send + Clone + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
     na::SVector<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
 {
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);

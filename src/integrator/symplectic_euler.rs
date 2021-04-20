@@ -28,8 +28,6 @@ use super::{
         },
         lattice::{
             LatticeCyclique,
-            Direction,
-            DirectionList,
         },
     },
     SymplecticIntegrator,
@@ -99,7 +97,6 @@ impl SymplecticEuler {
     fn get_link_matrix_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
     where
         State: LatticeStateWithEField<D>,
-        Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
             lattice.get_links(),
@@ -115,7 +112,6 @@ impl SymplecticEuler {
     fn get_e_field_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
     where
         State: LatticeStateWithEField<D>,
-        Direction<D>: DirectionList,
     {
         run_pool_parallel_vec(
             lattice.get_points(),
@@ -140,7 +136,6 @@ impl Default for SymplecticEuler {
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
 where
     State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    Direction<D>: DirectionList,
 {
     type Error = SymplecticEulerError<State::Error>;
     

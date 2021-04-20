@@ -132,6 +132,11 @@ impl<const D: usize> LatticeCyclique<D> {
         IteratorLatticePoint::new(&self, LatticePoint::new_zero())
     }
     
+    /// Get an Iterator over all canonical link of the lattice.
+    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
+        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::positive_directions().first().unwrap()));
+    }
+    
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
     /// points in each spatial dimension.
     /// # Errors
@@ -195,18 +200,6 @@ impl<const D: usize> LatticeCyclique<D> {
     /// Retuns whether the number of canonical link is the same as the length of `links`
     pub fn has_compatible_lenght_links(&self, links: &LinkMatrix) -> bool {
         self.get_number_of_canonical_links_space() == links.len()
-    }
-    
-}
-
-impl<const D: usize> LatticeCyclique<D>
-where
-    Direction<D>: DirectionList
-{
-    
-    /// Get an Iterator over all canonical link of the lattice.
-    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
-        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::get_all_positive_directions().first().unwrap()));
     }
     
     /// Returns wether the number of point is the same as the length of `e_field`
@@ -907,13 +900,6 @@ impl<const D: usize> Direction<D> {
         v
     }
     
-}
-
-
-impl<const D: usize> Direction<D>
-where
-    Direction<D>: DirectionList,
-{
     
     /// Find the direction the vector point the most.
     /// For a zero vector return [`DirectionEnum::XPos`].
@@ -929,7 +915,7 @@ where
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
-        for (i, dir) in Self::get_all_positive_directions().iter().enumerate() {
+        for (i, dir) in Self::positive_directions().iter().enumerate() {
             let scalar_prod = v.dot(&dir.to_vector(1_f64));
             if scalar_prod.abs() > max {
                 max = scalar_prod.abs();
@@ -1025,20 +1011,14 @@ impl<const D: usize> From<&Direction<D>> for usize {
 }
 
 /// Return [`DirectionEnum::from_vector`].
-impl<const D: usize> From<SVector<Real, D>> for Direction<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> From<SVector<Real, D>> for Direction<D> {
     fn from(v: SVector<Real, D>) -> Self {
         Direction::from_vector(&v)
     }
 }
 
 /// Return [`DirectionEnum::from_vector`].
-impl<const D: usize> From<&SVector<Real, D>> for Direction<D>
-where
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> From<&SVector<Real, D>> for Direction<D> {
     fn from(v: &SVector<Real, D>) -> Self {
         Direction::<D>::from_vector(v)
     }
