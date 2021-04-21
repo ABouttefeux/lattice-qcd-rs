@@ -20,7 +20,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let index = args[1].parse().unwrap();
     println!("Simulate for beta = {}", BETA[index]);
-    main_cross_with_e(index);
+    main_corr_b(index);
 }
 
 const DIRECTORY: &str = &"data/data_set_b/";
@@ -44,7 +44,7 @@ const LATTICE_SIZE: f64 = 1_f64;
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 const SEED: u64 = 0xd6_4b_ef_fd_9f_c8_b2_a4;
 
-fn main_cross_with_e(simulation_index: usize) {
+fn main_corr_b(simulation_index: usize) {
     fs::create_dir_all(DIRECTORY).unwrap();
     let beta = BETA[simulation_index];
     let cfg_l = LatticeConfig::new(

@@ -84,6 +84,7 @@ pub struct LatticeConfigScan {
 }
 
 impl LatticeConfigScan {
+    /// Create a new config scan
     pub fn new(
         lattice_size: ScanPossibility<Real>,
         lattice_number_of_points: ScanPossibility<usize>,
@@ -102,24 +103,29 @@ impl LatticeConfigScan {
         }
     }
 
+    /// Getter on the beta of the simulations.
     pub const fn lattice_beta(&self) -> &ScanPossibility<Real> {
         &self.lattice_beta
     }
 
+    /// Getter on the number of point of the simulations.
     pub const fn lattice_number_of_points(&self) -> &ScanPossibility<usize> {
         &self.lattice_number_of_points
     }
 
+    /// Getter on the lattice size (or lattice spacing) of the simulations.
     pub const fn lattice_size(&self) -> &ScanPossibility<Real> {
         &self.lattice_size
     }
 
+    /// Determine if the different values has a compatible length.
     pub fn is_valide_length(&self) -> bool {
         let len = self.get_len_array();
         let iter = len.iter().filter_map(|el| *el);
         iter.clone().max() == iter.min()
     }
 
+    /// Determine if the data is a valid configuration.
     pub fn is_data_valide(&self) -> bool {
         for i in 0..self.lattice_size.len() {
             if *self.lattice_size.get(i).unwrap() < 0_f64 {
@@ -134,6 +140,7 @@ impl LatticeConfigScan {
         true
     }
 
+    /// Determine is the data is valid and has compatible size.
     pub fn is_valide(&self) -> bool {
         self.is_valide_length() && self.is_data_valide()
     }
@@ -146,6 +153,7 @@ impl LatticeConfigScan {
         ]
     }
 
+    /// Get the lenght of the configuration. Retuns None if the configuration has only defaut value
     pub fn len_option(&self) -> Option<usize> {
         let len = self.get_len_array();
         for i in len.iter() {
@@ -156,6 +164,7 @@ impl LatticeConfigScan {
         None
     }
 
+    /// Get the configuration of at `pos` index
     pub fn get(&self, pos: usize) -> Option<LatticeConfig> {
         LatticeConfig::new(
             *self.lattice_size.get(pos)?,
