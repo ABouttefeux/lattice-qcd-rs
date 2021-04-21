@@ -68,12 +68,12 @@ where
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
 {
-    /// Create the Self using a mutable reference
+    /// Create the Self using a mutable reference.
     pub fn new(data: &'a mut MC) -> Self {
         Self{data, _phantom: PhantomData}
     }
     
-    /// getter for the reference holded by self
+    /// Getter for the reference holded by self.
     pub fn data(&'a mut self) -> &'a mut MC {
         self.data
     }

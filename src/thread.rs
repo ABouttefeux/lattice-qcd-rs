@@ -296,7 +296,6 @@ where
     Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
     Data: Send + Clone,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
-    na::SVector<usize, D>: Copy + Send + Sync,
 {
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
@@ -387,7 +386,6 @@ where
     F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
     FInit: Send + Clone + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
-    na::SVector<usize, D>: Copy + Send + Sync,
 {
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);

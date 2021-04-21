@@ -26,7 +26,7 @@ use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
-/// Hybrid Monte Carlo algorithm ( HCM for short).
+/// Hybrid Monte Carlo algorithm (HCM for short).
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
 /// This conjugatewd momenta is also refed as the "Electric" field

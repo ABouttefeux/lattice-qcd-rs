@@ -38,7 +38,7 @@ use std::vec::Vec;
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
-///Error for [`SymplecticEuler`].
+/// Error for [`SymplecticEuler`].
 #[derive(Debug)]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
@@ -78,12 +78,12 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 /// but use less memory
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct SymplecticEuler
-{
+pub struct SymplecticEuler {
     number_of_thread: usize,
 }
 
 impl SymplecticEuler {
+    
     /// Create a integrator using a set number of threads
     pub const fn new(number_of_thread: usize) -> Self {
         Self {number_of_thread}

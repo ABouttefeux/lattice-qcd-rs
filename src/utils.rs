@@ -124,7 +124,7 @@ impl FactorialStorageDyn {
     }
 }
 
-/// Represent a sing
+/// Represent a sign.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Sign {
@@ -133,7 +133,7 @@ pub enum Sign {
     /// Stricly positive number ( non zero)
     Positive,
     /// Zero (or very close to zero)
-    Zero
+    Zero,
 }
 
 impl Sign {
@@ -151,7 +151,7 @@ impl Sign {
     /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
     pub fn sign(f: f64) -> Self {
         // TODO manage NaN
-        if relative_eq!(f, 0_f64) {
+        if abs_diff_eq!(f, 0_f64) {
             Sign::Zero
         }
         else if f > 0_f64 {
