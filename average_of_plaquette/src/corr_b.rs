@@ -7,6 +7,7 @@ use average_of_plaquette::{
     plot_corr_e::*,
  };
 //use plotter_backend_text::*;
+//use plotters::prelude::*;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use lattice_qcd_rs::{
@@ -45,6 +46,8 @@ static NUMBER_OF_MEASUREMENT: Lazy<usize> = Lazy::new(|| {
 });
 
 const LATTICE_DIM: usize = 24;
+//const LATTICE_DIM: usize = 16;
+//const LATTICE_DIM: usize = 8;
 const LATTICE_SIZE: f64 = 1_f64;
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -108,8 +111,11 @@ fn main_cross_with_e(simulation_index: usize) {
     
     let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs, DIRECTORY, &format!("ecorr_{}", beta)).unwrap();
     let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned(), DT).unwrap();
-    let _ = save_data_any(&state, &format!("{}/sim_bin_{}_th_e.bin", DIRECTORY, beta));
     
+    // we may want to do one simulation step to remove the big jump at the begining
+    //let state = state.simulate_symplectic(&INTEGRATOR, DT).unwrap();
+    
+    let _ = save_data_any(&state, &format!("{}/sim_bin_{}_th_e.bin", DIRECTORY, beta));
     let (state, measure) = measure(state, *NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
     
     let _ = save_data_any(&state, &format!("{}/sim_bin_{}_e.bin", DIRECTORY, beta));
@@ -200,7 +206,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
                         0_f64..((vec_plot.len() - 1) * PLOT_COUNT) as f64 * DT,
                         y_min..y_max,
                         vec_plot.iter().enumerate().map(|(index, el)| ((index * PLOT_COUNT) as f64 * DT, *el)),
-                        "E Corr"
+                        "B Corr"
                     );
                     let _ = console::Term::stderr().move_cursor_up(30);
                 }
