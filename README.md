@@ -30,7 +30,7 @@ You can easily choose the Monte Carlo algorithm, you can implement you own Hamil
 ## Usage
 
 
-Add `lattice_qcd_rs = { version = "0.1.0", git = "https://github.com/ABouttefeux/lattice_qcd_rs", branch = "develop" }` into your `cargo.toml`.
+Add `lattice_qcd_rs = { version = "0.2", git = "https://github.com/ABouttefeux/lattice_qcd_rs", branch = "main" }` into your `cargo.toml`.
 
 for the moment it is not on crates.io. Maybe I will add it. But for the moment it is still in development.
 Note that you may want to specify a specific commit as for now I may introduce breaking changes.

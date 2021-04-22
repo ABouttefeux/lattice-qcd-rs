@@ -1,12 +1,12 @@
 [package]
 name = "lattice-qcd-rs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
 edition = "2018"
 readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
 categories = ["Science", "Simulation"]
-description = "Lattice QCD"
+description = "Lattice QCD simulation"
 keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
 publish = false
 
