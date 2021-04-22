@@ -20,7 +20,6 @@ use lattice_qcd_rs::{
     Real,
     Complex,
     su3::*,
-    dim::{U4, U3, DimName},
 };
 use std::{
     time::Instant,
@@ -30,9 +29,6 @@ use std::{
 
 use na::{
     ComplexField,
-    VectorN,
-    DefaultAllocator,
-    base::allocator::Allocator,
 };
 
 use rand::{
@@ -56,7 +52,7 @@ use dialoguer::{
     theme::ColorfulTheme
 };
 
-type DimUse = U3;
+const DIM_USE: usize = 3;
 const NB_OF_PTS: usize = 10;
 const BETA: f64 = 24_f64;
 
@@ -93,7 +89,7 @@ fn test_write_read() -> std::io::Result<()> {
     f.read_to_end(&mut encoded_2)?;
     println!("{}", encoded_2.len());
     println!("read");
-    let decoded: LatticeStateDefault<U4> = bincode::deserialize(&encoded_2).unwrap();
+    let decoded: LatticeStateDefault<4> = bincode::deserialize(&encoded_2).unwrap();
     println!("decoded");
     assert_eq!(decoded, state);
     Ok(())
@@ -108,7 +104,7 @@ fn test_leap_frog() {
     let beta = 1_f64;
     let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
     println!("h_l {}", state.get_hamiltonian_links());
-    let state_hmc = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, _>::new_random_e_state(state, &mut rng);
+    let state_hmc = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(state, &mut rng);
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc.simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01, 1).unwrap();
@@ -116,15 +112,10 @@ fn test_leap_frog() {
     println!("h_t {}", h2);
     println!("{}", (h1-h2).exp() );
 
-    assert!((h1-h2).abs() < 0.1);
+    assert!((h1-h2).abs() < 0.000_01);
 }
 
-fn generate_state_with_logs<D>(rng: &mut impl rand::Rng) -> LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+fn generate_state_with_logs<const D: usize>(rng: &mut impl rand::Rng) -> LatticeStateDefault<D> {
     let size = 1000_f64;
     let number_of_pts = NB_OF_PTS;
     let beta = BETA;
@@ -142,8 +133,9 @@ fn generate_state_with_logs<D>(rng: &mut impl rand::Rng) -> LatticeStateDefault<
 }
 
 #[allow(dead_code)]
-fn simulate_with_log_subblock<MC>(mut simulation: LatticeStateDefault<U4>, mc: &mut MC, number_of_sims: u64) -> LatticeStateDefault<U4>
-    where MC: MonteCarlo<LatticeStateDefault<U4>, U4>,
+fn simulate_with_log_subblock<MC>(mut simulation: LatticeStateDefault<4>, mc: &mut MC, number_of_sims: u64) -> LatticeStateDefault<4>
+where
+    MC: MonteCarlo<LatticeStateDefault<4>, 4>,
     MC::Error: core::fmt::Debug,
 {
     let pb = ProgressBar::new(number_of_sims);
@@ -169,18 +161,15 @@ fn simulate_with_log_subblock<MC>(mut simulation: LatticeStateDefault<U4>, mc: &
 }
 
 #[allow(clippy::mutex_atomic)]
-fn simulate_loop_with_input<MC, D>(
+fn simulate_loop_with_input<MC, const D: usize>(
     mut simulation: LatticeStateDefault<D>,
     mc: &mut MC,
     number_of_sims: u64,
     sub_block: u64,
     closure_message : &dyn Fn(&LatticeStateDefault<D>, &MC) -> String
 ) -> LatticeStateDefault<D>
-    where MC: MonteCarlo<LatticeStateDefault<D>, D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+where
+    MC: MonteCarlo<LatticeStateDefault<D>, D>,
     MC::Error: core::fmt::Debug,
 {
     
@@ -232,7 +221,7 @@ fn sim_hmc() {
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
-    let simulation: LatticeStateDefault<DimUse> = generate_state_with_logs(&mut rng);
+    let simulation: LatticeStateDefault<DIM_USE> = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
@@ -243,7 +232,7 @@ fn sim_hmc() {
     let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
-        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<_>, Xoshiro256PlusPlus, SymplecticEulerRayon, _>| {
+        &|sim, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<DIM_USE>, Xoshiro256PlusPlus, SymplecticEulerRayon, DIM_USE>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.prob_replace_last(), mc.has_replace_last())
         }
@@ -261,7 +250,7 @@ fn sim_mh() {
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     //let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     
-    let simulation: LatticeStateDefault<DimUse> = generate_state_with_logs(&mut rng);
+    let simulation: LatticeStateDefault<DIM_USE> = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
@@ -274,7 +263,7 @@ fn sim_mh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, 100,
-        &|sim, mc : &McWrapper<MetropolisHastingsDiagnostic<LatticeStateDefault<_>, _>, LatticeStateDefault<_>, _, Xoshiro256PlusPlus>| {
+        &|sim, mc : &McWrapper<MetropolisHastingsDiagnostic, LatticeStateDefault<DIM_USE>, Xoshiro256PlusPlus, DIM_USE>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2},R {}", average / 3_f64, mc.mcd().prob_replace_last(), mc.mcd().has_replace_last())
         }
@@ -291,7 +280,7 @@ fn sim_dmh() {
     let seed = rng_seeder.next_u64();
     println!("Begining simulation MH Delta with seed {:#08x}", seed);
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
-    let simulation: LatticeStateDefault<DimUse> = generate_state_with_logs(&mut rng);
+    let simulation: LatticeStateDefault<DIM_USE> = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
@@ -304,7 +293,7 @@ fn sim_dmh() {
     //let simulation = simulate_with_log_subblock(simulation, &mut mh, number_of_sims);
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim: &LatticeStateDefault<_>, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+        &|sim: &LatticeStateDefault<DIM_USE>, mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             let average = sim.average_trace_plaquette().unwrap().real();
             format!("A {:.6},P {:.2}", average / 3_f64, mc.prob_replace_last())
         }
@@ -321,7 +310,7 @@ fn sim_dmh_hmc() {
     let seed = rng_seeder.next_u64();
     println!("Begining simulation MH Delta -> HMC with seed {:#08x}", seed);
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(seed);
-    let simulation: LatticeStateDefault<DimUse> = generate_state_with_logs(&mut rng);
+    let simulation: LatticeStateDefault<DIM_USE> = generate_state_with_logs(&mut rng);
     
     println!("initial plaquette average {}", simulation.average_trace_plaquette().unwrap());
     
@@ -331,14 +320,14 @@ fn sim_dmh_hmc() {
     let sub_block = 1_000;
     
     let initial_data = simulation.lattice().get_points().par_bridge().map(|point| {
-        simulation.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+        simulation.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], simulation.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
     }).collect::<Vec<f64>>();
     
     let simulation = simulate_loop_with_input(simulation, &mut mh, number_of_sims, sub_block,
-        &|sim: &LatticeStateDefault<_>, _mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
+        &|sim: &LatticeStateDefault<DIM_USE>, _mc : &MetropolisHastingsDeltaDiagnostic<Xoshiro256PlusPlus>| {
             //let average = sim.average_trace_plaquette().unwrap().real();
             let vec = sim.lattice().get_points().par_bridge().map(|point| {
-                sim.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
+                sim.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64).unwrap()
             }).collect::<Vec<f64>>();
             
             let sum = vec.iter().sum::<f64>();
@@ -360,10 +349,10 @@ fn sim_dmh_hmc() {
     let number_of_sims = 10;
     
     let simulation = simulate_loop_with_input(simulation, &mut hmc, number_of_sims, 1,
-        &|sim: &LatticeStateDefault<_>, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<_>, Xoshiro256PlusPlus, SymplecticEulerRayon, _>| {
+        &|sim: &LatticeStateDefault<DIM_USE>, mc : &HybridMonteCarloDiagnostic<LatticeStateDefault<DIM_USE>, Xoshiro256PlusPlus, SymplecticEulerRayon, DIM_USE>| {
             //let average = sim.average_trace_plaquette().unwrap().real();
             let sum = sim.lattice().get_points().par_bridge().map(|point| {
-                sim.link_matrix().get_pij(&point, &Direction::<U3>::get_all_positive_directions()[0], &Direction::get_all_positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
+                sim.link_matrix().get_pij(&point, &Direction::<3>::positive_directions()[0], &Direction::positive_directions()[1], sim.lattice()).map(|el| 1_f64 - el.trace().real() / 3_f64)
             }).sum::<Option<f64>>().unwrap();
             let number_of_plaquette = sim.lattice().get_number_of_points() as f64;
             let c1 = 8_f64 / 3_f64;

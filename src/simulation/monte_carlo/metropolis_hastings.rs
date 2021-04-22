@@ -20,7 +20,6 @@ use super::{
                 LatticeElementToIndex,
                 LatticeLink,
                 LatticeCyclique,
-                DirectionList,
             },
             error::{
                 Never,
@@ -33,38 +32,20 @@ use super::{
         },
     },
 };
-use std::marker::PhantomData;
+
 use rand_distr::Distribution;
-use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
-};
+
 
 /// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
-pub struct MetropolisHastings<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
+pub struct MetropolisHastings {
     number_of_update: usize,
     spread: Real,
-    _phantom: PhantomData<(State, D)>,
 }
 
-impl<State, D> MetropolisHastings<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl MetropolisHastings {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -78,17 +59,13 @@ impl<State, D> MetropolisHastings<State, D>
         Some(Self {
             number_of_update,
             spread,
-            _phantom: PhantomData,
         })
     }
 }
 
-impl<State, D> MonteCarloDefault<State, D> for MetropolisHastings<State, D>
-    where State: LatticeState<D> + LatticeStateNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> MonteCarloDefault<State, D> for MetropolisHastings
+where
+    State: LatticeState<D> + LatticeStateNew<D>,
 {
     type Error = State::Error;
     
@@ -106,28 +83,15 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastings<State, D>
 /// Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
-pub struct MetropolisHastingsDiagnostic<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
+pub struct MetropolisHastingsDiagnostic {
     number_of_update: usize,
     spread: Real,
     has_replace_last: bool,
     prob_replace_last: Real,
-    _phantom: PhantomData<(State, D)>,
 }
 
-impl<State, D> MetropolisHastingsDiagnostic<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl MetropolisHastingsDiagnostic {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -143,27 +107,23 @@ impl<State, D> MetropolisHastingsDiagnostic<State, D>
             spread,
             has_replace_last: false,
             prob_replace_last: 0_f64,
-            _phantom: PhantomData,
         })
     }
     
     /// Get the last probably of acceptance of the random change.
-    pub fn prob_replace_last(&self) -> Real {
+    pub const fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
     
     /// Get if last step has accepted the replacement.
-    pub fn has_replace_last(&self) -> bool {
+    pub const fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
 }
 
-impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<State, D>
-    where State: LatticeState<D> + LatticeStateNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic
+where
+    State: LatticeState<D> + LatticeStateNew<D>,
 {
     
     type Error = State::Error;
@@ -197,19 +157,15 @@ impl<State, D> MonteCarloDefault<State, D> for MetropolisHastingsDiagnostic<Stat
 /// Metropolis Hastings algorithm with diagnostics.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
-/// for a sweep there is [`MetropolisHastingsSweep`].
-pub struct MetropolisHastingsDeltaDiagnostic<Rng>
-    where Rng: rand::Rng,
-{
+/// for a sweep there is [`super::MetropolisHastingsSweep`].
+pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
     spread: Real,
     has_replace_last: bool,
     prob_replace_last: Real,
     rng: Rng
 }
 
-impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
-    where Rng: rand::Rng,
-{
+impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -243,34 +199,24 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_delta_s<D>(
+    fn get_delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-    ) -> Real
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    ) -> Real {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     
     #[inline]
-    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>)
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>) {
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
         let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<D>::dim_st());
         
         let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
-        let direction = Direction::get_all_positive_directions()[d_d.sample(&mut self.rng)];
+        let direction = Direction::positive_directions()[d_d.sample(&mut self.rng)];
         let link = LatticeLinkCanonical::new(point, direction).unwrap();
         let index = link.to_index(state.lattice());
         
@@ -281,12 +227,7 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
     
     #[inline]
-    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let (link, matrix) = self.get_potential_modif(&state);
         let delta_s = Self::get_delta_s(state.link_matrix(), state.lattice(), &link, &matrix, state.beta());
         let proba = (-delta_s).exp().min(1_f64).max(0_f64);
@@ -304,12 +245,9 @@ impl<Rng> MetropolisHastingsDeltaDiagnostic<Rng>
     }
 }
 
-impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDiagnostic<Rng>
-    where Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsDeltaDiagnostic<Rng>
+where
+    Rng: rand::Rng,
 {
     type Error = Never;
     
@@ -328,7 +266,7 @@ fn test_mh_delta(){
     let size = 1_000_f64;
     let number_of_pts = 4;
     let beta = 2_f64;
-    let mut simulation = LatticeStateDefault::<na::U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
     
     let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01, rng).unwrap();
     for _ in 0..10 {

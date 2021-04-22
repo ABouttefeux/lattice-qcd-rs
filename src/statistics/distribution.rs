@@ -21,14 +21,16 @@ use serde::{Serialize, Deserialize};
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ModifiedNormal<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
 {
     param_exp: T,
 }
 
 impl<T> ModifiedNormal<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
 {
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
@@ -47,11 +49,13 @@ impl<T> ModifiedNormal<T>
 }
 
 impl<T> Distribution<T> for ModifiedNormal<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + rand_distr::uniform::SampleUniform + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + rand_distr::uniform::SampleUniform + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
 {
     fn sample<R>(&self, rng: &mut R) -> T
-        where R: rand::Rng + ?Sized,
+    where
+        R: rand::Rng + ?Sized,
     {
         let mut r = [T::one(); 3];
         for element in r.iter_mut() {
@@ -68,7 +72,8 @@ impl<T> Distribution<T> for ModifiedNormal<T>
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathDistribution<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
@@ -76,7 +81,8 @@ pub struct HeatBathDistribution<T>
 }
 
 impl<T> HeatBathDistribution<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
@@ -97,7 +103,8 @@ impl<T> HeatBathDistribution<T>
 
 impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
     fn sample<R>(&self, rng: &mut R) -> CMatrix2
-        where R: rand::Rng + ?Sized,
+    where
+        R: rand::Rng + ?Sized,
     {
         // TODO make a functrion to reduce copy of code with su2::get_random_su2_close_to_unity
         
@@ -121,7 +128,8 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
 #[derive(Clone, Debug, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathDistributionNorm<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
@@ -129,7 +137,8 @@ pub struct HeatBathDistributionNorm<T>
 }
 
 impl<T> HeatBathDistributionNorm<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
@@ -150,12 +159,14 @@ impl<T> HeatBathDistributionNorm<T>
 
 
 impl<T> Distribution<T> for HeatBathDistributionNorm<T>
-    where T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
+where
+    T: One + Div<T, Output = T> + Mul<T, Output = T> + Add<T, Output = T> + Neg<Output = T> + Float + Copy + FloatConst + Zero + rand_distr::uniform::SampleUniform + Sub<T, Output = T> + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
     fn sample<R>(&self, rng: &mut R) -> T
-        where R: rand::Rng + ?Sized,
+    where
+        R: rand::Rng + ?Sized,
     {
         let two = T::one() + T::one();
         // the unwrap is OK because we verify that the param is not zero at creation.
@@ -195,7 +206,8 @@ impl CloseToUnit {
 
 impl Distribution<CMatrix2> for CloseToUnit{
     fn sample<R>(&self, rng: &mut R) -> CMatrix2
-        where R: rand::Rng + ?Sized,
+    where
+        R: rand::Rng + ?Sized,
     {
         su2::get_random_su2_close_to_unity(self.spread_parameter, rng)
     }
@@ -204,7 +216,8 @@ impl Distribution<CMatrix2> for CloseToUnit{
 
 impl Distribution<CMatrix3> for CloseToUnit{
     fn sample<R>(&self, rng: &mut R) -> CMatrix3
-        where R: rand::Rng + ?Sized,
+    where
+        R: rand::Rng + ?Sized,
     {
         su3::get_random_su3_close_to_unity(self.spread_parameter, rng)
     }

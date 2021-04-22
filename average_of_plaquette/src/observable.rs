@@ -5,14 +5,13 @@ use lattice_qcd_rs::{
     simulation::*,
     ComplexField,
     lattice::{Direction, DirectionList, LatticePoint},
-    dim::{U3},
 };
 use rayon::prelude::*;
 
-pub fn volume_obs(p: &LatticePoint<U3>, state: &LatticeStateDefault<U3>) -> f64
+pub fn volume_obs(p: &LatticePoint<3>, state: &LatticeStateDefault<3>) -> f64
 {
-    let number_of_directions = (Direction::<U3>::dim() * (Direction::<U3>::dim() - 1)) * 2; // ( *4 / 2)
-    let directions_all = Direction::<U3>::get_all_directions();
+    let number_of_directions = (Direction::<3>::dim() * (Direction::<3>::dim() - 1)) * 2; // ( *4 / 2)
+    let directions_all = Direction::<3>::get_all_directions();
     // We consider all plaquette in positive and negative directions
     // but we avoid counting two times the plaquette P_IJ P_JI
     // as this is manage by taking the real part
@@ -26,7 +25,7 @@ pub fn volume_obs(p: &LatticePoint<U3>, state: &LatticeStateDefault<U3>) -> f64
     
 }
 
-pub fn volume_obs_mean(state: &LatticeStateDefault<U3>) -> f64 {
+pub fn volume_obs_mean(state: &LatticeStateDefault<3>) -> f64 {
     let sum = state.lattice().get_points().par_bridge().map(|point| {
         volume_obs(&point, state)
     }).sum::<f64>();
@@ -45,7 +44,7 @@ pub fn parameter_volume (value: f64, beta: f64) -> f64 {
 }
 
 
-pub fn e_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+pub fn e_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, pt: &LatticePoint<3>) -> Option<f64> {
     Some(
         state_new.e_field().get_e_vec(pt, state_new.lattice())?.iter()
             .zip(state.e_field().get_e_vec(pt, state.lattice())?.iter())
@@ -58,7 +57,7 @@ pub fn e_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefaul
     )
 }
 
-pub fn b_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, pt: &LatticePoint<U3>) -> Option<f64> {
+pub fn b_correletor(state: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, state_new: &LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, pt: &LatticePoint<3>) -> Option<f64> {
     Some(
         state_new.link_matrix().get_magnetic_field_vec(pt, state_new.lattice())?.iter()
             .zip(state.link_matrix().get_magnetic_field_vec(pt, state.lattice())?.iter())

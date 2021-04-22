@@ -12,24 +12,19 @@
 use super::field::{
     LinkMatrix,
     EField,
-    Su3Adjoint,
 };
 use na::{
     Vector4,
-    VectorN,
-    base::dimension::{DimName},
-    base::allocator::Allocator,
-    DefaultAllocator,
+    SVector,
 };
 use super::{
     Real,
-    dim::*,
     error::LatticeInitializationError,
 };
 use std::ops::{Index, IndexMut, Neg};
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
-use std::marker::PhantomData;
+
 use std::convert::{TryInto};
 use std::cmp::Ordering;
 use lattice_qcd_rs_procedural_macro::{
@@ -39,10 +34,7 @@ use lattice_qcd_rs_procedural_macro::{
 
 /// A cyclique lattice in space. Does not store point and links but is used to generate them.
 ///
-/// The generic parameter `D` is the dimension. For now this is a type that encode a number.
-/// For instance a 4 dimensional lattice will use [`dim::U4`].
-/// This is the system used by [`nalgebra`] to encode the size of matrices.
-/// hopefully this will change to use const generic.
+/// The generic parameter `D` is the dimension.
 ///
 /// This lattice is cyclique more precisely if the lattice has N poits in each direction.
 /// Then we can mouve alongisde a direction going though point 0, 1, ... N-1. The next step in
@@ -59,31 +51,21 @@ use lattice_qcd_rs_procedural_macro::{
 /// it does not implement [`Copy`].
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeCyclique<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-{
+pub struct LatticeCyclique<const D: usize> {
     /// The lattice spacing.
     size: Real,
     /// The number of point *per* dimension.
     dim: usize,
-    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
-    _phantom: PhantomData<D>,
 }
 
-impl<D> LatticeCyclique<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+
+impl<const D: usize> LatticeCyclique<D> {
     
-    /// Number space + time dimension.
+    /// Number space + time dimension, this is the `D` parameter.
     ///
-    /// Not to confuse with [`LatticeCyclique::dim`]. This is the dimension of space-time.
-    pub fn dim_st() -> usize {
-        D::dim()
+    /// Not to confuse with [`LatticeCyclique::dim`] which is the number of point per dimension.
+    pub const fn dim_st() -> usize {
+        D
     }
     
     /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
@@ -92,9 +74,8 @@ impl<D> LatticeCyclique<D>
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint, LatticeLinkCanonical};
-    /// # use lattice_qcd_rs::dim::U4;
-    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::<U4>::new([1, 0, 2, 0].into());
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let point = LatticePoint::<4>::new([1, 0, 2, 0].into());
     /// assert_eq!(
     ///     lattice.get_link_canonical(point, DirectionEnum::XNeg.into()),
     ///     LatticeLinkCanonical::new(LatticePoint::new([0, 0, 2, 0].into()), DirectionEnum::XPos.into()).unwrap()
@@ -141,14 +122,9 @@ impl<D> LatticeCyclique<D>
     /// Get the number of points in a single direction.
     ///
     /// use [`LatticeCyclique::get_number_of_points`] for the total number of points.
-    /// Not to confuse with [`LatticeCyclique::dim_st`]. This is the dimension of space-time.
-    pub fn dim(&self) -> usize {
+    /// Not to confuse with [`LatticeCyclique::dim_st`] which is the dimension of space-time.
+    pub const fn dim(&self) -> usize {
         self.dim
-    }
-    
-    /// Get an Iterator over all canonical link of the lattice.
-    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
-        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::get_all_positive_directions().first().unwrap()));
     }
     
     /// Get an Iterator over all points of the lattice.
@@ -156,34 +132,42 @@ impl<D> LatticeCyclique<D>
         IteratorLatticePoint::new(&self, LatticePoint::new_zero())
     }
     
+    /// Get an Iterator over all canonical link of the lattice.
+    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
+        return IteratorLatticeLinkCanonical::new(&self, self.get_link_canonical(LatticePoint::new_zero(), *Direction::positive_directions().first().unwrap()));
+    }
+    
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
     /// points in each spatial dimension.
     /// # Errors
     /// Size should be greater than 0 and dim greater or equal to 2, otherwise return an error.
     pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError>{
+        if D == 0 {
+            return Err(LatticeInitializationError::ZeroDimension);
+        }
         if size <= 0_f64 || size.is_nan() || size.is_infinite() {
             return Err(LatticeInitializationError::NonPositiveSize);
         }
         if dim < 2 {
             return Err(LatticeInitializationError::DimTooSmall);
         }
-        Ok(Self {size, dim, _phantom: PhantomData})
+        Ok(Self {size, dim})
     }
     
     /// Total number of canonical links oriented in space for a set time.
     ///
     /// basically the number of element return by [`LatticeCyclique::get_links`]
     pub fn get_number_of_canonical_links_space(&self) -> usize {
-        self.get_number_of_points() * D::dim()
+        self.get_number_of_points() * D
     }
     
     /// Total number of point in the lattice for a set time.
     pub fn get_number_of_points(&self) -> usize {
-        self.dim().pow(D::dim().try_into().unwrap())
+        self.dim().pow(D.try_into().unwrap())
     }
     
     /// Return the lattice size factor.
-    pub fn size(&self) -> Real {
+    pub const fn size(&self) -> Real {
         self.size
     }
     
@@ -191,9 +175,8 @@ impl<D> LatticeCyclique<D>
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint};
-    /// # use lattice_qcd_rs::dim::U4;
-    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
-    /// let point = LatticePoint::<U4>::from([1, 0, 2, 0]);
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let point = LatticePoint::<4>::from([1, 0, 2, 0]);
     /// assert_eq!(lattice.add_point_direction(point, &DirectionEnum::XPos.into()), LatticePoint::from([2, 0, 2, 0]));
     /// // In the following case we get [_, 3, _, _] because `dim = 4`, and this lattice is cyclique.
     /// assert_eq!(lattice.add_point_direction(point, &DirectionEnum::YNeg.into()), LatticePoint::from([1, 3, 2, 0]));
@@ -219,16 +202,6 @@ impl<D> LatticeCyclique<D>
         self.get_number_of_canonical_links_space() == links.len()
     }
     
-}
-
-impl<D> LatticeCyclique<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-{
     /// Returns wether the number of point is the same as the length of `e_field`
     pub fn has_compatible_lenght_e_field(&self, e_field: &EField<D>) -> bool {
         self.get_number_of_points() == e_field.len()
@@ -243,32 +216,22 @@ impl<D> LatticeCyclique<D>
 
 /// Iterator over [`LatticeLinkCanonical`] associated to a particular [`LatticeCyclique`].
 #[derive(Clone, Debug)]
-pub struct IteratorLatticeLinkCanonical<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-{
+pub struct IteratorLatticeLinkCanonical<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticeLinkCanonical<D>>,
 }
 
-impl<'a, D> IteratorLatticeLinkCanonical<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D> {
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] will return `first_el`.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorLatticeLinkCanonical, LatticeCyclique, LatticeLinkCanonical, LatticePoint, DirectionEnum};
-    /// # use lattice_qcd_rs::dim::U4;
-    /// let lattice = LatticeCyclique::<U4>::new(1_f64, 4).unwrap();
-    /// let first_el = LatticeLinkCanonical::<U4>::new(LatticePoint::from([1, 0, 2, 0]), DirectionEnum::YPos.into()).unwrap();
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let first_el = LatticeLinkCanonical::<4>::new(LatticePoint::from([1, 0, 2, 0]), DirectionEnum::YPos.into()).unwrap();
     /// let mut iter = IteratorLatticeLinkCanonical::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
-    pub fn new(lattice: &'a LatticeCyclique<D>, first_el: LatticeLinkCanonical<D>) -> Self {
+    pub const fn new(lattice: &'a LatticeCyclique<D>, first_el: LatticeLinkCanonical<D>) -> Self {
         Self {
             lattice,
             element: Some(first_el),
@@ -276,19 +239,14 @@ impl<'a, D> IteratorLatticeLinkCanonical<'a, D>
     }
 }
 
-impl<'a, D> Iterator for IteratorLatticeLinkCanonical<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D> {
     type Item = LatticeLinkCanonical<D>;
     
     // TODO improve
     fn next(&mut self) -> Option<Self::Item> {
         let previous_el = self.element;
         if let Some(ref mut element) = self.element {
-            let mut iter_dir = IteratorDirection::<_, true>::new(Some(element.dir)).unwrap();
+            let mut iter_dir = IteratorDirection::<D, true>::new(Some(element.dir)).unwrap();
             let new_dir = iter_dir.next();
             match new_dir {
                 Some(dir) => element.set_dir(dir),
@@ -319,19 +277,9 @@ impl<'a, D> Iterator for IteratorLatticeLinkCanonical<'a, D>
     }
 }
 
-impl<'a, D> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
-impl<'a, D> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
 /// Enum for internal use of interator. It store the previous element returned by `next`
 #[derive(Clone, Debug, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -357,8 +305,7 @@ impl<T> From<IteratorElement<T>> for Option<T> {
 /// # Example
 /// ```
 /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
-/// # use lattice_qcd_rs::dim::U4;
-/// let mut iter = IteratorDirection::<U4, true>::new(None).unwrap();
+/// let mut iter = IteratorDirection::<4, true>::new(None).unwrap();
 /// assert_eq!(iter.next().unwrap(), Direction::new(0, true).unwrap());
 /// assert_eq!(iter.next().unwrap(), Direction::new(1, true).unwrap());
 /// assert_eq!(iter.next().unwrap(), Direction::new(2, true).unwrap());
@@ -367,40 +314,34 @@ impl<T> From<IteratorElement<T>> for Option<T> {
 /// assert_eq!(iter.next(), None);
 /// ```
 #[derive(Clone, Debug)]
-pub struct IteratorDirection<D, const IS_POSITIVE_DIRECTION: bool>
-    where D: DimName,
-{
+pub struct IteratorDirection<const D: usize, const IS_POSITIVE_DIRECTION: bool> {
     element: IteratorElement<Direction<D>>,
 }
 
-impl<D, const IS_POSITIVE_DIRECTION: bool> IteratorDirection<D, IS_POSITIVE_DIRECTION>
-    where D: DimName,
-{
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> IteratorDirection<D, IS_POSITIVE_DIRECTION> {
     /// Create an iterator where the first element upon calling [`Self::next`] is the direction
     /// after `element`. Giving `None` results in the first element being the direction with index 0
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
-    /// # use lattice_qcd_rs::dim::U4;
-    /// let mut iter = IteratorDirection::<U4, true>::new(None).unwrap();
+    /// let mut iter = IteratorDirection::<4, true>::new(None).unwrap();
     /// assert_eq!(iter.next().unwrap(), Direction::new(0, true).unwrap());
     /// assert_eq!(iter.next().unwrap(), Direction::new(1, true).unwrap());
-    /// let element = Direction::<U4>::new(0, false).unwrap();
-    /// let mut iter = IteratorDirection::<U4, false>::new(Some(element)).unwrap();
+    /// let element = Direction::<4>::new(0, false).unwrap();
+    /// let mut iter = IteratorDirection::<4, false>::new(Some(element)).unwrap();
     /// assert_eq!(iter.next().unwrap(), Direction::new(1, false).unwrap());
     /// assert_eq!(iter.next().unwrap(), Direction::new(2, false).unwrap());
     /// ```
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
-    /// # use lattice_qcd_rs::dim::{U0, U4};
-    /// let iter = IteratorDirection::<U0, true>::new(None);
-    /// // U0 is invalide
+    /// let iter = IteratorDirection::<0, true>::new(None);
+    /// // 0 is invalide
     /// assert!(iter.is_none());
-    /// let iter = IteratorDirection::<U4, true>::new(Some(Direction::new(2, false).unwrap()));
+    /// let iter = IteratorDirection::<4, true>::new(Some(Direction::new(2, false).unwrap()));
     /// // the sign of the direction is invalid
     /// assert!(iter.is_none());
     /// ```
-    pub fn new(element: Option<Direction<D>>) -> Option<Self> {
+    pub const fn new(element: Option<Direction<D>>) -> Option<Self> {
         match element {
             None => Self::new_from_element(IteratorElement::FirstElement),
             Some(dir) => Self::new_from_element(IteratorElement::Element(dir)),
@@ -408,21 +349,20 @@ impl<D, const IS_POSITIVE_DIRECTION: bool> IteratorDirection<D, IS_POSITIVE_DIRE
     }
     
     /// create a new iterator. The first [`IteratorLatticeLinkCanonical::next()`] the element just after the one given
-    /// or the first ellement if [`IteratorDirection::FirstElement`] is given.
+    /// or the first ellement if [`IteratorElement::FirstElement`] is given.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
-    /// # use lattice_qcd_rs::dim::U4;
-    /// let mut iter = IteratorDirection::<U4, true>::new_from_element(IteratorElement::FirstElement).unwrap();
+    /// let mut iter = IteratorDirection::<4, true>::new_from_element(IteratorElement::FirstElement).unwrap();
     /// assert_eq!(iter.next().unwrap(), Direction::new(0, true).unwrap());
     /// assert_eq!(iter.next().unwrap(), Direction::new(1, true).unwrap());
-    /// let element = Direction::<U4>::new(0, false).unwrap();
-    /// let mut iter = IteratorDirection::<U4, false>::new_from_element(IteratorElement::Element(element)).unwrap();
+    /// let element = Direction::<4>::new(0, false).unwrap();
+    /// let mut iter = IteratorDirection::<4, false>::new_from_element(IteratorElement::Element(element)).unwrap();
     /// assert_eq!(iter.next().unwrap(), Direction::new(1, false).unwrap());
     /// assert_eq!(iter.next().unwrap(), Direction::new(2, false).unwrap());
     /// ```
-    pub fn new_from_element(element: IteratorElement<Direction<D>>) -> Option<Self> {
-        if D::dim() == 0 {
+    pub const fn new_from_element(element: IteratorElement<Direction<D>>) -> Option<Self> {
+        if D == 0 {
             return None;
         }
         if let IteratorElement::Element(ref el) = element {
@@ -434,9 +374,7 @@ impl<D, const IS_POSITIVE_DIRECTION: bool> IteratorDirection<D, IS_POSITIVE_DIRE
     }
 }
 
-impl<D, const IS_POSITIVE_DIRECTION: bool> Iterator for IteratorDirection<D, IS_POSITIVE_DIRECTION>
-    where D: DimName,
-{
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator for IteratorDirection<D, IS_POSITIVE_DIRECTION> {
     type Item = Direction<D>;
     
     fn next(&mut self) -> Option<Self::Item> {
@@ -458,9 +396,9 @@ impl<D, const IS_POSITIVE_DIRECTION: bool> Iterator for IteratorDirection<D, IS_
     
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = match self.element {
-            IteratorElement::FirstElement => D::dim(),
+            IteratorElement::FirstElement => D,
             IteratorElement::Element(ref dir) => {
-                D::dim() - (dir.to_index() + 1)
+                D - (dir.to_index() + 1)
             },
             IteratorElement::LastElement => 0,
         };
@@ -468,31 +406,18 @@ impl<D, const IS_POSITIVE_DIRECTION: bool> Iterator for IteratorDirection<D, IS_
     }
 }
 
-impl<D, const IS_POSITIVE_DIRECTION: bool> std::iter::FusedIterator for IteratorDirection<D, IS_POSITIVE_DIRECTION>
-    where D: DimName,
-{}
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::FusedIterator for IteratorDirection<D, IS_POSITIVE_DIRECTION> {}
 
-impl<D, const IS_POSITIVE_DIRECTION: bool> std::iter::ExactSizeIterator for IteratorDirection<D, IS_POSITIVE_DIRECTION>
-    where D: DimName,
-{}
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::ExactSizeIterator for IteratorDirection<D, IS_POSITIVE_DIRECTION> {}
 
 /// Iterator over [`LatticePoint`]
 #[derive(Clone, Debug)]
-pub struct IteratorLatticePoint<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-{
+pub struct IteratorLatticePoint<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticePoint<D>>,
 }
 
-impl<'a, D> IteratorLatticePoint<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> IteratorLatticePoint<'a, D> {
     /// create a new iterator. The first [`IteratorLatticePoint::next()`] will return `first_el`.
     /// # Example
     /// ```
@@ -502,7 +427,7 @@ impl<'a, D> IteratorLatticePoint<'a, D>
     /// let mut iter = IteratorLatticePoint::new(&lattice, first_el);
     /// assert_eq!(iter.next().unwrap(), first_el);
     /// ```
-    pub fn new(lattice: &'a LatticeCyclique<D>, first_el: LatticePoint<D>) -> Self {
+    pub const fn new(lattice: &'a LatticeCyclique<D>, first_el: LatticePoint<D>) -> Self {
         Self {
             lattice,
             element: Some(first_el),
@@ -511,12 +436,7 @@ impl<'a, D> IteratorLatticePoint<'a, D>
 }
 
 
-impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
     type Item = LatticePoint<D>;
     
     // TODO improve
@@ -551,47 +471,29 @@ impl<'a, D> Iterator for IteratorLatticePoint<'a, D>
     }
 }
 
-impl<'a, D> std::iter::FusedIterator for IteratorLatticePoint<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticePoint<'a, D> {}
 
-impl<'a, D> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{}
+impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D> {}
 
 /// Represents point on a (any) lattice.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D> : Copy,
-{
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
-    data: na::VectorN<usize, D>
+pub struct LatticePoint<const D: usize> {
+    data: na::SVector<usize, D>
 }
 
-impl<D> LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> LatticePoint<D> {
+    
     /// Create a new lattice point.
     ///
-    ///(It can be outside a lattice).
-    pub fn new(data: VectorN<usize, D>) -> Self {
+    /// It can be outside a lattice.
+    pub const fn new(data: SVector<usize, D>) -> Self {
         Self {data}
     }
     
     /// Create a point at the origin
     pub fn new_zero() -> Self{
-        Self {data: VectorN::zeros()}
+        Self {data: SVector::zeros()}
     }
     
     /// Create a point using the closure generate elements with the index as input.
@@ -600,18 +502,21 @@ impl<D> LatticePoint<D>
     pub fn from_fn<F>(mut f: F) -> Self
         where F: FnMut(usize) -> usize
     {
-        Self::new(VectorN::from_fn(|index, _| f(index) ))
+        Self::new(SVector::from_fn(|index, _| f(index) ))
     }
     
-    /// Number of elements in [`LatticePoint`].
-    pub fn len(&self) -> usize {
-        self.data.len()
+    /// Number of elements in [`LatticePoint`]. This is `D`.
+    #[allow(clippy::unused_self)]
+    pub const fn len(&self) -> usize {
+        // this is in order to have a const function.
+        // we could have called self.data.len()
+        D
     }
     
     /// Return if LatticePoint contain no data. True when the dimension is 0, false otherwise.
     #[allow(clippy::unused_self)]
-    pub fn is_empty(&self) -> bool {
-        D::dim() == 0
+    pub const fn is_empty(&self) -> bool {
+        D == 0
     }
     
     /// Get an iterator on the data.
@@ -625,47 +530,31 @@ impl<D> LatticePoint<D>
     }
 }
 
-impl<D> Default for LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> Default for LatticePoint<D> {
     fn default() -> Self {
         Self::new_zero()
     }
 }
 
-impl<'a, D> IntoIterator for &'a LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D> : Copy,
-{
+impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D> {
     type Item = &'a usize;
-    type IntoIter = <&'a VectorN<usize, D> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a SVector<usize, D> as IntoIterator>::IntoIter;
     
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
 }
 
-impl<'a, D> IntoIterator for &'a mut LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D> : Copy,
-{
+impl<'a, const D: usize> IntoIterator for &'a mut LatticePoint<D> {
     type Item = &'a mut usize;
-    type IntoIter = <&'a mut VectorN<usize, D> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a mut SVector<usize, D> as IntoIterator>::IntoIter;
     
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter_mut()
     }
 }
 
-impl<D> Index<usize> for LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> Index<usize> for LatticePoint<D> {
     type Output = usize;
     
     /// Get the element at position `pos`
@@ -681,11 +570,7 @@ impl<D> Index<usize> for LatticePoint<D>
     }
 }
 
-impl<D> IndexMut<usize> for LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> IndexMut<usize> for LatticePoint<D> {
     
     /// Get the element at position `pos`
     /// # Panic
@@ -700,51 +585,33 @@ impl<D> IndexMut<usize> for LatticePoint<D>
     }
 }
 
-impl<D, T> From<T> for LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + From<T>,
+impl<T, const D: usize> From<T> for LatticePoint<D>
+where
+    SVector<usize, D>: From<T>,
 {
     fn from(data: T) -> Self {
-        LatticePoint::new(VectorN::from(data))
+        LatticePoint::new(SVector::from(data))
     }
 }
 
-// implement conversions from [`LatticePoint`] to [usize; N].
-macro_rules! implement_from_lattice_point{
-    ($(($l:literal, $i:ident)) ,+) => {
-        $(
-            impl From<LatticePoint<$i>> for [usize; $l] {
-                fn  from(data: LatticePoint<$i>) -> [usize; $l] {
-                    data.data.into()
-                }
-            }
-        )*
+impl<const D: usize> From<LatticePoint<D>> for [usize; D]
+    where SVector<usize, D>: Into<[usize; D]>
+{
+    fn  from(data: LatticePoint<D>) -> [usize; D] {
+        data.data.into()
     }
 }
-
-implement_from_lattice_point!((1, U1), (2, U2), (3, U3), (4, U4), (5, U5), (6, U6), (7, U7), (8, U8), (9, U9), (10, U10));
 
 /// Trait to convert an element on a lattice to an [`usize`].
 ///
 /// Used mainly to index field on the lattice using [`std::vec::Vec`]
 // TODO change name ? make it less confusing
-pub trait LatticeElementToIndex<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+pub trait LatticeElementToIndex<const D: usize> {
     /// Given a lattice return an index from the element
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize;
 }
 
-impl<D> LatticeElementToIndex<D> for LatticePoint<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D> {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
         self.iter().enumerate().map(|(index, pos)| {
             (pos % l.dim()) * l.dim().pow(index.try_into().unwrap())
@@ -752,35 +619,24 @@ impl<D> LatticeElementToIndex<D> for LatticePoint<D>
     }
 }
 
-impl<D> LatticeElementToIndex<D> for Direction<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for Direction<D> {
     /// equivalent to [`Direction::to_index()`]
     fn to_index(&self, _: &LatticeCyclique<D>) -> usize {
         self.to_index()
     }
 }
 
-impl<D> LatticeElementToIndex<D> for LatticeLinkCanonical<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
-        self.pos().to_index(l) * D::dim() + self.dir().to_index()
+        self.pos().to_index(l) * D + self.dir().to_index()
     }
 }
 
-impl<D> LatticeElementToIndex<D> for usize
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+/// This is juste the identity.
+///
+/// It is implemented for compatibility reason
+/// such that function that require a [`LatticeElementToIndex`] can also accept [`usize`].
+impl<const D: usize> LatticeElementToIndex<D> for usize {
     /// return self
     fn to_index(&self, _l: &LatticeCyclique<D>) -> usize {
         *self
@@ -797,22 +653,13 @@ impl<D> LatticeElementToIndex<D> for usize
 /// This object can be used to safly index in a [`std::collections::HashMap`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeLinkCanonical<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
+pub struct LatticeLinkCanonical<const D: usize> {
     from: LatticePoint<D>,
     dir: Direction<D>,
 }
 
 
-impl<D> LatticeLinkCanonical<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> LatticeLinkCanonical<D> {
     /// Try create a LatticeLinkCanonical. If the dir is negative it fails.
     ///
     /// To guaranty creating an element see [LatticeCyclique::get_link_canonical].
@@ -826,7 +673,7 @@ impl<D> LatticeLinkCanonical<D>
     /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into());
     /// assert!(l.is_some());
     /// ```
-    pub fn new (from: LatticePoint<D>, dir: Direction<D>) -> Option<Self> {
+    pub const fn new (from: LatticePoint<D>, dir: Direction<D>) -> Option<Self> {
         if dir.is_negative() {
             return None;
         }
@@ -834,7 +681,7 @@ impl<D> LatticeLinkCanonical<D>
     }
     
     /// Position of the link.
-    pub fn pos(&self) -> &LatticePoint<D>{
+    pub const fn pos(&self) -> &LatticePoint<D>{
         &self.from
     }
     
@@ -844,7 +691,7 @@ impl<D> LatticeLinkCanonical<D>
     }
     
     /// Direction of the link.
-    pub fn dir(&self) -> &Direction<D> {
+    pub const fn dir(&self) -> &Direction<D> {
         &self.dir
     }
     
@@ -879,21 +726,13 @@ impl<D> LatticeLinkCanonical<D>
     }
 }
 
-impl<D> From<LatticeLinkCanonical<D>> for LatticeLink<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> From<LatticeLinkCanonical<D>> for LatticeLink<D> {
     fn from(l : LatticeLinkCanonical<D>) -> Self {
         LatticeLink::new(l.from, l.dir)
     }
 }
 
-impl<D> From<&LatticeLinkCanonical<D>> for LatticeLink<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D> {
     fn from(l : &LatticeLinkCanonical<D>) -> Self {
         LatticeLink::new(l.from, l.dir)
     }
@@ -909,28 +748,19 @@ impl<D> From<&LatticeLinkCanonical<D>> for LatticeLink<D>
 /// You can use modulus over the elements to use inside a lattice.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeLink<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<usize, D>: Serialize", deserialize = "VectorN<usize, D>: Deserialize<'de>")) )]
+pub struct LatticeLink<const D: usize> {
     from: LatticePoint<D>,
     dir: Direction<D>,
 }
 
-impl<D> LatticeLink<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy,
-{
+impl<const D: usize> LatticeLink<D> {
     /// Create a link from position `from` and direction `dir`.
-    pub fn new (from: LatticePoint<D>, dir: Direction<D>) -> Self {
+    pub const fn new (from: LatticePoint<D>, dir: Direction<D>) -> Self {
         Self {from, dir}
     }
     
     /// Get the position of the link.
-    pub fn pos(&self) -> &LatticePoint<D>{
+    pub const fn pos(&self) -> &LatticePoint<D>{
         &self.from
     }
     
@@ -940,7 +770,7 @@ impl<D> LatticeLink<D>
     }
     
     /// Get the direction of the link.
-    pub fn dir(&self) -> &Direction<D> {
+    pub const fn dir(&self) -> &Direction<D> {
         &self.dir
     }
     
@@ -950,46 +780,38 @@ impl<D> LatticeLink<D>
     }
     
     /// Get if the direction of the link is positive.
-    pub fn is_dir_positive(&self) -> bool {
+    pub const fn is_dir_positive(&self) -> bool {
         self.dir.is_positive()
     }
     
     /// Get if the direction of the link is negative.
-    pub fn is_dir_negative(&self) -> bool {
+    pub const fn is_dir_negative(&self) -> bool {
         self.dir.is_negative()
     }
 }
 
-
-
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct Direction<D>
-    where D: DimName
-{
+pub struct Direction<const D: usize> {
     index_dir: usize,
     is_positive: bool,
-    #[cfg_attr(feature = "serde-serialize", serde(skip) )]
-    _phantom: PhantomData<D>,
 }
 
-impl<D> Direction<D>
-    where D: DimName
-{
+impl<const D: usize> Direction<D> {
     /// New direction from a direction as an idex and wether it is in the positive direction.
-    pub fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
-        if index_dir >= D::dim() {
+    pub const fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
+        if index_dir >= D {
             return None;
         }
-        Some(Self {index_dir, is_positive, _phantom: PhantomData})
+        Some(Self {index_dir, is_positive})
     }
     
     /// List of all positives directions.
-    /// This is very slow use [`DirectionList::get_all_positive_directions`] instead
+    /// This is very slow use [`Self::positive_directions`] instead
     pub fn positives_vec() -> Vec<Self> {
-        let mut x = Vec::with_capacity(D::dim());
-        for i in 0..D::dim() {
+        let mut x = Vec::with_capacity(D);
+        for i in 0..D {
             x.push(Self::new(i, true).unwrap());
         }
         x
@@ -998,22 +820,43 @@ impl<D> Direction<D>
     /// List all directions.
     /// This is very slow use [`DirectionList::get_all_directions`] instead
     pub fn directions_vec() -> Vec<Self> {
-        let mut x = Vec::with_capacity(2 * D::dim());
-        for i in 0..D::dim() {
+        let mut x = Vec::with_capacity(2 * D);
+        for i in 0..D {
             x.push(Self::new(i, true).unwrap());
             x.push(Self::new(i, false).unwrap());
         }
         x
     }
     
+    // TODO add const function for all direction once operation on const generic are added
+    /// Get all direction with the sign `IS_POSITIVE`
+    pub const fn get_directions<const IS_POSITIVE: bool>() -> [Self; D] {
+        let mut i = 0_usize;
+        let mut array = [Direction {index_dir: 0, is_positive: IS_POSITIVE}; D];
+        while i < D {
+            array[i] = Direction {index_dir: i, is_positive: IS_POSITIVE};
+            i += 1;
+        }
+        array
+    }
+    
+    /// Get all negative direction
+    pub const fn negative_directions() -> [Self; D] {
+        Self::get_directions::<false>()
+    }
+    
+    /// Get all positive direction
+    pub const fn positive_directions() -> [Self; D] {
+        Self::get_directions::<true>()
+    }
     
     /// Get if the position is positive.
-    pub fn is_positive(&self) -> bool {
+    pub const fn is_positive(&self) -> bool {
         self.is_positive
     }
     
     /// Get if the position is Negative. see [`Direction::is_positive`]
-    pub fn is_negative(&self) -> bool {
+    pub const fn is_negative(&self) -> bool {
         ! self.is_positive()
     }
     
@@ -1022,11 +865,10 @@ impl<D> Direction<D>
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::Direction;
-    /// # use lattice_qcd_rs::dim::U4;
-    /// assert_eq!(Direction::<U4>::new(1, false).unwrap().to_positive(), Direction::<U4>::new(1, true).unwrap());
-    /// assert_eq!(Direction::<U4>::new(1, true).unwrap().to_positive(), Direction::<U4>::new(1, true).unwrap());
+    /// assert_eq!(Direction::<4>::new(1, false).unwrap().to_positive(), Direction::<4>::new(1, true).unwrap());
+    /// assert_eq!(Direction::<4>::new(1, true).unwrap().to_positive(), Direction::<4>::new(1, true).unwrap());
     /// ```
-    pub fn to_positive(mut self) -> Self {
+    pub const fn to_positive(mut self) -> Self {
         self.is_positive = true;
         self
     }
@@ -1035,45 +877,28 @@ impl<D> Direction<D>
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::Direction;
-    /// # use lattice_qcd_rs::dim::U4;
-    /// assert_eq!(Direction::<U4>::new(1, false).unwrap().to_index(), 1);
+    /// assert_eq!(Direction::<4>::new(1, false).unwrap().to_index(), 1);
     /// ```
-    pub fn to_index(&self) -> usize {
+    pub const fn to_index(&self) -> usize {
         self.index_dir
     }
-}
-
-impl<D> Direction<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-{
     
     /// Convert the direction into a vector of norm `a`;
-    pub fn to_vector(&self, a: f64) -> VectorN<Real, D> {
+    pub fn to_vector(&self, a: f64) -> SVector<Real, D> {
         self.to_unit_vector() * a
     }
     
     /// Returns the dimension
-    pub fn dim() -> usize {
-        D::dim()
+    pub const fn dim() -> usize {
+        D
     }
     
     /// Convert the direction into a vector of norm `1`;
-    pub fn to_unit_vector(&self) -> VectorN<Real, D> {
-        let mut v = VectorN::zeros();
+    pub fn to_unit_vector(&self) -> SVector<Real, D> {
+        let mut v = SVector::zeros();
         v[self.index_dir] = 1_f64;
         v
     }
-    
-}
-
-
-impl<D> Direction<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-    Direction<D>: DirectionList,
-{
-    
     
     
     /// Find the direction the vector point the most.
@@ -1081,17 +906,16 @@ impl<D> Direction<D>
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::Direction;
-    /// # use lattice_qcd_rs::dim::U4;
     /// # extern crate nalgebra;
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), Direction::<U4>::new(0, true).unwrap());
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), Direction::<U4>::new(1, false).unwrap());
-    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), Direction::<U4>::new(3, true).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), Direction::<4>::new(0, true).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), Direction::<4>::new(1, false).unwrap());
+    /// assert_eq!(Direction::from_vector(&nalgebra::Vector4::new(0.5_f64, 1_f64, 0_f64, 2_f64)), Direction::<4>::new(3, true).unwrap());
     /// ```
-    pub fn from_vector(v: &VectorN<Real, D>) -> Self {
+    pub fn from_vector(v: &SVector<Real, D>) -> Self {
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
-        for (i, dir) in Self::get_all_positive_directions().iter().enumerate() {
+        for (i, dir) in Self::positive_directions().iter().enumerate() {
             let scalar_prod = v.dot(&dir.to_vector(1_f64));
             if scalar_prod.abs() > max {
                 max = scalar_prod.abs();
@@ -1105,9 +929,9 @@ impl<D> Direction<D>
 /// List all possible direction
 pub trait DirectionList: Sized {
     /// List all directions.
-    fn get_all_directions()->& 'static [Self];
+    fn get_all_directions() -> & 'static [Self];
     /// List all positive directions.
-    fn get_all_positive_directions()->& 'static [Self];
+    fn get_all_positive_directions() -> & 'static [Self];
 }
 
 implement_direction_list!();
@@ -1120,26 +944,25 @@ implement_direction_from!();
 /// # Example
 /// ```
 /// # use lattice_qcd_rs::lattice::Direction;
-/// # use lattice_qcd_rs::dim::U4;
 /// use std::cmp::Ordering;
 ///
-/// let dir_1 = Direction::<U4>::new(1, false).unwrap();
-/// let dir_2 = Direction::<U4>::new(1, true).unwrap();
+/// let dir_1 = Direction::<4>::new(1, false).unwrap();
+/// let dir_2 = Direction::<4>::new(1, true).unwrap();
 /// assert!(dir_1 < dir_2);
 /// assert_eq!(dir_1.partial_cmp(&dir_2), Some(Ordering::Less));
 /// //--------
-/// let dir_3 = Direction::<U4>::new(3, false).unwrap();
-/// let dir_4 = Direction::<U4>::new(1, false).unwrap();
+/// let dir_3 = Direction::<4>::new(3, false).unwrap();
+/// let dir_4 = Direction::<4>::new(1, false).unwrap();
 /// assert!(dir_3 > dir_4);
 /// assert_eq!(dir_3.partial_cmp(&dir_4), Some(Ordering::Greater));
 /// //--------
-/// let dir_5 = Direction::<U4>::new(3, true).unwrap();
-/// let dir_6 = Direction::<U4>::new(1, false).unwrap();
+/// let dir_5 = Direction::<4>::new(3, true).unwrap();
+/// let dir_6 = Direction::<4>::new(1, false).unwrap();
 /// assert_eq!(dir_5.partial_cmp(&dir_6), None);
 /// ```
 ///
 ///
-impl<D: DimName> PartialOrd for Direction<D> {
+impl<const D: usize> PartialOrd for Direction<D> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self == other {
             Some(Ordering::Equal)
@@ -1156,7 +979,7 @@ impl<D: DimName> PartialOrd for Direction<D> {
     }
 }
 
-impl<D: DimName> Neg for Direction<D> {
+impl<const D: usize> Neg for Direction<D> {
     type Output = Self;
     
     fn neg(mut self) -> Self::Output {
@@ -1165,7 +988,7 @@ impl<D: DimName> Neg for Direction<D> {
     }
 }
 
-impl<D: DimName> Neg for &Direction<D> {
+impl<const D: usize> Neg for &Direction<D> {
     type Output = Direction<D>;
     
     fn neg(self) -> Self::Output {
@@ -1174,68 +997,54 @@ impl<D: DimName> Neg for &Direction<D> {
 }
 
 /// Return [`Direction::to_index`].
-impl<D: DimName> From<Direction<D>> for usize {
+impl<const D: usize> From<Direction<D>> for usize {
     fn from(d: Direction<D>) -> Self {
         d.to_index()
     }
 }
 
 /// Return [`Direction::to_index`].
-impl<D: DimName> From<&Direction<D>> for usize {
+impl<const D: usize> From<&Direction<D>> for usize {
     fn from(d: &Direction<D>) -> Self {
         d.to_index()
     }
 }
 
 /// Return [`DirectionEnum::from_vector`].
-impl<D> From<VectorN<Real, D>> for Direction<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-    Direction<D>: DirectionList,
-{
-    fn from(v: VectorN<Real, D>) -> Self {
+impl<const D: usize> From<SVector<Real, D>> for Direction<D> {
+    fn from(v: SVector<Real, D>) -> Self {
         Direction::from_vector(&v)
     }
 }
 
 /// Return [`DirectionEnum::from_vector`].
-impl<D> From<&VectorN<Real, D>> for Direction<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-    Direction<D>: DirectionList,
-{
-    fn from(v: &VectorN<Real, D>) -> Self {
+impl<const D: usize> From<&SVector<Real, D>> for Direction<D> {
+    fn from(v: &SVector<Real, D>) -> Self {
         Direction::<D>::from_vector(v)
     }
 }
 
 /// Return [`Direction::to_unit_vector`].
-impl<D> From<Direction<D>> for VectorN<Real, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-{
+impl<const D: usize> From<Direction<D>> for SVector<Real, D> {
     fn from(d: Direction<D>) -> Self {
         d.to_unit_vector()
     }
 }
 
 /// Return [`Direction::to_unit_vector`].
-impl<D> From<&Direction<D>> for VectorN<Real, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<Real, D>,
-{
+impl<const D: usize> From<&Direction<D>> for SVector<Real, D> {
     fn from(d: &Direction<D>) -> Self {
         d.to_unit_vector()
     }
 }
 
-impl From<DirectionEnum> for Direction<na::U4> {
+impl From<DirectionEnum> for Direction<4> {
     fn from(d: DirectionEnum) -> Self {
         Self::new(d.to_index(), d.is_positive()).expect("unreachable")
     }
 }
 
-impl From<&DirectionEnum> for Direction<na::U4> {
+impl From<&DirectionEnum> for Direction<4> {
     fn from(d: &DirectionEnum) -> Self {
         Self::new(d.to_index(), d.is_positive()).expect("unreachable")
     }
@@ -1283,7 +1092,7 @@ impl DirectionEnum {
     }
     
     /// Convert the direction into a vector of norm `1`;
-    pub fn to_unit_vector(self) -> Vector4<Real> {
+    pub const fn to_unit_vector(self) -> Vector4<Real> {
         match self {
             DirectionEnum::XPos => Vector4::<Real>::new(1_f64, 0_f64, 0_f64, 0_f64),
             DirectionEnum::XNeg => Vector4::<Real>::new(-1_f64, 0_f64, 0_f64, 0_f64),
@@ -1321,7 +1130,6 @@ impl DirectionEnum {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::DirectionEnum;
-    /// # use lattice_qcd_rs::dim::U4;
     /// # extern crate nalgebra;
     /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(1_f64, 0_f64, 0_f64, 0_f64)), DirectionEnum::XPos);
     /// assert_eq!(DirectionEnum::from_vector(&nalgebra::Vector4::new(0_f64, -1_f64, 0_f64, 0_f64)), DirectionEnum::YNeg);
@@ -1423,11 +1231,11 @@ impl DirectionEnum {
 
 impl DirectionList for DirectionEnum {
     
-    fn get_all_directions()->& 'static [Self] {
+    fn get_all_directions() -> &'static [Self] {
         &Self::DIRECTIONS
     }
     
-    fn get_all_positive_directions()->& 'static [Self] {
+    fn get_all_positive_directions() -> &'static [Self] {
         &Self::POSITIVES
     }
 }
@@ -1512,5 +1320,45 @@ impl From<DirectionEnum> for Vector4<Real> {
 impl From<&DirectionEnum> for Vector4<Real> {
     fn from(d: &DirectionEnum) -> Self {
         d.to_unit_vector()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    
+    #[test]
+    fn directions_list_cst() {
+        let dirs = Direction::<3>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<3>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
+        
+        let dirs = Direction::<8>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<8>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
+        
+        let dirs = Direction::<0>::positive_directions();
+        assert_eq!(dirs.len(), 0);
+        let dirs = Direction::<0>::negative_directions();
+        assert_eq!(dirs.len(), 0);
+        
+        let dirs = Direction::<128>::positive_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, true).unwrap());
+        }
+        let dirs = Direction::<128>::negative_directions();
+        for (index, dir) in dirs.iter().enumerate() {
+            assert_eq!(*dir, Direction::new(index, false).unwrap());
+        }
     }
 }

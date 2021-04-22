@@ -7,13 +7,13 @@ use average_of_plaquette::{
     plot_corr_e::*,
  };
 //use plotter_backend_text::*;
+//use plotters::prelude::*;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use lattice_qcd_rs::{
     simulation::*,
     lattice::{LatticePoint},
     integrator::SymplecticEulerRayon,
-    dim::U3,
     statistics,
     error::StateInitializationError,
 };
@@ -46,6 +46,8 @@ static NUMBER_OF_MEASUREMENT: Lazy<usize> = Lazy::new(|| {
 });
 
 const LATTICE_DIM: usize = 24;
+//const LATTICE_DIM: usize = 16;
+//const LATTICE_DIM: usize = 8;
 const LATTICE_SIZE: f64 = 1_f64;
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
@@ -109,8 +111,11 @@ fn main_cross_with_e(simulation_index: usize) {
     
     let (sim_th, _t_exp) = thermalize_state(sim_init, &mut mc, &multi_pb, &observable::volume_obs, DIRECTORY, &format!("ecorr_{}", beta)).unwrap();
     let (state, _rng) = thermalize_with_e_field(sim_th, &multi_pb, mc.rng_owned(), DT).unwrap();
-    let _ = save_data_any(&state, &format!("{}/sim_bin_{}_th_e.bin", DIRECTORY, beta));
     
+    // we may want to do one simulation step to remove the big jump at the begining
+    //let state = state.simulate_symplectic(&INTEGRATOR, DT).unwrap();
+    
+    let _ = save_data_any(&state, &format!("{}/sim_bin_{}_th_e.bin", DIRECTORY, beta));
     let (state, measure) = measure(state, *NUMBER_OF_MEASUREMENT, &multi_pb).unwrap();
     
     let _ = save_data_any(&state, &format!("{}/sim_bin_{}_e.bin", DIRECTORY, beta));
@@ -132,10 +137,10 @@ fn main_cross_with_e(simulation_index: usize) {
 }
 
 
-type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, Vec<[f64; 2]>);
+type ResultMeasure = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, Vec<[f64; 2]>);
 
 #[allow(clippy::useless_format)]
-fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<U3>, U3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
+fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3>, number_of_measurement: usize, mp: &MultiProgress) -> Result<ResultMeasure, StateInitializationError> {
     
     let pb = mp.add(ProgressBar::new((number_of_measurement) as u64));
     pb.set_style(ProgressStyle::default_bar().progress_chars("=>-").template(
@@ -144,7 +149,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
     pb.set_prefix(&format!("simulating"));
     
     let mut state = state_initial.clone();
-    let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
+    let points = state.lattice().get_points().collect::<Vec<LatticePoint<3>>>();
     let mut vec = Vec::with_capacity(number_of_measurement + 1);
     
     let vec_data = statistics::mean_and_variance_par_iter_val(
@@ -201,7 +206,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
                         0_f64..((vec_plot.len() - 1) * PLOT_COUNT) as f64 * DT,
                         y_min..y_max,
                         vec_plot.iter().enumerate().map(|(index, el)| ((index * PLOT_COUNT) as f64 * DT, *el)),
-                        "E Corr"
+                        "B Corr"
                     );
                     let _ = console::Term::stderr().move_cursor_up(30);
                 }

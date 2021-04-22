@@ -10,7 +10,6 @@ use super::{
     Complex,
     ComplexField,
 };
-use once_cell::sync::Lazy;
 use rand_distr::Distribution;
 
 /// First Pauli matrix.
@@ -19,10 +18,10 @@ use rand_distr::Distribution;
 /// 0   1
 /// 1   0
 /// ```
-pub static PAULI_1: Lazy<CMatrix2> = Lazy::new(|| CMatrix2::new(
+pub const PAULI_1: CMatrix2 = CMatrix2::new(
     ZERO, ONE,
     ONE, ZERO
-));
+);
 
 /// Second Pauli matrix.
 ///
@@ -30,10 +29,10 @@ pub static PAULI_1: Lazy<CMatrix2> = Lazy::new(|| CMatrix2::new(
 /// 0  -i
 /// i   0
 /// ```
-pub static PAULI_2: Lazy<CMatrix2> = Lazy::new(|| CMatrix2::new(
-    ZERO, -I,
+pub const PAULI_2: CMatrix2 = CMatrix2::new(
+    ZERO, Complex::new(0_f64, -1_f64),
     I, ZERO
-));
+);
 
 /// Third Pauli matrix.
 ///
@@ -41,16 +40,14 @@ pub static PAULI_2: Lazy<CMatrix2> = Lazy::new(|| CMatrix2::new(
 /// 1   0
 /// 0  -1
 /// ```
-pub static PAULI_3: Lazy<CMatrix2> = Lazy::new(|| CMatrix2::new(
+pub const PAULI_3: CMatrix2 = CMatrix2::new(
     ONE, ZERO,
-    ZERO, -ONE
-));
+    ZERO, Complex::new(1_f64, 0_f64)
+);
 
 /// List of Pauli matrices, see
 /// [wikipedia](https://en.wikipedia.org/w/index.php?title=Pauli_matrices&oldid=1002053121)
-pub static PAULI_MATRICES: Lazy<[&CMatrix2; 3]> = Lazy::new(||
-    [&PAULI_1, &PAULI_2, &PAULI_3]
-);
+pub const PAULI_MATRICES: [&CMatrix2; 3] = [&PAULI_1, &PAULI_2, &PAULI_3];
 
 /// Get a radom SU(2) matrix close the 1 or -1.
 ///
@@ -58,7 +55,8 @@ pub static PAULI_MATRICES: Lazy<[&CMatrix2; 3]> = Lazy::new(||
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this bound it will not panic but can have unexpected results.
 pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix2
-    where R: rand::Rng + ?Sized,
+where
+    R: rand::Rng + ?Sized,
 {
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
@@ -133,7 +131,7 @@ mod test {
     #[test]
     fn test_u2_const() {
         // test constant
-        for el in &*PAULI_MATRICES {
+        for el in &PAULI_MATRICES {
             assert_matrix_is_unitary_2!(*el, EPSILON);
         }
     }

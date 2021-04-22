@@ -12,8 +12,6 @@ use super::{
             su3,
             lattice::{
                 LatticeLinkCanonical,
-                Direction,
-                DirectionList,
             },
             error::Never,
             su2,
@@ -25,10 +23,6 @@ use super::{
     },
 };
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
     ComplexField,
 };
 #[cfg(feature = "serde-serialize")]
@@ -38,15 +32,11 @@ use serde::{Serialize, Deserialize};
 /// Pseudo heat bath algorithm
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-{
+pub struct HeatBathSweep<Rng: rand::Rng> {
     rng: Rng
 }
 
-impl<Rng> HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-{
+impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     /// Create a new Self form a rng.
     pub fn new(rng: Rng) -> Self {
         Self {rng}
@@ -78,12 +68,7 @@ impl<Rng> HeatBathSweep<Rng>
     }
     
     #[inline]
-    fn get_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link);
         
@@ -96,12 +81,7 @@ impl<Rng> HeatBathSweep<Rng>
     
     #[inline]
     // TODO improve error handeling
-    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.get_modif(&state, &link);
@@ -111,12 +91,9 @@ impl<Rng> HeatBathSweep<Rng>
     }
 }
 
-impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for HeatBathSweep<Rng>
-    where Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for HeatBathSweep<Rng>
+where
+    Rng: rand::Rng,
 {
     type Error = Never;
     

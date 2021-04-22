@@ -38,31 +38,25 @@ use super::{
 
 use na::{
     ComplexField,
-    VectorN,
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
+    SVector,
 };
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 use crossbeam::thread;
-use std::marker::PhantomData;
+
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
 /// Default leap frog simulation state
-pub type LeapFrogStateDefault<D> = SimulationStateLeap<LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, D>;
+pub type LeapFrogStateDefault<const D: usize> = SimulationStateLeap<LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, D>;
 
 /// trait to represent a pure gauge lattice state.
 ///
-/// It defines only one field link_matrix.
-pub trait LatticeState<D>
-    where Self: Sync + Sized + core::fmt::Debug,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+/// It defines only one field: `link_matrix` of type [`LinkMatrix`].
+pub trait LatticeState<const D: usize>
+where
+    Self: Sync + Sized + core::fmt::Debug,
 {
     
     /// The link matrices of this state.
@@ -107,12 +101,9 @@ pub trait LatticeState<D>
 ///
 /// It is separated from the [`LatticeState`] because not all [`LatticeState`] can be create in this way.
 /// By instance when there is also a field of conjugate momenta of the link matrices.
-pub trait LatticeStateNew<D>
-    where Self: LatticeState<D> + Sized,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+pub trait LatticeStateNew<const D: usize>
+where
+    Self: LatticeState<D> + Sized,
 {
     /// Error type
     type Error;
@@ -134,14 +125,9 @@ pub trait LatticeStateNew<D>
 /// [`SimulationStateSynchrone`] and [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
 ///
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
-pub trait LatticeStateWithEField<D>
-    where Self: Sized + Sync + LatticeState<D> + core::fmt::Debug,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub trait LatticeStateWithEField<const D: usize>
+where
+    Self: Sized + Sync + LatticeState<D> + core::fmt::Debug,
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
     /// # Errors
@@ -171,8 +157,9 @@ pub trait LatticeStateWithEField<D>
     
     /// get the derivative \partial_t U(link)
     fn get_derivative_u(link: &LatticeLinkCanonical<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3>;
+    
     /// get the derivative \partial_t E(point)
-    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<VectorN<Su3Adjoint, D>>;
+    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>>;
     
     /// Get the energy of the conjugate momenta configuration
     fn get_hamiltonian_efield(&self) -> Real;
@@ -183,18 +170,12 @@ pub trait LatticeStateWithEField<D>
         self.get_hamiltonian_links() + self.get_hamiltonian_efield()
     }
     
-    
 }
 
 /// Trait to create a simulation state
-pub trait LatticeStateWithEFieldNew<D>
-    where Self: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub trait LatticeStateWithEFieldNew<const D: usize>
+where
+    Self: LatticeStateWithEField<D>,
 {
     /// Error type
     type Error : From<rand_distr::NormalError>;
@@ -206,7 +187,7 @@ pub trait LatticeStateWithEFieldNew<D>
     /// and `e_field` does not correspond to `lattice`
     fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error>;
     
-    /// Ceate a new state with e_field randomly distributed as [`rand_distr::Normal`]
+    /// Create a new state with e_field randomly distributed as [`rand_distr::Normal`]
     /// # Errors
     /// Gives an error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     /// or propagate the error from [`LatticeStateWithEFieldNew::new`]
@@ -231,21 +212,17 @@ pub trait LatticeStateWithEFieldNew<D>
 /// a wrapper ([`SimulationStateLeap`]) for [`SimulationStateLeapFrog`].
 /// Also not implementing both trait gives you a compile time verification that you did not
 /// considered a leap frog state as a sync one.
-pub trait SimulationStateSynchrone<D>
-    where Self: LatticeStateWithEField<D> + Clone,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub trait SimulationStateSynchrone<const D: usize>
+where
+    Self: LatticeStateWithEField<D> + Clone,
 {
     /// does half a step for the conjugate momenta.
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_to_leapfrog<I, State>(&self, integrator: &I, delta_t: Real) -> Result<State, I::Error>
-        where State: SimulationStateLeapFrog<D>,
+    where
+        State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
         integrator.integrate_sync_leap(&self, delta_t)
@@ -263,7 +240,8 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
     ) -> Result<Self, MultiIntegrationError<I::Error>>
-        where State: SimulationStateLeapFrog<D>,
+    where
+        State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
         if number_of_steps == 0 {
@@ -309,7 +287,8 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
     ) -> Result<Self, MultiIntegrationError<I::Error>>
-        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
         self.simulate_using_leapfrog_n(integrator, delta_t, number_of_steps)
     }
@@ -319,7 +298,8 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_sync<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
-        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         integrator.integrate_sync_sync(&self, delta_t)
@@ -331,7 +311,8 @@ pub trait SimulationStateSynchrone<D>
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_sync_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
-        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
@@ -349,7 +330,8 @@ pub trait SimulationStateSynchrone<D>
     /// # Errors
     /// Return an error if the integration could not be done
     fn simulate_symplectic<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
-        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         integrator.integrate_symplectic(&self, delta_t)
@@ -361,7 +343,8 @@ pub trait SimulationStateSynchrone<D>
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_symplectic_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
-        where I: SymplecticIntegrator<Self, T, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
         if numbers_of_times == 0 {
@@ -385,7 +368,8 @@ pub trait SimulationStateSynchrone<D>
         delta_t: Real,
         number_of_steps: usize,
     ) -> Result<Self, MultiIntegrationError<I::Error>>
-        where I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<Self, SimulationStateLeap<Self, D>, D> + ?Sized,
     {
         self.simulate_symplectic_n(integrator, delta_t, number_of_steps)
     }
@@ -395,21 +379,17 @@ pub trait SimulationStateSynchrone<D>
 /// momenta at time T + 1/2.
 ///
 /// If you have a [`SimulationStateSynchrone`] look at the wrapper [`SimulationStateLeap`].
-pub trait SimulationStateLeapFrog<D>
-    where Self: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub trait SimulationStateLeapFrog<const D: usize>
+where
+    Self: LatticeStateWithEField<D>,
 {
     /// Simulate the state to synchrone by finishing the half setp.
     ///
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_to_synchrone<I, State>(&self, integrator: &I, delta_t: Real) -> Result<State, I::Error>
-        where State: SimulationStateSynchrone<D>,
+    where
+        State: SimulationStateSynchrone<D>,
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
         integrator.integrate_leap_sync(&self, delta_t)
@@ -420,7 +400,8 @@ pub trait SimulationStateLeapFrog<D>
     /// # Errors
     /// Return an error if the integration could not be done.
     fn simulate_leap<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
-        where I: SymplecticIntegrator<T, Self, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         integrator.integrate_leap_leap(&self, delta_t)
@@ -432,7 +413,8 @@ pub trait SimulationStateLeapFrog<D>
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     fn simulate_leap_n<I, T>(&self, integrator: &I, delta_t: Real, numbers_of_times: usize) -> Result<Self, MultiIntegrationError<I::Error>>
-        where I: SymplecticIntegrator<T, Self, D> + ?Sized,
+    where
+        I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D>,
     {
         if numbers_of_times == 0 {
@@ -452,23 +434,13 @@ pub trait SimulationStateLeapFrog<D>
 /// It has the default pure gauge hamiltonian
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+pub struct LatticeStateDefault<const D: usize> {
     lattice : LatticeCyclique<D>,
     beta: Real,
     link_matrix: LinkMatrix,
 }
 
-impl<D> LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeStateDefault<D> {
     /// Create a cold configuration. i.e. all the links are set to the unit matrix.
     ///
     /// With the lattice of size `size` and dimension `number_of_points` ( see [`LatticeCyclique::new`] )
@@ -508,8 +480,8 @@ impl<D> LatticeStateDefault<D>
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// assert_eq!(
-    ///     LatticeStateDefault::<dim::U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
-    ///     LatticeStateDefault::<dim::U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2).unwrap()
+    ///     LatticeStateDefault::<4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
+    ///     LatticeStateDefault::<4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -541,17 +513,13 @@ impl<D> LatticeStateDefault<D>
     }
     
     /// Absorbe self anf return the link_matrix as owned
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn link_matrix_owned(self) -> LinkMatrix {
         self.link_matrix
     }
 }
 
-impl<D> LatticeStateNew<D> for LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D> {
     
     type Error = StateInitializationError;
     
@@ -563,12 +531,7 @@ impl<D> LatticeStateNew<D> for LatticeStateDefault<D>
     }
 }
 
-impl<D> LatticeState<D> for LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     const CA: Real = 3_f64;
     
     getter_trait!(
@@ -593,8 +556,8 @@ impl<D> LatticeState<D> for LatticeStateDefault<D>
     fn get_hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
-                Direction::get_all_positive_directions().iter()
+            Direction::positive_directions().iter().map(|dir_i| {
+                Direction::positive_directions().iter()
                     .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
                     .map(|dir_j| {
                         1_f64 - self.link_matrix().get_pij(&el, dir_i, dir_j, self.lattice())
@@ -609,27 +572,16 @@ impl<D> LatticeState<D> for LatticeStateDefault<D>
 /// ([`SimulationStateSynchrone`]).
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct SimulationStateLeap<State, D>
-    where State: SimulationStateSynchrone<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub struct SimulationStateLeap<State, const D: usize>
+where
+    State: SimulationStateSynchrone<D>,
 {
     state: State,
-    _phantom: PhantomData<D>,
 }
 
-impl<State, D> SimulationStateLeap<State, D>
-    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> SimulationStateLeap<State, D>
+where
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
 {
     getter!(/// get a reference to the state
         state, State
@@ -657,25 +609,15 @@ impl<State, D> SimulationStateLeap<State, D>
 }
 
 /// This state is a leap frog state
-impl<State, D> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
-    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D>
+where
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
 {}
 
 /// We just transmit the function of `State`, there is nothing new.
-impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
-    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> LatticeState<D> for SimulationStateLeap<State, D>
+where
+    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
 {
     const CA: Real = State::CA;
     
@@ -702,32 +644,22 @@ impl<State, D> LatticeState<D> for SimulationStateLeap<State, D>
     }
 }
 
-impl<State, D> LatticeStateWithEFieldNew<D> for SimulationStateLeap<State, D>
-    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + LatticeStateWithEFieldNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> LatticeStateWithEFieldNew<D> for SimulationStateLeap<State, D>
+where
+    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + LatticeStateWithEFieldNew<D>,
 {
     type Error = State::Error;
     
     fn new(lattice: LatticeCyclique<D>, beta: Real, e_field: EField<D>, link_matrix: LinkMatrix, t: usize) -> Result<Self, Self::Error> {
         let state = State::new(lattice, beta, e_field, link_matrix, t)?;
-        Ok(Self {state, _phantom: PhantomData})
+        Ok(Self {state})
     }
 }
 
 /// We just transmit the function of `State`, there is nothing new.
-impl<State, D> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
-    where State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
+where
+    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
 {
     
     project!(get_hamiltonian_efield, state, Real);
@@ -752,7 +684,7 @@ impl<State, D> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
         State::get_derivative_u(link, link_matrix, e_field, lattice)
     }
     
-    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<VectorN<Su3Adjoint, D>> {
+    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>> {
         State::get_derivative_e(point, link_matrix, e_field, lattice)
     }
     
@@ -764,30 +696,20 @@ impl<State, D> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
 /// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeStateWithEFieldSyncDefault<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+pub struct LatticeStateWithEFieldSyncDefault<State, const D: usize>
+where
+    State: LatticeState<D>,
 {
     lattice_state: State,
-    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "VectorN<Su3Adjoint, D>: Serialize", deserialize = "VectorN<Su3Adjoint, D>: Deserialize<'de>")) )]
+    #[cfg_attr(feature = "serde-serialize", serde(bound(serialize = "SVector<Su3Adjoint, D>: Serialize", deserialize = "SVector<Su3Adjoint, D>: Deserialize<'de>")) )]
     e_field: EField<D>,
     t: usize,
 }
 
 
-impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+where
+    State: LatticeState<D>,
 {
     /// Absorbe self and return the state as owned.
     /// It essentialy deconstruct the structure.
@@ -821,15 +743,10 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
-    where Self: LatticeStateWithEField<D>,
+impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+where
+    Self: LatticeStateWithEField<D>,
     State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
@@ -837,16 +754,11 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
-    where Self: LatticeStateWithEFieldNew<D>,
+impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+where
+    Self: LatticeStateWithEFieldNew<D>,
     <Self as LatticeStateWithEFieldNew<D>>::Error: From<LatticeInitializationError>,
     State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
 {
     /// Generate a hot (i.e. random) initial state.
     ///
@@ -866,7 +778,7 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     /// ```
     /// extern crate rand;
     /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::{LatticeStateWithEFieldSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique, dim::U4};
+    /// # use lattice_qcd_rs::{simulation::{LatticeStateWithEFieldSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique};
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
@@ -874,8 +786,8 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// assert_eq!(
-    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<U4>, U4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
     pub fn new_deterministe(
@@ -926,15 +838,10 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
-    where Self: LatticeStateWithEFieldNew<D, Error = StateInitializationError>,
+impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+where
+    Self: LatticeStateWithEFieldNew<D, Error = StateInitializationError>,
     State: LatticeState<D>,
-    D: DimName + Eq,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
 {
     /// Generate a hot (i.e. random) initial state.
     ///
@@ -982,25 +889,15 @@ impl<State, D> LatticeStateWithEFieldSyncDefault<State, D>
 }
 
 /// This is an sync State
-impl<State, D> SimulationStateSynchrone<D> for LatticeStateWithEFieldSyncDefault<State, D>
-    where State: LatticeState<D> + Clone,
+impl<State, const D: usize> SimulationStateSynchrone<D> for LatticeStateWithEFieldSyncDefault<State, D>
+where
+    State: LatticeState<D> + Clone,
     Self: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
 {}
 
-impl<State, D> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
+where
+    State: LatticeState<D>,
 {
     
     fn link_matrix(&self) -> &LinkMatrix{
@@ -1028,15 +925,10 @@ impl<State, D> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
     }
 }
 
-impl<State, D> LatticeStateWithEFieldNew<D> for LatticeStateWithEFieldSyncDefault<State, D>
-    where State: LatticeState<D> + LatticeStateNew<D>,
+impl<State, const D: usize> LatticeStateWithEFieldNew<D> for LatticeStateWithEFieldSyncDefault<State, D>
+    where
+    State: LatticeState<D> + LatticeStateNew<D>,
     Self: LatticeStateWithEField<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
-    Direction<D>: DirectionList,
     StateInitializationError: Into<State::Error>,
     State::Error: From<rand_distr::NormalError>,
 {
@@ -1056,18 +948,14 @@ impl<State, D> LatticeStateWithEFieldNew<D> for LatticeStateWithEFieldSyncDefaul
     }
 }
 
-impl<D> LatticeStateWithEField<D> for LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Sync + Send,
+impl<const D: usize> LatticeStateWithEField<D> for LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>
+where
     Direction<D>: DirectionList,
 {
     /// By default \sum_x Tr(E_i E_i)
     fn get_hamiltonian_efield(&self) -> Real {
         self.lattice().get_points().par_bridge().map(|el| {
-            Direction::get_all_positive_directions().iter().map(|dir_i| {
+            Direction::positive_directions().iter().map(|dir_i| {
                 let e_i = self.e_field().get_e_field(&el, dir_i, self.lattice()).unwrap();
                 e_i.trace_squared()
             }).sum::<Real>()
@@ -1102,9 +990,10 @@ impl<D> LatticeStateWithEField<D> for LatticeStateWithEFieldSyncDefault<LatticeS
     }
     
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, _e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<VectorN<Su3Adjoint, D>> {
+    fn get_derivative_e(point: &LatticePoint<D>, link_matrix: &LinkMatrix, _e_field: &EField<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<Su3Adjoint, D>>
+    {
         let c = - (2_f64 / Self::CA).sqrt();
-        let dir_pos = Direction::<D>::get_all_positive_directions();
+        let dir_pos = Direction::<D>::positive_directions();
         let iterator = dir_pos.iter().map(|dir| {
             let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
             let sum_s: CMatrix3 = Direction::<D>::get_all_directions().iter()
@@ -1119,7 +1008,7 @@ impl<D> LatticeStateWithEField<D> for LatticeStateWithEFieldSyncDefault<LatticeS
                 })
             ))
         });
-        let mut return_vector = VectorN::<_, D>::from_element(Su3Adjoint::default());
+        let mut return_vector = SVector::<_, D>::from_element(Su3Adjoint::default());
         for (index, element) in iterator.enumerate() {
             return_vector[index] = element?;
         }

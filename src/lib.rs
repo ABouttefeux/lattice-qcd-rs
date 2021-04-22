@@ -9,7 +9,7 @@
 //! Classical lattice QCD simulation and tools.
 //!
 //! This library provides tool to simulate a pure gauge SU(3) theory on a lattice. It aimed to provide generic tool such that many different simulation or methods can be used.
-//! You can easily choose the Monte Carlo algorithm, you can implement you own Hamiltonian etc. It provides also an easy way to do simulation in dimension between 1 and 127. So this library is not limited to d = 3 or d = 4.
+//! You can easily choose the Monte Carlo algorithm, you can implement you own Hamiltonian etc. It provides also an easy way to do simulation in dimension between 1 and `usize::MAX`. So this library is not limited to d = 3 or d = 4.
 //!
 //! **Features**:
 //! - Generic dimension;
@@ -29,10 +29,11 @@
 //!
 //! ## Usage
 //!
-//!
 //! Add `lattice_qcd_rs = { version = "0.1.0", git = "https://github.com/ABouttefeux/lattice_qcd_rs", branch = "develop" }` into your `cargo.toml`.
 //!
 //! for the moment it is not on crates.io. Maybe I will add it. But for the moment it is still in development.
+//! Note that you may want to specify a specific commit as for now I may introduce breaking changes.
+//! I will however commit to more stability once I am ready to release version `0.2.0`.
 //!
 //! First let us see how to do a simulation on a 10x10x10x10 lattice with beta = 1. We are looking to compute `1/3 <Re(Tr(P_{ij}))>` the trace of all plaquette after a certain number of steps. In our cases Beta is small so we choose 100'000 steps.
 //!
@@ -48,7 +49,7 @@
 //! let number_of_pts = 10;
 //! let beta = 1_f64;
 //!
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let spread_parameter = 0.1_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
@@ -119,7 +120,8 @@
 //! It is determinist but not reproducible between platform. It is however slow.
 //! - [`rand_jitter::JitterRng`](https://docs.rs/rand_jitter/0.3.0/rand_jitter/) True RNG but very slow.
 //!
-//! Also [ranlux](https://luscher.web.cern.ch/luscher/ranlux/) is a good choice. But there is no native rust implementation of it that I know of.
+//! Also [ranlux](https://luscher.web.cern.ch/luscher/ranlux/) is a good choice. But there is no native rust implementation of it that I know of
+//! (except mine but it is very slow).
 //!
 //! # Other Examples
 //! ```rust
@@ -127,7 +129,6 @@
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::{MetropolisHastingsDeltaDiagnostic},
 //!    ComplexField,
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -135,7 +136,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let spread_parameter = 1E-5_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
@@ -154,7 +155,6 @@
 //! use lattice_qcd_rs::{
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -162,7 +162,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
@@ -183,7 +183,6 @@
 //!    simulation::state::{LatticeStateDefault, LatticeState},
 //!    simulation::monte_carlo::HybridMonteCarloDiagnostic,
 //!    integrator::SymplecticEulerRayon,
-//!    dim::U4,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -191,7 +190,7 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<U4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let delta_t = 1E-3_f64;
 //! let number_of_step = 10;
@@ -276,8 +275,8 @@ mod test;
 pub type Real = f64;
 /// easy to use allias for [`nalgebra::Complex::<Real>`]
 pub type Complex = na::Complex<Real>;
-/// alias for [`nalgebra::VectorN::<N, nalgebra::U8>`]
-pub type Vector8<N> = na::VectorN<N, na::U8>;
+/// alias for [`nalgebra::SVector::<N, nalgebra::U8>`]
+pub type Vector8<N> = na::SVector<N, 8>;
 /// alias for [`nalgebra::Matrix3<nalgebra::Complex>`]
 pub type CMatrix3 = na::Matrix3<Complex>;
 /// alias for [`nalgebra::Matrix2<nalgebra::Complex>`]

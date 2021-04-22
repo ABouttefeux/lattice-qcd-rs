@@ -7,7 +7,6 @@ use super::{
         Complex,
         lattice::{
             Direction,
-            DirectionList,
             LatticeCyclique,
             LatticeLinkCanonical,
             LatticeLink,
@@ -22,10 +21,6 @@ use super::{
 use std::marker::PhantomData;
 use rand_distr::Distribution;
 use na::{
-    DimName,
-    DefaultAllocator,
-    VectorN,
-    base::allocator::Allocator,
     ComplexField,
 };
 
@@ -46,12 +41,9 @@ pub use hybride::*;
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
 /// It is also a Markov chain
-pub trait MonteCarlo<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+pub trait MonteCarlo<State, const D: usize>
+where
+    State: LatticeState<D>,
 {
     /// Error returned while getting the next ellement.
     type Error;
@@ -66,12 +58,9 @@ pub trait MonteCarlo<State, D>
 /// Some times is is esayer to just implement a potential next element, the rest is done automatically.
 ///
 /// To get an [`MonteCarlo`] use the wrapper [`McWrapper`]
-pub trait MonteCarloDefault<State, D>
-    where State: LatticeState<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+pub trait MonteCarloDefault<State, const D: usize>
+where
+    State: LatticeState<D>,
 {
     /// Error returned while getting the next ellement.
     type Error;
@@ -102,7 +91,7 @@ pub trait MonteCarloDefault<State, D>
         if d.sample(rng) {
             Ok(potential_next)
         }
-        else{
+        else {
             Ok(state)
         }
     }
@@ -110,28 +99,22 @@ pub trait MonteCarloDefault<State, D>
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug)]
-pub struct McWrapper<MCD, State, D, Rng>
-    where MCD: MonteCarloDefault<State, D>,
+pub struct McWrapper<MCD, State, Rng, const D: usize>
+where
+    MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
 {
     mcd: MCD,
     rng: Rng,
-    _phantom: PhantomData<(State, D)>,
+    _phantom: PhantomData<State>,
 }
 
-impl<MCD, State, Rng, D> McWrapper<MCD, State, D, Rng>
-    where MCD: MonteCarloDefault<State, D>,
+impl<MCD, State, Rng, const D: usize> McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
 {
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self{
@@ -149,14 +132,11 @@ impl<MCD, State, Rng, D> McWrapper<MCD, State, D, Rng>
     }
 }
 
-impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
-    where T: MonteCarloDefault<State, D>,
+impl<T, State, Rng, const D: usize> MonteCarlo<State, D> for McWrapper<T, State, Rng, D>
+where
+    T: MonteCarloDefault<State, D>,
     State: LatticeState<D>,
     Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
 {
     type Error = T::Error;
     
@@ -166,36 +146,26 @@ impl<T, State, D, Rng> MonteCarlo<State, D> for McWrapper<T, State, D, Rng>
 }
 
 #[inline]
-fn get_delta_s_old_new_cmp<D>(
+fn get_delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
     new_link: &na::Matrix3<Complex>,
     beta : Real,
     old_matrix: &na::Matrix3<Complex>,
-) -> Real
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+) -> Real {
     let a = get_staple(link_matrix, lattice, link);
-    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::CA
+    -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::<D>::CA
 }
 
 // TODO move in state
-fn get_staple<D>(
+fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
-) -> na::Matrix3<Complex>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D> + Allocator<na::Complex<Real>, na::U3, na::U3>,
-    na::VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+) -> na::Matrix3<Complex> {
     let dir_j = link.dir();
-    Direction::<D>::get_all_positive_directions().iter()
+    Direction::<D>::positive_directions().iter()
         .filter(|dir_i| *dir_i != dir_j ).map(|dir_i| {
             let el_1 = link_matrix.get_sij(link.pos(), dir_j, &dir_i, lattice).unwrap().adjoint();
             let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), - dir_i);

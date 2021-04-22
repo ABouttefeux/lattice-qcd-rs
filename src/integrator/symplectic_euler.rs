@@ -4,10 +4,7 @@
 //! See [`SymplecticEuler`]
 
 use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
+    SVector,
 };
 use super::{
     super::{
@@ -31,8 +28,6 @@ use super::{
         },
         lattice::{
             LatticeCyclique,
-            Direction,
-            DirectionList,
         },
     },
     SymplecticIntegrator,
@@ -43,7 +38,7 @@ use std::vec::Vec;
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
-///Error for [`SymplecticEuler`].
+/// Error for [`SymplecticEuler`].
 #[derive(Debug)]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
@@ -83,12 +78,12 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 /// but use less memory
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct SymplecticEuler
-{
+pub struct SymplecticEuler {
     number_of_thread: usize,
 }
 
 impl SymplecticEuler {
+    
     /// Create a integrator using a set number of threads
     pub const fn new(number_of_thread: usize) -> Self {
         Self {number_of_thread}
@@ -99,15 +94,9 @@ impl SymplecticEuler {
         number_of_thread, usize
     );
     
-    fn get_link_matrix_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
-        where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Sync + Send,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Sync + Send,
-        D: Eq,
-        Direction<D>: DirectionList,
+    fn get_link_matrix_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<CMatrix3>, ThreadError>
+    where
+        State: LatticeStateWithEField<D>,
     {
         run_pool_parallel_vec(
             lattice.get_links(),
@@ -120,15 +109,9 @@ impl SymplecticEuler {
         )
     }
     
-    fn get_e_field_integrate<State, D> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<VectorN<Su3Adjoint, D>>, ThreadError>
-        where State: LatticeStateWithEField<D>,
-        D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        VectorN<usize, D>: Copy + Sync + Send,
-        DefaultAllocator: Allocator<Su3Adjoint, D>,
-        VectorN<Su3Adjoint, D>: Send + Sync,
-        D: Eq,
-        Direction<D>: DirectionList,
+    fn get_e_field_integrate<State, const D: usize> (self, link_matrix: &LinkMatrix, e_field: &EField<D>, lattice: &LatticeCyclique<D>, delta_t: Real) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
+    where
+        State: LatticeStateWithEField<D>,
     {
         run_pool_parallel_vec(
             lattice.get_points(),
@@ -137,7 +120,7 @@ impl SymplecticEuler {
             self.number_of_thread,
             lattice.get_number_of_points(),
             lattice,
-            &VectorN::<_, D>::from_element(Su3Adjoint::default()),
+            &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
     }
 }
@@ -150,15 +133,9 @@ impl Default for SymplecticEuler {
     }
 }
 
-impl<State, D> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
-    where State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Sync + Send,
-    DefaultAllocator: Allocator<Su3Adjoint, D>,
-    VectorN<Su3Adjoint, D>: Send + Sync,
-    D: Eq,
-    Direction<D>: DirectionList,
+impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D> for SymplecticEuler
+where
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
 {
     type Error = SymplecticEulerError<State::Error>;
     

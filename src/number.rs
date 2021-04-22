@@ -26,7 +26,8 @@ impl<T, V> Rng<T,V>
 /// Fix point number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
+where
+    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     integer : I,
@@ -35,7 +36,8 @@ pub struct FixedPointNumber<I, D>
 
 
 impl<I, D> FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
+where
+    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     /// Get tje integer part of the number

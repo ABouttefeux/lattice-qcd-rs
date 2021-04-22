@@ -14,11 +14,9 @@ use super::{
             su3,
             lattice::{
                 LatticeLinkCanonical,
-                Direction,
                 LatticeElementToIndex,
                 LatticeLink,
                 LatticeCyclique,
-                DirectionList,
             },
             error::Never,
         },
@@ -29,21 +27,13 @@ use super::{
     },
 };
 use rand_distr::Distribution;
-use na::{
-    DimName,
-    DefaultAllocator,
-    base::allocator::Allocator,
-    VectorN,
-};
 #[cfg(feature = "serde-serialize")]
 use serde::{Serialize, Deserialize};
 
 /// Metropolis Hastings methode by doing a pass on all points
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-{
+pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
     number_of_update: usize,
     spread: Real,
     number_replace_last: usize,
@@ -51,9 +41,7 @@ pub struct MetropolisHastingsSweep<Rng>
     rng: Rng
 }
 
-impl<Rng> MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-{
+impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -89,29 +77,19 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
     
     #[inline]
-    fn get_delta_s<D>(
+    fn get_delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta : Real,
-    ) -> Real
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    ) -> Real {
         let old_matrix = link_matrix.get_matrix(&LatticeLink::from(*link), lattice).unwrap();
         get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
     
     #[inline]
-    fn get_potential_modif<D>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_potential_modif<const D: usize>(&mut self, state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
         let index = link.to_index(state.lattice());
         let old_link_m = state.link_matrix()[index];
         let mut new_link = old_link_m;
@@ -124,12 +102,7 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
     
     #[inline]
-    fn get_next_element_default<D>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D>
-        where D: DimName,
-        DefaultAllocator: Allocator<usize, D>,
-        na::VectorN<usize, D>: Copy + Send + Sync,
-        Direction<D>: DirectionList,
-    {
+    fn get_next_element_default<const D: usize>(&mut self, mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
         self.prob_replace_mean = 0_f64;
         self.number_replace_last += 0;
         let lattice = state.lattice().clone();
@@ -148,12 +121,9 @@ impl<Rng> MetropolisHastingsSweep<Rng>
     }
 }
 
-impl<Rng, D> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+impl<Rng, const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for MetropolisHastingsSweep<Rng>
+where
+    Rng: rand::Rng,
 {
     type Error = Never;
     #[inline]

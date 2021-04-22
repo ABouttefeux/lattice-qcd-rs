@@ -3,8 +3,6 @@
 
 use lattice_qcd_rs::{
     Real,
-    lattice::{Direction, DirectionList},
-    dim::DimName,
 };
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
@@ -14,11 +12,6 @@ use super::config::Config;
 use plotters::prelude::*;
 use lattice_qcd_rs::simulation::LatticeStateDefault;
 use std::io::prelude::*;
-use na::{
-    DefaultAllocator,
-    VectorN,
-    base::allocator::Allocator,
-};
 
 
 /// Data point for an average
@@ -208,24 +201,14 @@ pub fn plot_data_auto_corr(auto_corr: &[f64], name: &str) -> Result<(), Box<dyn 
 
 
 /// save configuration to `format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta())`
-pub fn save_data<D>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()>
-    where D: DimName + Serialize,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+pub fn save_data<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>) -> std::io::Result<()> {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(format!("sim_b_{}.bin", cfg.lattice_config().lattice_beta()))?;
     file.write_all(&encoded)?;
     Ok(())
 }
 
-pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()>
-    where D: DimName + Serialize,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+pub fn save_data_n<const D: usize>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str) -> std::io::Result<()> {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(format!("sim_b_{}_n_{}{}.bin", cfg.lattice_config().lattice_beta(), cfg.lattice_config().lattice_number_of_points(), sufix))?;
     file.write_all(&encoded)?;
@@ -233,7 +216,8 @@ pub fn save_data_n<D>(cfg: &Config, state: &LatticeStateDefault<D>, sufix: &str)
 }
 
 pub fn save_data_any<T>(state: &T, file_name: &str) -> std::io::Result<()>
-    where T: Serialize,
+where
+    T: Serialize,
 {
     let encoded: Vec<u8> = bincode::serialize(&state).unwrap();
     let mut file = File::create(file_name)?;

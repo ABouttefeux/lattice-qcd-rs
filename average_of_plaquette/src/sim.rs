@@ -4,7 +4,6 @@ use lattice_qcd_rs::{
     ComplexField,
     lattice::{Direction, DirectionList, LatticePoint},
     utils::Sign,
-    dim::{U4, U3, DimName},
     statistics,
     Real,
     field::Su3Adjoint,
@@ -20,9 +19,7 @@ use super::{
 };
 use rayon::prelude::*;
 use na::{
-    DefaultAllocator,
-    VectorN,
-    base::allocator::Allocator,
+    SVector,
 };
 
 /// Return the [`indicatif::ProgressBar`] template
@@ -31,36 +28,34 @@ pub const fn get_pb_template() -> &'static str {
 }
 
 /// Generate a hot configuration with the given config
-pub fn generate_state_default<D>(cfg: &LatticeConfig, rng: &mut impl rand::Rng) -> LatticeStateDefault<D>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
-{
+pub fn generate_state_default<Rng: rand::Rng, const D: usize>(cfg: &LatticeConfig, rng: &mut Rng) -> LatticeStateDefault<D> {
     LatticeStateDefault::new_deterministe(cfg.lattice_size(), cfg.lattice_beta(), cfg.lattice_number_of_points(), rng).expect("Invalide Configuration")
 }
 
 /// Generate a [`MetropolisHastingsDeltaDiagnostic`] from a config
 pub fn get_mc_from_config<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsDeltaDiagnostic<Rng>
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     MetropolisHastingsDeltaDiagnostic::new(cfg.spread(), rng).expect("Invalide Configuration")
 }
 
 /// Generate a [`MetropolisHastingsSweep`] from a config
 pub fn get_mc_from_config_sweep<Rng>(cfg: &MonteCarloConfig, rng: Rng) -> MetropolisHastingsSweep<Rng>
-    where Rng: rand::Rng,
+where
+    Rng: rand::Rng,
 {
     MetropolisHastingsSweep::new(cfg.number_of_rand(), cfg.spread(), rng).expect("Invalide Configuration")
 }
 
 pub fn run_simulation_with_progress_bar_average<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault<U4>,
+    inital_state : LatticeStateDefault<4>,
     mp : &MultiProgress,
     rng: Rng,
-) -> (AverageData, LatticeStateDefault<U4>, Rng)
-    where Rng: rand::Rng,
+) -> (AverageData, LatticeStateDefault<4>, Rng)
+where
+    Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         simulation.average_trace_plaquette().unwrap().real() / 3.0
@@ -69,11 +64,12 @@ pub fn run_simulation_with_progress_bar_average<Rng>(
 
 pub fn run_simulation_with_progress_bar_volume<Rng>(
     config: &SimConfig,
-    inital_state : LatticeStateDefault<U3>,
+    inital_state : LatticeStateDefault<3>,
     mp : &MultiProgress,
     rng: Rng,
-) -> (AverageData, LatticeStateDefault<U3>, Rng)
-    where Rng: rand::Rng,
+) -> (AverageData, LatticeStateDefault<3>, Rng)
+where
+    Rng: rand::Rng,
 {
     run_simulation_with_progress_bar(config, inital_state, mp, rng, &|simulation| {
         observable::volume_obs_mean(simulation)
@@ -81,18 +77,15 @@ pub fn run_simulation_with_progress_bar_volume<Rng>(
 }
 
 /// Run a simulation with a progress bar
-fn run_simulation_with_progress_bar<Rng, D>(
+fn run_simulation_with_progress_bar<Rng, const D: usize>(
     config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
     closure: &dyn Fn(&LatticeStateDefault<D>) -> f64,
 ) -> (AverageData, LatticeStateDefault<D>, Rng)
-    where Rng: rand::Rng,
-    D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+where
+    Rng: rand::Rng,
 {
     
     let mut mc = get_mc_from_config(config.mc_config(), rng);
@@ -154,7 +147,7 @@ impl<Error> From<Error> for ThermalisationSimumlationError<Error> {
 #[allow(clippy::needless_range_loop)]
 /// thermalize the state using a observable as a mesurement.
 /// It plot a graph and write a csv file for the correlation
-pub fn thermalize_state<D, MC, F>(
+pub fn thermalize_state<MC, F, const D: usize>(
     //config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
     mc: &mut MC,
@@ -163,10 +156,7 @@ pub fn thermalize_state<D, MC, F>(
     prefix: &str,
     sufix: &str,
 ) -> Result<(LatticeStateDefault<D>, Real), ThermalisationSimumlationError<MC::Error>>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+where
     MC: MonteCarlo<LatticeStateDefault<D>, D>,
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
 {
@@ -182,7 +172,7 @@ pub fn thermalize_state<D, MC, F>(
     
     let mut state = inital_state.monte_carlo_step(mc)?;
 
-    let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
+    let points = state.lattice().get_points().collect::<Vec<LatticePoint<D>>>();
     let measurement_val_init = points.par_iter()
         .map(|el| observable(el, &state))
         .sum::<f64>();
@@ -261,9 +251,9 @@ pub fn thermalize_state<D, MC, F>(
     Ok((state, t_exp))
 }
 
-type MesurementAndLattice<D> = (LatticeStateDefault<D>, Vec<Vec<Real>>);
+type MesurementAndLattice<const D: usize> = (LatticeStateDefault<D>, Vec<Vec<Real>>);
 
-pub fn simulation_gather_measurement<D, MC, F>(
+pub fn simulation_gather_measurement<MC, F, const D: usize>(
     //config: &SimConfig,
     inital_state : LatticeStateDefault<D>,
     mc: &mut MC,
@@ -272,10 +262,7 @@ pub fn simulation_gather_measurement<D, MC, F>(
     number_of_discard: usize,
     number_of_measurement: usize,
 ) -> Result<MesurementAndLattice<D>, ThermalisationSimumlationError<MC::Error>>
-    where D: DimName,
-    DefaultAllocator: Allocator<usize, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
-    Direction<D>: DirectionList,
+where
     MC: MonteCarlo<LatticeStateDefault<D>, D>,
     F: Fn(&LatticePoint<D>, &LatticeStateDefault<D>) -> f64 + Sync
 {
@@ -288,7 +275,7 @@ pub fn simulation_gather_measurement<D, MC, F>(
     
     let mut state = inital_state;
     let mut vec = Vec::with_capacity(number_of_measurement);
-    let points = state.lattice().get_points().collect::<Vec<LatticePoint<_>>>();
+    let points = state.lattice().get_points().collect::<Vec<LatticePoint<D>>>();
     
     for _ in 0..number_of_measurement {
         for _ in 0..number_of_discard {
@@ -325,22 +312,20 @@ impl From<StateInitializationError> for ThermalizeError {
     }
 }
 
-pub type ResultThermalizeE<D, Rng> = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, Rng);
+pub type ResultThermalizeE<Rng, const D: usize> = (LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, Rng);
 
 const INTEGRATOR: SymplecticEulerRayon = SymplecticEulerRayon::new();
 
 #[allow(clippy::useless_format)]
-pub fn thermalize_with_e_field<D, Rng>(
+pub fn thermalize_with_e_field<Rng, const D: usize>(
     inital_state : LatticeStateDefault<D>,
     mp : &MultiProgress,
     rng: Rng,
     dt: f64,
-) -> Result<ResultThermalizeE<D, Rng>, ThermalizeError>
-    where D: DimName + Eq,
-    DefaultAllocator: Allocator<usize, D> + Allocator<Su3Adjoint, D>,
-    VectorN<usize, D>: Copy + Send + Sync,
+) -> Result<ResultThermalizeE<Rng, D>, ThermalizeError>
+where
     Direction<D>: DirectionList,
-    VectorN<Su3Adjoint, D>: Sync + Send,
+    SVector<Su3Adjoint, D>: Sync + Send,
     Rng: rand::Rng,
 {
     
