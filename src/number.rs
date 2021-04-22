@@ -7,23 +7,22 @@
 pub struct FixedPointNumber<I, D>
 where
     I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
-    integer : I,
-    decimal : D,
+    integer: I,
+    decimal: D,
 }
-
 
 impl<I, D> FixedPointNumber<I, D>
 where
     I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     /// Get tje integer part of the number
     pub fn integer(&self) -> I {
         self.integer
     }
-    
+
     /// Get the decimal part of the number as it is stored (as raw data)
     pub fn decimal(&self) -> D {
         self.decimal
@@ -39,7 +38,7 @@ impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     type Output = Self;
-    
+
      fn neg(mut self) -> Self::Output {
         self.integer = - self.integer;
         if self.decimal != 0 {
@@ -56,7 +55,7 @@ impl<I, D> num_traits::Num for FixedPointNumber<I, D>
     where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
     D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
-    
+
 }
 
 impl<I, D> num_traits::real::Real for FixedPointNumber<I, D>
@@ -69,35 +68,35 @@ impl<I, D> num_traits::real::Real for FixedPointNumber<I, D>
             decimal: D::MIN,
         }
     }
-    
+
     fn max_value() -> Self {
         Self {
             integer: I::MAX,
             decimal: D::MAX,
         }
     }
-    
+
     fn epsilon() -> Self{
         Self {
             integer: 0,
             decimal: 1,
         }
     }
-    
+
     fn min_positive_value() -> Self{
         Self {
             integer: 0,
             decimal: 1,
         }
     }
-    
+
     fn floor(self) -> Self{
         Self {
             integer: self.integer,
             decimal: 0,
         }
     }
-    
+
     fn ceil(self) -> Self {
         let mut integer = self.integer;
         if self.decimal > 0 {
@@ -108,7 +107,7 @@ impl<I, D> num_traits::real::Real for FixedPointNumber<I, D>
             decimal: 0,
         }
     }
-    
+
     fn round(self) -> Self {
         let mut integer = self.integer;
         if self.decimal >= D::MAX / 2 {

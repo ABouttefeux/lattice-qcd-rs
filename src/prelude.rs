@@ -1,29 +1,17 @@
 //! reexport for easy use,
 //! `use lattice_qcd_rs::prelude::*`
-//!
 
 pub use super::{
-    Real,
-    Complex,
-    CMatrix3,
-    ComplexField,
-    field::Su3Adjoint,
-    dim::U4,
     dim::U3,
+    dim::U4,
+    field::Su3Adjoint,
+    integrator::{SymplecticEuler, SymplecticEulerRayon, SymplecticIntegrator},
     simulation::{
-        LatticeState,
-        LatticeStateDefault,
         monte_carlo::{
-            MonteCarlo,
+            HybridMonteCarloDiagnostic, McWrapper, MetropolisHastingsDeltaDiagnostic, MonteCarlo,
             MonteCarloDefault,
-            McWrapper,
-            MetropolisHastingsDeltaDiagnostic,
-            HybridMonteCarloDiagnostic,
         },
+        LatticeState, LatticeStateDefault,
     },
-    integrator::{
-        SymplecticIntegrator,
-        SymplecticEulerRayon,
-        SymplecticEuler,
-    },
+    CMatrix3, Complex, ComplexField, Real,
 };

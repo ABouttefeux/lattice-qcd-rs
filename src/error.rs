@@ -1,11 +1,9 @@
-
 //! defines different error types.
 
+use core::fmt::{Debug, Display};
 use std::error::Error;
-use core::fmt::{Display, Debug};
-use super::{
-    thread::ThreadError,
-};
+
+use super::thread::ThreadError;
 
 /// Type that can never be (safly) initialized.
 /// This is temporary, until [`never`](https://doc.rust-lang.org/std/primitive.never.html) is accepted into stable rust.
@@ -28,18 +26,21 @@ pub enum ImplementationError {
     /// We atain a portion of the code that was tought to be unreachable.
     Unreachable,
     /// An option contained an unexpected non_exhaustive value
-    OptionWithUnexpectedNone
+    OptionWithUnexpectedNone,
 }
 
 impl Display for ImplementationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            ImplementationError::Unreachable => write!(f, "internal error: entered unreachable code"),
-            ImplementationError::OptionWithUnexpectedNone => write!(f, "An option contained an unexpected non_exhaustive value"),
+            ImplementationError::Unreachable => {
+                write!(f, "internal error: entered unreachable code")
+            }
+            ImplementationError::OptionWithUnexpectedNone => {
+                write!(f, "An option contained an unexpected non_exhaustive value")
+            }
         }
     }
 }
-
 
 impl Error for ImplementationError {}
 
@@ -57,11 +58,12 @@ impl<Error: Display> Display for MultiIntegrationError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             MultiIntegrationError::ZeroIntegration => write!(f, "error: no integration steps"),
-            MultiIntegrationError::IntegrationError(index, error) => write!(f, "error during intgration step {}: {}", index, error),
+            MultiIntegrationError::IntegrationError(index, error) => {
+                write!(f, "error during intgration step {}: {}", index, error)
+            }
         }
     }
 }
-
 
 impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -71,7 +73,6 @@ impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
         }
     }
 }
-
 
 /// Error while initialising a state
 #[non_exhaustive]
@@ -86,28 +87,30 @@ pub enum StateInitializationError {
 }
 
 impl From<rand_distr::NormalError> for StateInitializationError {
-    fn from(err: rand_distr::NormalError) -> Self{
+    fn from(err: rand_distr::NormalError) -> Self {
         Self::InvalideParameterNormalDistribution(err)
     }
 }
 
 impl From<LatticeInitializationError> for StateInitializationError {
-    fn from(err: LatticeInitializationError) -> Self{
+    fn from(err: LatticeInitializationError) -> Self {
         Self::LatticeInitializationError(err)
     }
 }
 
-
 impl Display for StateInitializationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::InvalideParameterNormalDistribution(error) => write!(f, "normal distribution error: {}", error),
+            Self::InvalideParameterNormalDistribution(error) => {
+                write!(f, "normal distribution error: {}", error)
+            }
             Self::IncompatibleSize => write!(f, "size of lattice and data are imcompatible"),
-            Self::LatticeInitializationError(err) => write!(f, "lattice Initialization error : {}", err),
+            Self::LatticeInitializationError(err) => {
+                write!(f, "lattice Initialization error : {}", err)
+            }
         }
     }
 }
-
 
 impl Error for StateInitializationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -145,11 +148,10 @@ impl Display for StateInitializationErrorThreaded {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) =>  write!(f, "{}", error),
+            Self::StateInitializationError(error) => write!(f, "{}", error),
         }
     }
 }
-
 
 impl Error for StateInitializationErrorThreaded {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -160,7 +162,6 @@ impl Error for StateInitializationErrorThreaded {
     }
 }
 
-
 /// Error while initialising a lattice
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -170,7 +171,7 @@ pub enum LatticeInitializationError {
     /// `dim` must be greater than 2.
     DimTooSmall,
     /// the dimension parameter `D = 0` is not valide.
-    ZeroDimension
+    ZeroDimension,
 }
 
 impl Display for LatticeInitializationError {
@@ -193,27 +194,31 @@ pub struct ErrorWithOnwnedValue<Error, State> {
 }
 
 impl<Error, State> ErrorWithOnwnedValue<Error, State> {
-    /// Create a new Self with an error and an owned value
-    pub const fn new(error: Error, owned: State) -> Self{
-        Self{error, owned}
-    }
-    
-    getter!(const,
+    getter!(
+        const,
         /// getter on the error
-        error, Error
+        error,
+        Error
     );
-    
-    getter!(const,
+
+    getter!(
+        const,
         /// getter on the owned value
-        owned, State
+        owned,
+        State
     );
-    
+
+    /// Create a new Self with an error and an owned value
+    pub const fn new(error: Error, owned: State) -> Self {
+        Self { error, owned }
+    }
+
     /// Deconstruct the structur.
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn deconstruct(self) -> (Error, State) {
         (self.error, self.owned)
     }
-    
+
     /// Deconstruct the structur returning the error and discarding the owned value.
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn error_owned(self) -> Error {
@@ -222,31 +227,37 @@ impl<Error, State> ErrorWithOnwnedValue<Error, State> {
 }
 
 impl<Error, State> From<(Error, State)> for ErrorWithOnwnedValue<Error, State> {
-    fn from(data: (Error, State)) -> Self{
+    fn from(data: (Error, State)) -> Self {
         Self::new(data.0, data.1)
     }
 }
 
-impl<Error : Display, State: Display> Display for ErrorWithOnwnedValue<Error, State>  {
+impl<Error: Display, State: Display> Display for ErrorWithOnwnedValue<Error, State> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "error {} with data {}", self.error, self.owned)
     }
 }
 
-impl<E : Display + Error + Debug + 'static, State: Display + Debug> Error for ErrorWithOnwnedValue<E, State>  {
+impl<E: Display + Error + Debug + 'static, State: Display + Debug> Error
+    for ErrorWithOnwnedValue<E, State>
+{
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }
 }
 
-impl<State> From<ErrorWithOnwnedValue<StateInitializationError, State>> for StateInitializationError {
+impl<State> From<ErrorWithOnwnedValue<StateInitializationError, State>>
+    for StateInitializationError
+{
     fn from(data: ErrorWithOnwnedValue<StateInitializationError, State>) -> Self {
         data.error
     }
 }
 
-impl<Error, Data1, Data2> From<ErrorWithOnwnedValue<Error, (Data1, Data2)>> for ErrorWithOnwnedValue<Error, Data1> {
-    fn from(data: ErrorWithOnwnedValue<Error, (Data1, Data2)>) -> Self{
+impl<Error, Data1, Data2> From<ErrorWithOnwnedValue<Error, (Data1, Data2)>>
+    for ErrorWithOnwnedValue<Error, Data1>
+{
+    fn from(data: ErrorWithOnwnedValue<Error, (Data1, Data2)>) -> Self {
         Self::new(data.error, data.owned.0)
     }
 }

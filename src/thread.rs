@@ -1,25 +1,19 @@
-
 //! tool for easy use of mutli threading.
 
 use std::{
-    collections::HashMap,
-    iter::Iterator,
-    sync::{
-        Arc,
-        Mutex,
-        mpsc,
-    },
     any::Any,
+    collections::HashMap,
     hash::Hash,
-    vec::Vec
+    iter::Iterator,
+    sync::{mpsc, Arc, Mutex},
+    vec::Vec,
 };
+
 use crossbeam::thread;
-use super::lattice::{
-    LatticeCyclique,
-    LatticeElementToIndex,
-};
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
+
+use super::lattice::{LatticeCyclique, LatticeElementToIndex};
 
 /// Multithreading error.
 #[derive(Debug)]
@@ -31,7 +25,6 @@ pub enum ThreadError {
     /// see [`run_pool_parallel`] example.
     Panic(Box<dyn Any + Send + 'static>),
 }
-
 
 impl core::fmt::Display for ThreadError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -57,16 +50,25 @@ macro_rules! implement_dyn_downcast{
 impl std::error::Error for ThreadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         use std::error::Error;
-        use super::error::{ImplementationError, Never, StateInitializationError, StateInitializationErrorThreaded};
+
+        use super::error::{
+            ImplementationError, Never, StateInitializationError, StateInitializationErrorThreaded,
+        };
         match self {
             Self::ThreadNumberIncorect => None,
             Self::Panic(any) => {
-                implement_dyn_downcast!(any, Error, Never, ImplementationError, StateInitializationError, StateInitializationErrorThreaded);
-            },
+                implement_dyn_downcast!(
+                    any,
+                    Error,
+                    Never,
+                    ImplementationError,
+                    StateInitializationError,
+                    StateInitializationErrorThreaded
+                );
+            }
         }
     }
 }
-
 
 /// run jobs in parallel.
 ///
@@ -86,7 +88,7 @@ impl std::error::Error for ThreadError {
 /// let iter = 2..10000;
 /// let c = 5;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
-/// let result = run_pool_parallel(iter, &c, &|i, c| {i * i * c} , 4, 10000 - 2).unwrap();
+/// let result = run_pool_parallel(iter, &c, &|i, c| i * i * c, 4, 10000 - 2).unwrap();
 /// assert_eq!(*result.get(&40).unwrap(), 40 * 40 * c);
 /// assert_eq!(result.get(&1), None);
 /// ```
@@ -94,7 +96,7 @@ impl std::error::Error for ThreadError {
 /// ```should_panic
 /// # use lattice_qcd_rs::thread::{run_pool_parallel, ThreadError};
 /// let iter = 0..10;
-/// let result = run_pool_parallel(iter, &(), &|_, _| {panic!("panic message")}, 4, 10);
+/// let result = run_pool_parallel(iter, &(), &|_, _| panic!("panic message"), 4, 10);
 /// result.unwrap(); // this propagate the panic.
 /// ```
 /// This give the following panic message
@@ -153,16 +155,17 @@ where
 ///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i, c| {
-///          if ! *has_greeted {
-///              *has_greeted = true;
-///              println!("Hello from the thread");
-///          }
-///          i * i * c
+///         if !*has_greeted {
+///             *has_greeted = true;
+///             println!("Hello from the thread");
+///         }
+///         i * i * c
 ///     },
-///     || {false},
+///     || false,
 ///     4,
-///     100000
-/// ).unwrap();
+///     100000,
+/// )
+/// .unwrap();
 /// ```
 /// will print "Hello from the thread" four times.
 ///
@@ -170,9 +173,9 @@ where
 /// ```
 /// extern crate rand;
 /// extern crate rand_distr;
-/// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
-/// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::lattice::LatticeCyclique;
+/// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
 ///
 /// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
@@ -183,7 +186,8 @@ where
 ///     rand::thread_rng,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
-/// ).unwrap();
+/// )
+/// .unwrap();
 /// ```
 #[allow(clippy::needless_return)] // for lisibiliy
 pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
@@ -204,10 +208,10 @@ where
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);
     }
-    else if number_of_thread== 1{
+    else if number_of_thread == 1 {
         let mut hash_map = HashMap::<Key, Data>::with_capacity(capacity);
         let mut init_data = closure_init();
-        for i in iter{
+        for i in iter {
             hash_map.insert(i.clone(), closure(&mut init_data, &i, common_data));
         }
         return Ok(hash_map);
@@ -226,7 +230,9 @@ where
                     loop {
                         let val = iter_clone.lock().unwrap().next();
                         match val {
-                            Some(i) => transmitter.send((i.clone(), closure(&mut init_data, &i, common_data))).unwrap(),
+                            Some(i) => transmitter
+                                .send((i.clone(), closure(&mut init_data, &i, common_data)))
+                                .unwrap(),
                             None => break,
                         }
                     }
@@ -241,10 +247,11 @@ where
                 hash_map.insert(key, data);
             }
             for handel in threads {
-                handel.join().map_err(|err| ThreadError::Panic(err) )?;
+                handel.join().map_err(|err| ThreadError::Panic(err))?;
             }
             Ok(hash_map)
-        }).map_err(|err| ThreadError::Panic(err))?;
+        })
+        .map_err(|err| ThreadError::Panic(err))?;
         return result;
     }
 }
@@ -264,9 +271,9 @@ where
 ///
 /// # Example
 /// ```
-/// use lattice_qcd_rs::thread::run_pool_parallel_vec;
-/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec;
 ///
 /// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let c = 5_usize;
@@ -278,7 +285,8 @@ where
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     &0,
-/// ).unwrap();
+/// )
+/// .unwrap();
 /// let point = LatticePoint::new([3, 0, 5, 0].into());
 /// assert_eq!(result[point.to_index(&l)], point[0] * c)
 /// ```
@@ -300,7 +308,7 @@ where
     run_pool_parallel_vec_with_initialisation_mutable(
         iter,
         common_data,
-        &|_, key, common| { closure(key, common)},
+        &|_, key, common| closure(key, common),
         &|| (),
         number_of_thread,
         capacity,
@@ -320,8 +328,8 @@ where
 /// # Examples
 /// Let us create some value but we will greet the user from the threads
 /// ```
-/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 /// let l = LatticeCyclique::<4>::new(1_f64, 25).unwrap();
 /// let iter = l.get_points();
 /// let c = 5_usize;
@@ -330,18 +338,19 @@ where
 ///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i: &LatticePoint<4>, c: &usize| {
-///          if ! *has_greeted {
-///              *has_greeted = true;
-///              println!("Hello from the thread");
-///          }
-///          i[0] * c
+///         if !*has_greeted {
+///             *has_greeted = true;
+///             println!("Hello from the thread");
+///         }
+///         i[0] * c
 ///     },
-///     || {false},
+///     || false,
 ///     4,
 ///     100000,
 ///     &l,
 ///     &0,
-/// ).unwrap();
+/// )
+/// .unwrap();
 /// ```
 /// will print "Hello from the thread" four times.
 ///
@@ -350,9 +359,9 @@ where
 /// extern crate rand;
 /// extern crate rand_distr;
 /// extern crate nalgebra;
-/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
-/// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::field::Su3Adjoint;
+/// use lattice_qcd_rs::lattice::LatticeCyclique;
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
 ///
 /// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
@@ -365,11 +374,20 @@ where
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     &nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
-/// ).unwrap();
+/// )
+/// .unwrap();
 /// ```
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_return)] // for lisibiliy
-pub fn run_pool_parallel_vec_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit, const D: usize>(
+pub fn run_pool_parallel_vec_with_initialisation_mutable<
+    Key,
+    Data,
+    CommonData,
+    InitData,
+    F,
+    FInit,
+    const D: usize,
+>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
@@ -390,11 +408,16 @@ where
     if number_of_thread == 0 {
         return Err(ThreadError::ThreadNumberIncorect);
     }
-    else if number_of_thread== 1{
+    else if number_of_thread == 1 {
         let mut vec = Vec::<Data>::with_capacity(capacity);
         let mut init_data = closure_init();
-        for i in iter{
-            insert_in_vec(&mut vec, i.clone().to_index(l), closure(&mut init_data, &i, common_data), &default_data);
+        for i in iter {
+            insert_in_vec(
+                &mut vec,
+                i.clone().to_index(l),
+                closure(&mut init_data, &i, common_data),
+                &default_data,
+            );
         }
         return Ok(vec);
     }
@@ -414,7 +437,9 @@ where
                     loop {
                         let val = iter_clone.lock().unwrap().next();
                         match val {
-                            Some(i) => transmitter.send((i.clone(), closure(&mut init_data, &i, common_data))).unwrap(),
+                            Some(i) => transmitter
+                                .send((i.clone(), closure(&mut init_data, &i, common_data)))
+                                .unwrap(),
                             None => break,
                         }
                     }
@@ -429,10 +454,11 @@ where
                 insert_in_vec(&mut vec, key.to_index(l), data, &default_data);
             }
             for handel in threads {
-                handel.join().map_err(|err| ThreadError::Panic(err) )?;
+                handel.join().map_err(|err| ThreadError::Panic(err))?;
             }
             Ok(vec)
-        }).map_err(|err| ThreadError::Panic(err))?;
+        })
+        .map_err(|err| ThreadError::Panic(err))?;
         return result;
     }
 }
@@ -470,7 +496,6 @@ where
     }
 }
 
-
 /// Run a parallel pool using external crate [`rayon`].
 ///
 /// # Example.
@@ -500,5 +525,8 @@ where
     Data: Send,
     F: Sync + Fn(&Key, &CommonData) -> Data,
 {
-    iter.collect::<Vec<Key>>().into_par_iter().map(|el| closure(&el, common_data)).collect()
+    iter.collect::<Vec<Key>>()
+        .into_par_iter()
+        .map(|el| closure(&el, common_data))
+        .collect()
 }

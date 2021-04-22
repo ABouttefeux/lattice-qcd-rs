@@ -1,13 +1,12 @@
-
 //! Utils function and structure
 
-use std::convert::TryInto;
-use std::ops::{Neg, Mul, MulAssign};
 use std::cmp::Ordering;
-use approx::*;
+use std::convert::TryInto;
+use std::ops::{Mul, MulAssign, Neg};
 
+use approx::*;
 #[cfg(feature = "serde-serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 type FactorialNumber = u128;
 
@@ -53,7 +52,7 @@ impl FactorialStorageDyn {
     pub const fn new() -> Self {
         Self { data: Vec::new() }
     }
-    
+
     /// Build the storage up to and including `value`.
     ///
     /// #Example
@@ -66,7 +65,7 @@ impl FactorialStorageDyn {
     pub fn build_storage(&mut self, value: usize) {
         self.get_factorial(value);
     }
-    
+
     /// Get the factorial number. If it is not already computed build internal storage
     ///
     /// #Example
@@ -86,11 +85,12 @@ impl FactorialStorageDyn {
             return self.data[value];
         }
         for i in len..value + 1 {
-            self.data.push(self.data[i - 1] * TryInto::<FactorialNumber>::try_into(i).unwrap());
+            self.data
+                .push(self.data[i - 1] * TryInto::<FactorialNumber>::try_into(i).unwrap());
         }
         self.data[value]
     }
-    
+
     /// try get factorial from storage
     ///
     ///
@@ -105,7 +105,7 @@ impl FactorialStorageDyn {
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
-    
+
     /// Get factorial but does build the storage if it is missing
     /// #Example
     /// ```
@@ -145,7 +145,7 @@ impl Sign {
             Sign::Zero => 0_f64,
         }
     }
-    
+
     /// Get the sign form a f64.
     ///
     /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
@@ -161,7 +161,7 @@ impl Sign {
             Sign::Negative
         }
     }
-    
+
     /// Convert the sign to an i8.
     pub const fn to_i8(self) -> i8 {
         match self {
@@ -170,7 +170,7 @@ impl Sign {
             Sign::Zero => 0_i8,
         }
     }
-    
+
     /// Get the sign of the given [`i8`]
     #[allow(clippy::comparison_chain)] // Cannot use cmp in const function
     pub const fn sign_i8(n: i8) -> Self {
@@ -184,7 +184,7 @@ impl Sign {
             Sign::Negative
         }
     }
-    
+
     /// Retuns the sign of `a - b`, witah a and b are usize
     #[allow(clippy::comparison_chain)]
     pub const fn sign_from_diff(a: usize, b: usize) -> Self {
@@ -214,7 +214,7 @@ impl From<f64> for Sign {
 
 impl Neg for Sign {
     type Output = Self;
-    
+
     fn neg(self) -> Self::Output {
         match self {
             Sign::Positive => Sign::Negative,
@@ -226,7 +226,7 @@ impl Neg for Sign {
 
 impl Mul for Sign {
     type Output = Self;
-    
+
     fn mul(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Sign::Negative, Sign::Negative) | (Sign::Positive, Sign::Positive) => Sign::Positive,
@@ -275,17 +275,16 @@ pub const fn levi_civita(index: &[usize]) -> Sign {
     Sign::sign_i8(prod)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     #[test]
     /// test that the factorial pass for MAX_NUMBER_FACTORIAL
     fn test_factorial_pass() {
         factorial(MAX_NUMBER_FACTORIAL);
     }
-    
+
     #[test]
     #[should_panic]
     #[cfg(not(feature = "no-overflow-test"))]
@@ -293,7 +292,7 @@ mod test {
     fn test_factorial_bigger() {
         factorial(MAX_NUMBER_FACTORIAL + 1);
     }
-    
+
     #[test]
     #[should_panic]
     /// test that the factorial overflow for MAX_NUMBER_FACTORIAL + 1
@@ -302,7 +301,7 @@ mod test {
         let (_, overflowed) = n.overflowing_mul(MAX_NUMBER_FACTORIAL as u128 + 1);
         assert!(!overflowed);
     }
-    
+
     #[test]
     fn sign_i8() {
         assert_eq!(Sign::sign_i8(0), Sign::Zero);
@@ -312,7 +311,7 @@ mod test {
         assert_eq!(-1, Sign::Negative.to_i8());
         assert_eq!(1, Sign::Positive.to_i8());
     }
-    
+
     #[test]
     fn levi_civita_test() {
         assert_eq!(Sign::Positive, levi_civita(&[]));
@@ -334,7 +333,7 @@ mod test {
         assert_eq!(Sign::Negative, levi_civita(&[3, 2, 1]));
         assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
         assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3, 4]));
-        
+
         assert_eq!(Sign::Zero, Sign::sign_from_diff(0, 0));
         assert_eq!(Sign::Zero, Sign::sign_from_diff(4, 4));
         assert_eq!(Sign::Negative, Sign::sign_from_diff(1, 4));

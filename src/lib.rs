@@ -65,7 +65,6 @@
 //! }
 //!
 //! let average = simulation.average_trace_plaquette().unwrap().real() / 3_f64;
-//!
 //! ```
 //!
 //! This library use rayon as a way to do some computation in parallel. However not everything can be parallelized. I advice that if you want to do multiple similar simulation (for instance you want to do for Beta = 1, 1.1, 1.2, ...) to use rayon. In order to do multiple parallel simulation.
@@ -126,9 +125,9 @@
 //! # Other Examples
 //! ```rust
 //! use lattice_qcd_rs::{
-//!    simulation::state::{LatticeStateDefault, LatticeState},
-//!    simulation::monte_carlo::{MetropolisHastingsDeltaDiagnostic},
-//!    ComplexField,
+//!     simulation::monte_carlo::MetropolisHastingsDeltaDiagnostic,
+//!     simulation::state::{LatticeState, LatticeStateDefault},
+//!     ComplexField,
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -136,7 +135,8 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation =
+//!     LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let spread_parameter = 1E-5_f64;
 //! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
@@ -147,14 +147,14 @@
 //!         simulation = simulation.monte_carlo_step(&mut mc).unwrap();
 //!     }
 //!     simulation.normalize_link_matrices(); // we renormalize all matrices back to SU(3);
-//! };
+//! }
 //! let average = simulation.average_trace_plaquette().unwrap().real();
 //! ```
 //! Alternatively other Monte Carlo algorithm can be used like,
 //! ```rust
 //! use lattice_qcd_rs::{
-//!    simulation::state::{LatticeStateDefault, LatticeState},
-//!    simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
+//!     simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
+//!     simulation::state::{LatticeState, LatticeStateDefault},
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -162,16 +162,14 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation =
+//!     LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let number_of_rand = 20;
 //! let spread_parameter = 1E-5_f64;
 //! let mut mc = McWrapper::new(
-//!     MetropolisHastingsDiagnostic::new(
-//!         number_of_rand,
-//!         spread_parameter
-//!     ).unwrap(),
-//!     rng
+//!     MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(),
+//!     rng,
 //! );
 //!
 //! simulation = simulation.monte_carlo_step(&mut mc).unwrap();
@@ -180,9 +178,9 @@
 //! or
 //! ```rust
 //! use lattice_qcd_rs::{
-//!    simulation::state::{LatticeStateDefault, LatticeState},
-//!    simulation::monte_carlo::HybridMonteCarloDiagnostic,
-//!    integrator::SymplecticEulerRayon,
+//!     integrator::SymplecticEulerRayon,
+//!     simulation::monte_carlo::HybridMonteCarloDiagnostic,
+//!     simulation::state::{LatticeState, LatticeStateDefault},
 //! };
 //!
 //! let mut rng = rand::thread_rng();
@@ -190,16 +188,13 @@
 //! let size = 1_000_f64;
 //! let number_of_pts = 4;
 //! let beta = 2_f64;
-//! let mut simulation = LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+//! let mut simulation =
+//!     LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 //!
 //! let delta_t = 1E-3_f64;
 //! let number_of_step = 10;
-//! let mut mc = HybridMonteCarloDiagnostic::new(
-//!     delta_t,
-//!     number_of_step,
-//!     SymplecticEulerRayon::new(),
-//!     rng
-//! );
+//! let mut mc =
+//!     HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
 //!
 //! simulation = simulation.monte_carlo_step(&mut mc).unwrap();
 //! simulation.normalize_link_matrices();
@@ -231,42 +226,40 @@
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
 #![warn(clippy::unnecessary_wraps)]
-
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
-
 #![forbid(unsafe_code)]
 
-extern crate nalgebra as na;
 extern crate approx;
+extern crate crossbeam;
+extern crate lattice_qcd_rs_procedural_macro;
+extern crate nalgebra as na;
 extern crate num_traits;
 extern crate rand;
 extern crate rand_distr;
-extern crate crossbeam;
 extern crate rayon;
 #[cfg(feature = "serde-serialize")]
 extern crate serde;
-extern crate lattice_qcd_rs_procedural_macro;
 
 pub use na::ComplexField;
-pub use rand_distr::Distribution;
 pub use rand::{Rng, SeedableRng};
+pub use rand_distr::Distribution;
 
 #[macro_use]
 mod macro_def;
-pub mod lattice;
-pub mod su3;
-pub mod su2;
+pub mod dim;
+pub mod error;
 pub mod field;
-pub mod number;
 pub mod integrator;
+pub mod lattice;
+pub mod number;
+pub mod prelude;
+pub mod simulation;
+pub mod statistics;
+pub mod su2;
+pub mod su3;
 pub mod thread;
 pub mod utils;
-pub mod simulation;
-pub mod dim;
-pub mod prelude;
-pub mod statistics;
-pub mod error;
 
 #[cfg(test)]
 mod test;

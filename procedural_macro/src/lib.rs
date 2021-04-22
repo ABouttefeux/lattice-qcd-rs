@@ -1,4 +1,3 @@
-
 //! Procedural macro for lattice_qcd_rs
 //!
 //! For internal use only. Mainly it has macro for implementation of
@@ -30,17 +29,16 @@
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
 #![warn(clippy::unnecessary_wraps)]
-
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 
 extern crate proc_macro;
+extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
-extern crate proc_macro2;
 
-use quote::quote;
 use proc_macro::TokenStream;
+use quote::quote;
 
 const MAX_DIM: usize = 127;
 
@@ -53,22 +51,19 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let mut array_direction = vec![];
         let mut array_direction_positives = vec![];
         for j in 0..i {
-            array_direction.push(
-                quote!{
-                    Direction{index_dir: #j, is_positive: true},
-                    Direction{index_dir: #j, is_positive: false}
-                }
-            );
-            array_direction_positives.push(
-                quote!{
-                    Direction{index_dir: #j, is_positive: true}
-                }
-            );
+            array_direction.push(quote! {
+                Direction{index_dir: #j, is_positive: true},
+                Direction{index_dir: #j, is_positive: false}
+            });
+            array_direction_positives.push(quote! {
+                Direction{index_dir: #j, is_positive: true}
+            });
         }
         //let u_ident = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
         let u_dir_ident = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
-        let u_dir_pos_ident = syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
-        let s = quote!{
+        let u_dir_pos_ident =
+            syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
+        let s = quote! {
             const #u_dir_ident: [Direction<#i>; #i * 2] = [ #(#array_direction),* ];
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
             impl DirectionList for Direction<#i> {
@@ -84,7 +79,7 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         };
         implem.push(s);
     }
-    let final_stream = quote!{
+    let final_stream = quote! {
         #(#implem)*
     };
     final_stream.into()
@@ -92,47 +87,46 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
 
 const MAX_DIM_FROM_IMPLEM: usize = 10;
 
-
 /// Implement trait [`From`] and [`std::convert::TryFrom`] and for directions
 #[proc_macro]
 pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     // implementation of the error returned by the TryFrom trait.
-    let mut implem = vec![quote!{
+    let mut implem = vec![quote! {
         use std::convert::TryFrom;
-        
+
         /// Error return by try from for Directions
         #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
         pub enum ErrorDirectionConversion {
             /// the index is out of bound
             IndexOutOfBound,
         }
-        
+
         impl core::fmt::Display for ErrorDirectionConversion{
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "the index is out of bound")
             }
         }
-        
+
         impl std::error::Error for ErrorDirectionConversion {}
     }];
-    
+
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
-        for j in i+1..=MAX_DIM_FROM_IMPLEM {
+        for j in i + 1..=MAX_DIM_FROM_IMPLEM {
             //let u_ident_from = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
             //let u_ident_to = syn::Ident::new(&format!("U{}", j), proc_macro2::Span::call_site());
-            implem.push(quote!{
+            implem.push(quote! {
                 impl From<Direction<#i>> for Direction<#j> {
                     fn from(from: Direction<#i>) -> Self {
                         Self::new(from.to_index(), from.is_positive()).unwrap()
                     }
                 }
-                
+
                 impl From<&Direction<#i>> for Direction<#j> {
                     fn from(from: &Direction<#i>) -> Self {
                         Self::new(from.to_index(), from.is_positive()).unwrap()
                     }
                 }
-                
+
                 impl TryFrom<Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
                     fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
@@ -140,7 +134,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
                             .ok_or(ErrorDirectionConversion::IndexOutOfBound)
                     }
                 }
-                
+
                 impl TryFrom<&Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
                     fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
@@ -151,8 +145,8 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
             });
         }
     }
-    
-    let final_stream = quote!{
+
+    let final_stream = quote! {
         #(#implem)*
     };
     final_stream.into()
