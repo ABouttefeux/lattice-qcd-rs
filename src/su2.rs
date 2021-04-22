@@ -64,14 +64,14 @@ where
     let d_sign = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     // we could have use the spread_parameter but it is safer to use the norm of x
     let x0_unsigned = (1_f64 - x.norm_squared()).sqrt();
-    let x0;
-    if d_sign.sample(rng) {
-        x0 = x0_unsigned;
+    // determine the sign of x0.
+    let x0 = if d_sign.sample(rng) {
+        x0_unsigned
     }
-    else{
-        x0 = - x0_unsigned;
-    }
-    
+    else {
+        -x0_unsigned
+    };
+
     get_complex_matrix_from_vec(x0, x)
 }
 

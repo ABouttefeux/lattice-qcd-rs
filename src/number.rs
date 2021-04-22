@@ -2,27 +2,6 @@
 //!
 //! module to represent numbers.
 
-/*
-pub struct Rng<T, V>
-    where T: rand_distr::Distribution<V>,
-{
-    rng: rand::rngs::ThreadRng,
-    distribution: T
-}
-
-impl<T, V> Rng<T,V>
-    where T: rand_distr::Distribution<V>,
-{
-    pub fn get_random_number(&mut self) -> V {
-        self.sample(&mut self.rng)
-    }
-    
-    pub fn new(rng: rand::rngs::ThreadRng, distribution: T) -> Self{
-        Self {rng, distribution}
-    }
-}
-*/
-
 /// Fix point number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FixedPointNumber<I, D>
