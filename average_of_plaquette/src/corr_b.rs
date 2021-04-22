@@ -186,7 +186,7 @@ fn measure(state_initial: LatticeStateWithEFieldSyncDefault<LatticeStateDefault<
         let vec_data = statistics::mean_and_variance_par_iter_val(
             points.par_iter()
                 .map(|pt| {
-                    observable::e_correletor(&state_initial, &state_new, pt).unwrap()
+                    observable::b_correletor(&state_initial, &state_new, pt).unwrap()
                 })
         );
         vec.push(vec_data);
