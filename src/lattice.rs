@@ -94,6 +94,19 @@ impl<const D: usize> LatticeCyclique<D> {
     ///
     /// It is similar to [`LatticeLink::new`]. It however enforce that the point is inside the bounds.
     /// If it is not, it will use the modulus of the bound.
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, Direction, LatticePoint};
+    /// # use nalgebra::SVector;
+    /// let l = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+    /// let dir = Direction::new(0, true).unwrap();
+    /// let pt = LatticePoint::new(SVector::<_, 3>::new(1, 2, 5));
+    /// let link = l.get_link(pt, dir);
+    /// assert_eq!(
+    ///     *link.pos(),
+    ///     LatticePoint::new(SVector::<_, 3>::new(1, 2, 1))
+    /// );
+    /// ```
     pub fn get_link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
@@ -1484,5 +1497,17 @@ mod test {
 
         assert_eq!(Direction::<4>::get_all_directions().len(), 8);
         assert_eq!(Direction::<4>::get_all_positive_directions().len(), 4);
+    }
+
+    #[test]
+    fn lattice_link() {
+        let pt = [0, 0, 0, 0].into();
+        let dir = DirectionEnum::XNeg.into();
+        let mut link = LatticeLinkCanonical::new(pt, DirectionEnum::YPos.into()).unwrap();
+        link.set_dir_positive(dir);
+        assert_eq!(
+            link,
+            LatticeLinkCanonical::new(pt, dir.to_positive()).unwrap()
+        );
     }
 }
