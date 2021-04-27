@@ -1116,7 +1116,7 @@ mod test {
             );
             assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
         }
-        
+
         use crate::su3::su3_exp_r;
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
@@ -1125,12 +1125,12 @@ mod test {
             assert_eq!(su3_exp_r(v), v.exp());
         }
     }
-    
+
     #[test]
     fn link_matrix() {
         let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
         match LinkMatrix::new_random_threaded(&lattice, 0) {
-            Err(ThreadError::ThreadNumberIncorect) => {},
+            Err(ThreadError::ThreadNumberIncorect) => {}
             _ => panic!("unexpected ouptut"),
         }
         assert!(LinkMatrix::new_random_threaded(&lattice, 2).is_ok())

@@ -339,7 +339,7 @@ mod test {
         assert_eq!(Sign::Negative, Sign::sign_from_diff(1, 4));
         assert_eq!(Sign::Positive, Sign::sign_from_diff(4, 1));
     }
-    
+
     #[test]
     fn sign() {
         assert_eq!(Sign::sign(0_f64).to_f64(), 0_f64);

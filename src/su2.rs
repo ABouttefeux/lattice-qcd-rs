@@ -145,8 +145,10 @@ mod test {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
         let m = CMatrix2::new(
-            Complex::from(0_f64), Complex::from(0_f64),
-            Complex::from(0_f64), Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
         );
         let p = project_to_su2(m);
         assert_eq_matrix!(p, CMatrix2::identity(), EPSILON);
@@ -179,7 +181,7 @@ mod test {
         }
         for _ in 0..100 {
             let m = get_random_su2(&mut rng) * Complex::new(1.5_f64, 0.7_f64);
-            assert!(! is_matrix_su2(&m, EPSILON));
+            assert!(!is_matrix_su2(&m, EPSILON));
         }
     }
 }
