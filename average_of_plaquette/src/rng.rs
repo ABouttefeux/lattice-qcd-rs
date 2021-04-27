@@ -1,7 +1,5 @@
-
-
-use rand_xoshiro::Xoshiro256PlusPlus;
 use rand::SeedableRng;
+use rand_xoshiro::Xoshiro256PlusPlus;
 
 pub fn get_rand_from_entropy() -> Xoshiro256PlusPlus {
     Xoshiro256PlusPlus::from_entropy()

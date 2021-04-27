@@ -1,4 +1,3 @@
-
 //! Binary application to compute the average of the plaquette
 
 //#![warn(clippy::as_conversions)]
@@ -28,28 +27,27 @@
 #![warn(clippy::unused_self)]
 #![warn(clippy::unnecessary_wraps)]
 
-
 //#![warn(clippy::missing_errors_doc)]
 //#![warn(missing_docs)]
 
+extern crate bincode;
+extern crate console;
+extern crate csv;
 extern crate lattice_qcd_rs;
 extern crate nalgebra as na;
+extern crate plotters;
 extern crate rand;
 extern crate rand_distr;
-extern crate bincode;
+extern crate rand_xoshiro;
 extern crate serde;
 extern crate serde_json;
-extern crate csv;
-extern crate rand_xoshiro;
-extern crate console;
-extern crate plotters;
 
 pub mod config;
-pub mod sim;
 pub mod config_scan;
 pub mod data_analysis;
-pub mod rng;
 pub mod observable;
 pub mod plot_corr_e;
+pub mod rng;
+pub mod sim;
 #[cfg(test)]
 mod test;

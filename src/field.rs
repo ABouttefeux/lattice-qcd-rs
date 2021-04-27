@@ -1,43 +1,23 @@
-
 //! Represent the fields on the lattice.
-//!
 
-use super::{
-    Real,
-    Complex,
-    CMatrix3,
-    lattice::{
-        LatticePoint,
-        LatticeCyclique,
-        LatticeLink,
-        Direction,
-        LatticeElementToIndex,
-    },
-    Vector8,
-    su3,
-    su3::{
-        GENERATORS,
-    },
-    I,
-    thread::{
-        ThreadError,
-        run_pool_parallel_vec_with_initialisation_mutable,
-    },
-    utils::levi_civita,
-};
-use na::{
-    Matrix3,
-    ComplexField,
-    SVector,
-};
 use std::{
-    ops::{Index, IndexMut, Mul, Add, AddAssign, MulAssign, Div, DivAssign, Sub, SubAssign, Neg},
+    ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
     vec::Vec,
 };
+
+use na::{ComplexField, Matrix3, SVector};
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
+use super::{
+    lattice::{Direction, LatticeCyclique, LatticeElementToIndex, LatticeLink, LatticePoint},
+    su3,
+    su3::GENERATORS,
+    thread::{run_pool_parallel_vec_with_initialisation_mutable, ThreadError},
+    utils::levi_civita,
+    CMatrix3, Complex, Real, Vector8, I,
+};
 
 /// Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 /// See [`su3::GENERATORS`] to view the order of generators.
@@ -45,12 +25,11 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct Su3Adjoint {
-    data: Vector8<Real>
+    data: Vector8<Real>,
 }
 
 #[allow(clippy::len_without_is_empty)]
 impl Su3Adjoint {
-    
     /// create a new Su3Adjoint representation where `M = M^a T^a`, where `T` are generators given in [`su3::GENERATORS`].
     /// # Example
     /// ```
@@ -60,9 +39,9 @@ impl Su3Adjoint {
     /// let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::from_element(1_f64));
     /// ```
     pub const fn new(data: Vector8<Real>) -> Self {
-        Self {data}
+        Self { data }
     }
-    
+
     /// create a new Su3Adjoint representation where `M = M^a T^a`, where `T` are generators given in [`su3::GENERATORS`].
     /// # Example
     /// ```
@@ -72,12 +51,12 @@ impl Su3Adjoint {
     pub fn new_from_array(data: [Real; 8]) -> Self {
         Su3Adjoint::new(Vector8::from(data))
     }
-    
+
     /// get the data inside the Su3Adjoint.
     pub const fn data(&self) -> &Vector8<Real> {
         &self.data
     }
-    
+
     /// return the su(3) (Lie algebra) matrix.
     /// # Example
     /// ```
@@ -86,11 +65,13 @@ impl Su3Adjoint {
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
     pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
-        self.data.iter().enumerate()
+        self.data
+            .iter()
+            .enumerate()
             .map(|(pos, el)| *GENERATORS[pos] * na::Complex::<Real>::from(el))
             .sum()
     }
-    
+
     /// Return the SU(3) matrix associated with this generator.
     /// Note that the function consume self.
     /// # Example
@@ -105,13 +86,13 @@ impl Su3Adjoint {
         // where the value is not necessary anymore.
         su3::su3_exp_i(self)
     }
-    
+
     /// return exp( T^a v^a) where v is self.
     /// Note that the function consume self.
     pub fn exp(self) -> Matrix3<na::Complex<Real>> {
         su3::su3_exp_r(self)
     }
-    
+
     /// create a new random SU3 adjoint.
     /// # Example
     /// ```
@@ -120,15 +101,15 @@ impl Su3Adjoint {
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     ///
     /// let mut rng = rand::thread_rng();
-    /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// let su3 = Su3Adjoint::random(&mut rng, &distribution);
     /// ```
     pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> Self {
         Self {
-            data : Vector8::<Real>::from_fn(|_,_| d.sample(rng))
+            data: Vector8::<Real>::from_fn(|_, _| d.sample(rng)),
         }
     }
-    
+
     /// Returns the trace squared `Tr(X^2)`.
     ///
     /// It is more accurate and faster than computing
@@ -143,7 +124,7 @@ impl Su3Adjoint {
         // TODO investigate.
         self.data.iter().map(|el| el * el).sum::<Real>() / 2_f64
     }
-    
+
     /// Return the t coeff `t = - 1/2 * Tr(X^2)`.
     /// If you are looking for the trace square use [Self::trace_squared] instead.
     ///
@@ -154,13 +135,16 @@ impl Su3Adjoint {
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::from([1_f64; 8]);
     /// let m = su3.to_matrix();
-    /// assert_eq!(nalgebra::Complex::new(su3.t(), 0_f64), - nalgebra::Complex::from(0.5_f64) * (m * m).trace());
+    /// assert_eq!(
+    ///     nalgebra::Complex::new(su3.t(), 0_f64),
+    ///     -nalgebra::Complex::from(0.5_f64) * (m * m).trace()
+    /// );
     /// ```
     #[inline]
     pub fn t(&self) -> Real {
-        - 0.5_f64 * self.trace_squared()
+        -0.5_f64 * self.trace_squared()
     }
-    
+
     /// Return the t coeff `d = i * det(X)`.
     /// Used for [`su3::su3_exp_i`]
     /// # Example
@@ -169,13 +153,16 @@ impl Su3Adjoint {
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::from([1_f64; 8]);
     /// let m = su3.to_matrix();
-    /// assert_eq!(su3.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant());
+    /// assert_eq!(
+    ///     su3.d(),
+    ///     nalgebra::Complex::new(0_f64, 1_f64) * m.determinant()
+    /// );
     /// ```
     #[inline]
     pub fn d(&self) -> na::Complex<Real> {
         self.to_matrix().determinant() * I
     }
-    
+
     /// Return the number of data. This number is 8
     /// ```
     /// # extern crate nalgebra;
@@ -186,17 +173,17 @@ impl Su3Adjoint {
     pub fn len(&self) -> usize {
         self.data.len()
     }
-    
+
     /// Get an iterator over the ellements.
     pub fn iter(&self) -> impl Iterator<Item = &Real> {
         self.data.iter()
     }
-    
+
     /// Get an iterator over the mutable ref of ellements.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
         self.data.iter_mut()
     }
-    
+
     /// Get a mutlable reference over the data.
     pub fn data_mut(&mut self) -> &mut Vector8<Real> {
         &mut self.data
@@ -204,18 +191,18 @@ impl Su3Adjoint {
 }
 
 impl<'a> IntoIterator for &'a Su3Adjoint {
-    type Item = &'a Real;
     type IntoIter = <&'a Vector8<Real> as IntoIterator>::IntoIter;
-    
+    type Item = &'a Real;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
 }
 
 impl<'a> IntoIterator for &'a mut Su3Adjoint {
-    type Item = &'a mut Real;
     type IntoIter = <&'a mut Vector8<Real> as IntoIterator>::IntoIter;
-    
+    type Item = &'a mut Real;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter_mut()
     }
@@ -229,7 +216,8 @@ impl AddAssign for Su3Adjoint {
 
 impl Add<Su3Adjoint> for Su3Adjoint {
     type Output = Self;
-    fn add(mut self, rhs: Self) -> Self::Output{
+
+    fn add(mut self, rhs: Self) -> Self::Output {
         self += rhs;
         self
     }
@@ -237,21 +225,24 @@ impl Add<Su3Adjoint> for Su3Adjoint {
 
 impl Add<&Su3Adjoint> for Su3Adjoint {
     type Output = Self;
-    fn add(self, rhs: &Self) -> Self::Output{
+
+    fn add(self, rhs: &Self) -> Self::Output {
         self + *rhs
     }
 }
 
 impl Add<Su3Adjoint> for &Su3Adjoint {
     type Output = Su3Adjoint;
-    fn add(self, rhs: Su3Adjoint) -> Self::Output{
+
+    fn add(self, rhs: Su3Adjoint) -> Self::Output {
         rhs + self
     }
 }
 
 impl Add<&Su3Adjoint> for &Su3Adjoint {
     type Output = Su3Adjoint;
-    fn add(self, rhs: &Su3Adjoint) -> Self::Output{
+
+    fn add(self, rhs: &Su3Adjoint) -> Self::Output {
         self + *rhs
     }
 }
@@ -264,6 +255,7 @@ impl MulAssign<f64> for Su3Adjoint {
 
 impl Mul<Real> for Su3Adjoint {
     type Output = Self;
+
     fn mul(mut self, rhs: Real) -> Self::Output {
         self *= rhs;
         self
@@ -272,6 +264,7 @@ impl Mul<Real> for Su3Adjoint {
 
 impl Mul<&Real> for Su3Adjoint {
     type Output = Self;
+
     fn mul(self, rhs: &Real) -> Self::Output {
         self * (*rhs)
     }
@@ -279,6 +272,7 @@ impl Mul<&Real> for Su3Adjoint {
 
 impl Mul<Real> for &Su3Adjoint {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: Real) -> Self::Output {
         *self * rhs
     }
@@ -286,6 +280,7 @@ impl Mul<Real> for &Su3Adjoint {
 
 impl Mul<&Real> for &Su3Adjoint {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: &Real) -> Self::Output {
         *self * rhs
     }
@@ -293,6 +288,7 @@ impl Mul<&Real> for &Su3Adjoint {
 
 impl Mul<Su3Adjoint> for Real {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: Su3Adjoint) -> Self::Output {
         rhs * self
     }
@@ -300,6 +296,7 @@ impl Mul<Su3Adjoint> for Real {
 
 impl Mul<&Su3Adjoint> for Real {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: &Su3Adjoint) -> Self::Output {
         rhs * self
     }
@@ -307,6 +304,7 @@ impl Mul<&Su3Adjoint> for Real {
 
 impl Mul<Su3Adjoint> for &Real {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: Su3Adjoint) -> Self::Output {
         rhs * self
     }
@@ -314,6 +312,7 @@ impl Mul<Su3Adjoint> for &Real {
 
 impl Mul<&Su3Adjoint> for &Real {
     type Output = Su3Adjoint;
+
     fn mul(self, rhs: &Su3Adjoint) -> Self::Output {
         rhs * self
     }
@@ -333,6 +332,7 @@ impl DivAssign<&f64> for Su3Adjoint {
 
 impl Div<Real> for Su3Adjoint {
     type Output = Self;
+
     fn div(mut self, rhs: Real) -> Self::Output {
         self /= rhs;
         self
@@ -341,6 +341,7 @@ impl Div<Real> for Su3Adjoint {
 
 impl Div<&Real> for Su3Adjoint {
     type Output = Self;
+
     fn div(self, rhs: &Real) -> Self::Output {
         self / (*rhs)
     }
@@ -348,6 +349,7 @@ impl Div<&Real> for Su3Adjoint {
 
 impl Div<Real> for &Su3Adjoint {
     type Output = Su3Adjoint;
+
     fn div(self, rhs: Real) -> Self::Output {
         *self / rhs
     }
@@ -355,6 +357,7 @@ impl Div<Real> for &Su3Adjoint {
 
 impl Div<&Real> for &Su3Adjoint {
     type Output = Su3Adjoint;
+
     fn div(self, rhs: &Real) -> Self::Output {
         *self / rhs
     }
@@ -368,7 +371,8 @@ impl SubAssign for Su3Adjoint {
 
 impl Sub<Su3Adjoint> for Su3Adjoint {
     type Output = Self;
-    fn sub(mut self, rhs: Self) -> Self::Output{
+
+    fn sub(mut self, rhs: Self) -> Self::Output {
         self -= rhs;
         self
     }
@@ -376,36 +380,41 @@ impl Sub<Su3Adjoint> for Su3Adjoint {
 
 impl Sub<&Su3Adjoint> for Su3Adjoint {
     type Output = Self;
-    fn sub(self, rhs: &Self) -> Self::Output{
+
+    fn sub(self, rhs: &Self) -> Self::Output {
         self - *rhs
     }
 }
 
 impl Sub<Su3Adjoint> for &Su3Adjoint {
     type Output = Su3Adjoint;
-    fn sub(self, rhs: Su3Adjoint) -> Self::Output{
+
+    fn sub(self, rhs: Su3Adjoint) -> Self::Output {
         rhs - self
     }
 }
 
 impl Sub<&Su3Adjoint> for &Su3Adjoint {
     type Output = Su3Adjoint;
-    fn sub(self, rhs: &Su3Adjoint) -> Self::Output{
+
+    fn sub(self, rhs: &Su3Adjoint) -> Self::Output {
         *self - rhs
     }
 }
 
 impl Neg for Su3Adjoint {
     type Output = Self;
+
     fn neg(self) -> Self::Output {
-        Su3Adjoint::new(- self.data)
+        Su3Adjoint::new(-self.data)
     }
 }
 
 impl Neg for &Su3Adjoint {
     type Output = Su3Adjoint;
+
     fn neg(self) -> Self::Output {
-        Su3Adjoint::new(- self.data())
+        Su3Adjoint::new(-self.data())
     }
 }
 
@@ -415,16 +424,19 @@ impl Default for Su3Adjoint {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
-    /// assert_eq!(Su3Adjoint::default(), Su3Adjoint::new_from_array([0_f64; 8]));
+    /// assert_eq!(
+    ///     Su3Adjoint::default(),
+    ///     Su3Adjoint::new_from_array([0_f64; 8])
+    /// );
     /// ```
-    fn default() -> Self{
+    fn default() -> Self {
         Su3Adjoint::new(Vector8::from_element(0_f64))
     }
 }
 
 impl Index<usize> for Su3Adjoint {
     type Output = Real;
-    
+
     /// Get the element at position `pos`
     /// # Panic
     /// Panics if the position is out of bound (greater or equal to 8).
@@ -433,13 +445,12 @@ impl Index<usize> for Su3Adjoint {
     /// let su3 = Su3Adjoint::new_from_array([0_f64; 8]);
     /// let _ = su3[8];
     /// ```
-    fn index(&self, pos: usize) -> &Self::Output{
+    fn index(&self, pos: usize) -> &Self::Output {
         &self.data[pos]
     }
 }
 
 impl IndexMut<usize> for Su3Adjoint {
-    
     /// Get the element at position `pos`
     /// # Panic
     /// Panics if the position is out of bound (greater or equal to 8).
@@ -448,7 +459,7 @@ impl IndexMut<usize> for Su3Adjoint {
     /// let mut su3 = Su3Adjoint::new_from_array([0_f64; 8]);
     /// su3[8] += 1_f64;
     /// ```
-    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
     }
 }
@@ -485,17 +496,16 @@ pub struct LinkMatrix {
 }
 
 impl LinkMatrix {
-    
     /// Creat a new link matrix field
-    pub const fn new (data: Vec<Matrix3<na::Complex<Real>>>) -> Self{
-        Self {data}
+    pub const fn new(data: Vec<Matrix3<na::Complex<Real>>>) -> Self {
+        Self { data }
     }
-    
+
     /// Get the raw data.
     pub const fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         &self.data
     }
-    
+
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`].
     /// # Example
@@ -503,7 +513,7 @@ impl LinkMatrix {
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
-    /// use rand::{SeedableRng,rngs::StdRng};
+    /// use rand::{rngs::StdRng, SeedableRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
@@ -526,10 +536,9 @@ impl LinkMatrix {
             let matrix = su3::get_random_su3(rng);
             data.push(matrix);
         }
-        Self {data}
+        Self { data }
     }
-    
-    
+
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
     ///
@@ -556,17 +565,23 @@ impl LinkMatrix {
             l,
             &CMatrix3::zeros(),
         )?;
-        Ok(Self {data})
+        Ok(Self { data })
     }
-    
+
     /// Create a cold configuration ( where the link matrices is set to 1).
     pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
-        Self {data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()]}
+        Self {
+            data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()],
+        }
     }
-    
+
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
-    pub fn get_matrix<const D: usize>(&self, link: &LatticeLink<D>, l: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_matrix<const D: usize>(
+        &self,
+        link: &LatticeLink<D>,
+        l: &LatticeCyclique<D>,
+    ) -> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.get_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))?;
         if link.is_dir_negative() {
@@ -577,104 +592,172 @@ impl LinkMatrix {
             Some(*matrix)
         }
     }
-    
+
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
-    pub fn get_sij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_sij<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        dir_i: &Direction<D>,
+        dir_j: &Direction<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<Matrix3<na::Complex<Real>>> {
         let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
         let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
         let point_pi = lattice.add_point_direction(*point, dir_i);
-        let u_j_pi_d = self.get_matrix(&LatticeLink::new(point_pi, *dir_j), lattice)?.adjoint();
+        let u_j_pi_d = self
+            .get_matrix(&LatticeLink::new(point_pi, *dir_j), lattice)?
+            .adjoint();
         Some(u_j * u_i_p_j * u_j_pi_d)
     }
-    
+
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
-    pub fn get_pij<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_pij<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        dir_i: &Direction<D>,
+        dir_j: &Direction<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<Matrix3<na::Complex<Real>>> {
         let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
     }
-    
+
     /// Take the average of the trace of all plaquettes
     #[allow(clippy::as_conversions)] // no try into for f64
-    pub fn average_trace_plaquette<const D: usize>(&self, lattice: &LatticeCyclique<D>) -> Option<na::Complex<Real>> {
+    pub fn average_trace_plaquette<const D: usize>(
+        &self,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<na::Complex<Real>> {
         if lattice.get_number_of_canonical_links_space() != self.len() {
             return None;
         }
         // the order does not matter as we sum
-        let sum = lattice.get_points().par_bridge().map(|point| {
-            Direction::positive_directions().iter().map( |dir_i|{
-                Direction::positive_directions().iter().filter(|dir_j| dir_i.to_index() < dir_j.to_index())
-                    .map(|dir_j|{
-                        self.get_pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
-                    }).sum::<Option<na::Complex<Real>>>()
-            }).sum::<Option<na::Complex<Real>>>()
-        }).sum::<Option<na::Complex<Real>>>()?;
+        let sum = lattice
+            .get_points()
+            .par_bridge()
+            .map(|point| {
+                Direction::positive_directions()
+                    .iter()
+                    .map(|dir_i| {
+                        Direction::positive_directions()
+                            .iter()
+                            .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                            .map(|dir_j| {
+                                self.get_pij(&point, dir_i, dir_j, lattice)
+                                    .map(|el| el.trace())
+                            })
+                            .sum::<Option<na::Complex<Real>>>()
+                    })
+                    .sum::<Option<na::Complex<Real>>>()
+            })
+            .sum::<Option<na::Complex<Real>>>()?;
         let number_of_directions = (D * (D - 1)) / 2;
         let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
     }
-    
+
     /// Get the clover, used for F_mu_nu tensor
-    pub fn get_clover<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
-        Some(self.get_pij(point, dir_i, dir_j, lattice)? + self.get_pij(point, dir_j, &-dir_i, lattice)? + self.get_pij(point, &-dir_i, &-dir_j, lattice)? + self.get_pij(point, &-dir_j, dir_i, lattice)?)
+    pub fn get_clover<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        dir_i: &Direction<D>,
+        dir_j: &Direction<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<CMatrix3> {
+        Some(
+            self.get_pij(point, dir_i, dir_j, lattice)?
+                + self.get_pij(point, dir_j, &-dir_i, lattice)?
+                + self.get_pij(point, &-dir_i, &-dir_j, lattice)?
+                + self.get_pij(point, &-dir_j, dir_i, lattice)?,
+        )
     }
-    
+
     /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
     /// See arXive:1512.02374.
-    pub fn get_f_mu_nu<const D: usize>(&self, point: &LatticePoint<D>, dir_i: &Direction<D>, dir_j: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
-        let m = self.get_clover(point, dir_i, dir_j, lattice)? - self.get_clover(point, dir_j, dir_i, lattice)?;
+    pub fn get_f_mu_nu<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        dir_i: &Direction<D>,
+        dir_j: &Direction<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<CMatrix3> {
+        let m = self.get_clover(point, dir_i, dir_j, lattice)?
+            - self.get_clover(point, dir_j, dir_i, lattice)?;
         Some(m / Complex::from(8_f64 * lattice.size() * lattice.size()))
     }
-    
+
     /// Get the chromomagentic field at a given point
-    pub fn get_magnetic_field_vec<const D: usize>(&self, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<SVector<CMatrix3, D>> {
+    pub fn get_magnetic_field_vec<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
         for dir in &Direction::<D>::positive_directions() {
             vec[dir.to_index()] = self.get_magnetic_field(point, dir, lattice)?;
         }
         Some(vec)
     }
-    
+
     /// Get the chromomagentic field at a given point alongisde a given direction
-    pub fn get_magnetic_field<const D: usize>(&self, point: &LatticePoint<D>, dir: &Direction<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
-        let sum = Direction::<D>::positive_directions().iter().map(|dir_i| {
-            Direction::<D>::positive_directions().iter().map(|dir_j| {
-                let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
-                let lc = Complex::from(levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()]).to_f64());
-                Some(f_mn * lc)
-            }).sum::<Option<CMatrix3>>()
-        }).sum::<Option<CMatrix3>>()?;
+    pub fn get_magnetic_field<const D: usize>(
+        &self,
+        point: &LatticePoint<D>,
+        dir: &Direction<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<CMatrix3> {
+        let sum = Direction::<D>::positive_directions()
+            .iter()
+            .map(|dir_i| {
+                Direction::<D>::positive_directions()
+                    .iter()
+                    .map(|dir_j| {
+                        let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
+                        let lc = Complex::from(
+                            levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()])
+                                .to_f64(),
+                        );
+                        Some(f_mn * lc)
+                    })
+                    .sum::<Option<CMatrix3>>()
+            })
+            .sum::<Option<CMatrix3>>()?;
         Some(sum / Complex::new(0_f64, 2_f64))
     }
-    
+
     /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
-    pub fn get_magnetic_field_link<const D: usize>(&self, link: &LatticeLink<D>, lattice: &LatticeCyclique<D>) -> Option<Matrix3<na::Complex<Real>>> {
+    pub fn get_magnetic_field_link<const D: usize>(
+        &self,
+        link: &LatticeLink<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<Matrix3<na::Complex<Real>>> {
         self.get_magnetic_field(link.pos(), link.dir(), lattice)
     }
-    
+
     /// Return the number of elements.
     pub fn len(&self) -> usize {
         self.data.len()
     }
-    
+
     /// Returns wether the there is no data.
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
-    
+
     /// Correct the numerical drift, reprojecting all the matrices to SU(3).
     pub fn normalize(&mut self) {
         self.data.par_iter_mut().for_each(|el| {
             su3::orthonormalize_matrix_mut(el);
         });
     }
-    
+
     /// Iter on the data
     pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
         self.data.iter()
     }
-    
+
     /// Iter mutably on the data
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
         self.data.iter_mut()
@@ -682,18 +765,18 @@ impl LinkMatrix {
 }
 
 impl<'a> IntoIterator for &'a LinkMatrix {
-    type Item = &'a CMatrix3;
     type IntoIter = <&'a Vec<CMatrix3> as IntoIterator>::IntoIter;
-    
+    type Item = &'a CMatrix3;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
 }
 
 impl<'a> IntoIterator for &'a mut LinkMatrix {
-    type Item = &'a mut CMatrix3;
     type IntoIter = <&'a mut Vec<CMatrix3> as IntoIterator>::IntoIter;
-    
+    type Item = &'a mut CMatrix3;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter_mut()
     }
@@ -701,13 +784,14 @@ impl<'a> IntoIterator for &'a mut LinkMatrix {
 
 impl Index<usize> for LinkMatrix {
     type Output = CMatrix3;
-    fn index(&self, pos: usize) -> &Self::Output{
+
+    fn index(&self, pos: usize) -> &Self::Output {
         &self.data[pos]
     }
 }
 
 impl IndexMut<usize> for LinkMatrix {
-    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
     }
 }
@@ -720,22 +804,21 @@ pub struct EField<const D: usize> {
 }
 
 impl<const D: usize> EField<D> {
-    
     /// Create a new "Electrical" field.
-    pub fn new (data: Vec<SVector<Su3Adjoint, D>>) -> Self {
-        Self {data}
+    pub fn new(data: Vec<SVector<Su3Adjoint, D>>) -> Self {
+        Self { data }
     }
-    
+
     /// Get the raw data.
     pub const fn data(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         &self.data
     }
-    
+
     /// Return the number of elements.
     pub fn len(&self) -> usize {
         self.data.len()
     }
-    
+
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data.
     /// # Example
@@ -743,12 +826,12 @@ impl<const D: usize> EField<D> {
     /// extern crate rand;
     /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
-    /// use rand::{SeedableRng,rngs::StdRng};
+    /// use rand::{rngs::StdRng, SeedableRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let distribution = rand::distributions::Uniform::from(- 1_f64..1_f64);
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
     /// assert_eq!(
     ///     EField::new_deterministe(&lattice, &mut rng_1, &distribution),
@@ -763,82 +846,122 @@ impl<const D: usize> EField<D> {
         let mut data = Vec::with_capacity(l.get_number_of_points());
         for _ in l.get_points() {
             // iterator *should* be ordoned
-            data.push(SVector::<Su3Adjoint, D>::from_fn(|_, _| Su3Adjoint::random(rng, d)));
+            data.push(SVector::<Su3Adjoint, D>::from_fn(|_, _| {
+                Su3Adjoint::random(rng, d)
+            }));
         }
-        Self {data}
+        Self { data }
     }
-    
+
     /// Single thread generation by seeding a new rng number.
     /// To create a seedable and reproducible set use [`EField::new_deterministe`]..
-    pub fn new_random(
-        l: &LatticeCyclique<D>,
-        d: &impl rand_distr::Distribution<Real>,
-    ) -> Self {
+    pub fn new_random(l: &LatticeCyclique<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
         let mut rng = rand::thread_rng();
         EField::new_deterministe(l, &mut rng, d)
     }
-    
+
     /// Create a new cold configuration for the electriccal field, i.e. all E ar set to 0.
     pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
-        Self {data: vec![SVector::<Su3Adjoint, D>::from_element(p1); l.get_number_of_points()]}
+        Self {
+            data: vec![SVector::<Su3Adjoint, D>::from_element(p1); l.get_number_of_points()],
+        }
     }
-    
+
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
-    pub fn get_e_vec(&self, point: &LatticePoint<D>, l: &LatticeCyclique<D>) -> Option<&SVector<Su3Adjoint, D>> {
+    pub fn get_e_vec(
+        &self,
+        point: &LatticePoint<D>,
+        l: &LatticeCyclique<D>,
+    ) -> Option<&SVector<Su3Adjoint, D>> {
         self.data.get(point.to_index(l))
     }
-    
+
     /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e.
     /// `E_{-dir}(point) = E_{dir}(point)`.
-    pub fn get_e_field(&self, point: &LatticePoint<D>, dir: &Direction<D>, l: &LatticeCyclique<D>) -> Option<&Su3Adjoint> {
+    pub fn get_e_field(
+        &self,
+        point: &LatticePoint<D>,
+        dir: &Direction<D>,
+        l: &LatticeCyclique<D>,
+    ) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
             Some(vec) => vec.get(dir.to_index()),
             None => None,
         }
     }
-    
+
     /// Returns wether there is no data
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
-    
+
     /// Return the Gauss parameter `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     #[inline]
-    pub fn get_gauss(&self, link_matrix: &LinkMatrix, point: &LatticePoint<D>, lattice: &LatticeCyclique<D>) -> Option<CMatrix3> {
-        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+    pub fn get_gauss(
+        &self,
+        link_matrix: &LinkMatrix,
+        point: &LatticePoint<D>,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<CMatrix3> {
+        if lattice.get_number_of_points() != self.len()
+            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        {
             return None;
         }
-        Direction::positive_directions().iter().map(|dir| {
-            let e_i = self.get_e_field(point, dir, lattice)?;
-            let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, - *dir), lattice)?;
-            let p_mi = lattice.add_point_direction(*point, &- dir);
-            let e_m_i = self.get_e_field(&p_mi, dir, lattice)?;
-            Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
-        }).sum::<Option<CMatrix3>>()
+        Direction::positive_directions()
+            .iter()
+            .map(|dir| {
+                let e_i = self.get_e_field(point, dir, lattice)?;
+                let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, -*dir), lattice)?;
+                let p_mi = lattice.add_point_direction(*point, &-dir);
+                let e_m_i = self.get_e_field(&p_mi, dir, lattice)?;
+                Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
+            })
+            .sum::<Option<CMatrix3>>()
     }
-    
+
     /// Get the deviation from the Gauss law
     #[inline]
-    pub fn get_gauss_sum_div(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Real> {
-        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+    pub fn get_gauss_sum_div(
+        &self,
+        link_matrix: &LinkMatrix,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<Real> {
+        if lattice.get_number_of_points() != self.len()
+            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        {
             return None;
         }
-        lattice.get_points().par_bridge().map(|point| {
-            self.get_gauss(link_matrix, &point, lattice).map(|el| (su3::GENERATORS.iter().copied().sum::<CMatrix3>() * el).trace().abs())
-        }).sum::<Option<Real>>()
+        lattice
+            .get_points()
+            .par_bridge()
+            .map(|point| {
+                self.get_gauss(link_matrix, &point, lattice).map(|el| {
+                    (su3::GENERATORS.iter().copied().sum::<CMatrix3>() * el)
+                        .trace()
+                        .abs()
+                })
+            })
+            .sum::<Option<Real>>()
     }
-    
+
     /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
     #[allow(clippy::as_conversions)] // no try into for f64
     #[inline]
-    pub fn project_to_gauss(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Option<Self> {
+    pub fn project_to_gauss(
+        &self,
+        link_matrix: &LinkMatrix,
+        lattice: &LatticeCyclique<D>,
+    ) -> Option<Self> {
         // TODO improve
-        
+
         const NUMBER_FOR_LOOP: usize = 4;
-        
-        if lattice.get_number_of_points() != self.len() || lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+
+        if lattice.get_number_of_points() != self.len()
+            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        {
             return None;
         }
         let mut return_val = self.project_to_gauss_step(link_matrix, lattice);
@@ -858,44 +981,67 @@ impl<const D: usize> EField<D> {
         }
         Some(return_val)
     }
-    
+
     /// Done one step to project to gauss law
     /// # Panic
     /// panics if the link matric and lattice is not of the correct size.
     #[inline]
-    fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclique<D>) -> Self {
+    fn project_to_gauss_step(
+        &self,
+        link_matrix: &LinkMatrix,
+        lattice: &LatticeCyclique<D>,
+    ) -> Self {
         /// see https://arxiv.org/pdf/1512.02374.pdf
         // TODO verify
         const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
-        let data = lattice.get_points().collect::<Vec<LatticePoint<D>>>().par_iter().map(|point| {
-            let e = self.get_e_vec(&point, lattice).unwrap();
-            SVector::<_, D>::from_fn(|index_dir, _| {
-                let dir = Direction::<D>::positive_directions()[index_dir];
-                let u = link_matrix.get_matrix(&LatticeLink::new(*point, dir), lattice).unwrap();
-                let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
-                let gauss_p = self.get_gauss(link_matrix, &lattice.add_point_direction(*point, &dir), lattice).unwrap();
-                Su3Adjoint::new(Vector8::from_fn( |index, _| {
-                    2_f64 * ( su3::GENERATORS[index] * (( u * gauss * u.adjoint() * gauss_p - gauss) * K + su3::GENERATORS[index] * na::Complex::from(e[dir.to_index()][index]) )).trace().real()
-                }))
+        let data = lattice
+            .get_points()
+            .collect::<Vec<LatticePoint<D>>>()
+            .par_iter()
+            .map(|point| {
+                let e = self.get_e_vec(&point, lattice).unwrap();
+                SVector::<_, D>::from_fn(|index_dir, _| {
+                    let dir = Direction::<D>::positive_directions()[index_dir];
+                    let u = link_matrix
+                        .get_matrix(&LatticeLink::new(*point, dir), lattice)
+                        .unwrap();
+                    let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
+                    let gauss_p = self
+                        .get_gauss(
+                            link_matrix,
+                            &lattice.add_point_direction(*point, &dir),
+                            lattice,
+                        )
+                        .unwrap();
+                    Su3Adjoint::new(Vector8::from_fn(|index, _| {
+                        2_f64
+                            * (su3::GENERATORS[index]
+                                * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
+                                    + su3::GENERATORS[index]
+                                        * na::Complex::from(e[dir.to_index()][index])))
+                            .trace()
+                            .real()
+                    }))
+                })
             })
-        }).collect();
+            .collect();
         Self::new(data)
     }
 }
 
 impl<'a, const D: usize> IntoIterator for &'a EField<D> {
-    type Item = &'a SVector<Su3Adjoint, D>;
     type IntoIter = <&'a Vec<SVector<Su3Adjoint, D>> as IntoIterator>::IntoIter;
-    
+    type Item = &'a SVector<Su3Adjoint, D>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
 }
 
 impl<'a, const D: usize> IntoIterator for &'a mut EField<D> {
-    type Item = &'a mut SVector<Su3Adjoint, D>;
     type IntoIter = <&'a mut Vec<SVector<Su3Adjoint, D>> as IntoIterator>::IntoIter;
-    
+    type Item = &'a mut SVector<Su3Adjoint, D>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter_mut()
     }
@@ -903,56 +1049,75 @@ impl<'a, const D: usize> IntoIterator for &'a mut EField<D> {
 
 impl<const D: usize> Index<usize> for EField<D> {
     type Output = SVector<Su3Adjoint, D>;
-    fn index(&self, pos: usize) -> &Self::Output{
+
+    fn index(&self, pos: usize) -> &Self::Output {
         &self.data[pos]
     }
 }
 
 impl<const D: usize> IndexMut<usize> for EField<D> {
-    fn index_mut(&mut self, pos: usize) -> &mut Self::Output{
+    fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
     }
 }
 
 #[cfg(test)]
-mod test{
-    use super::*;
-    use rand::SeedableRng;
+mod test {
     use approx::*;
-    use super::super::{
-        Complex,
-        lattice::*,
-    };
-    
-    
+    use rand::SeedableRng;
+
+    use super::super::{lattice::*, Complex};
+    use super::*;
+
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
-    
+
     #[test]
     fn test_get_e_field_pos_neg() {
         use super::super::lattice;
-        
+
         let l = LatticeCyclique::new(1_f64, 4).unwrap();
-        let e = EField::new(vec![SVector::<_, 4>::from([Su3Adjoint::from([1_f64; 8]), Su3Adjoint::from([2_f64; 8]), Su3Adjoint::from([3_f64; 8]), Su3Adjoint::from([2_f64; 8]) ]) ]);
+        let e = EField::new(vec![SVector::<_, 4>::from([
+            Su3Adjoint::from([1_f64; 8]),
+            Su3Adjoint::from([2_f64; 8]),
+            Su3Adjoint::from([3_f64; 8]),
+            Su3Adjoint::from([2_f64; 8]),
+        ])]);
         assert_eq!(
-            e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XPos.into(), &l),
-            e.get_e_field(&LatticePoint::new([0, 0, 0, 0].into()), &lattice::DirectionEnum::XNeg.into(), &l)
+            e.get_e_field(
+                &LatticePoint::new([0, 0, 0, 0].into()),
+                &lattice::DirectionEnum::XPos.into(),
+                &l
+            ),
+            e.get_e_field(
+                &LatticePoint::new([0, 0, 0, 0].into()),
+                &lattice::DirectionEnum::XNeg.into(),
+                &l
+            )
         );
     }
-    
+
     #[test]
-    fn test_su3_adj(){
+    fn test_su3_adj() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
         for _ in 0..100 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
-            assert_abs_diff_eq!(v.trace_squared(), (m * m).trace().modulus(), epsilon=EPSILON);
-            assert_eq_complex!(v.d(), nalgebra::Complex::new(0_f64, 1_f64) * m.determinant(), EPSILON);
+            assert_abs_diff_eq!(
+                v.trace_squared(),
+                (m * m).trace().modulus(),
+                epsilon = EPSILON
+            );
+            assert_eq_complex!(
+                v.d(),
+                nalgebra::Complex::new(0_f64, 1_f64) * m.determinant(),
+                EPSILON
+            );
             assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
         }
     }
-    
+
     #[test]
     fn mangetic_field() {
         let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
@@ -961,37 +1126,91 @@ mod test{
         let dir_x = Direction::new(0, true).unwrap();
         let dir_y = Direction::new(1, true).unwrap();
         let dir_z = Direction::new(2, true).unwrap();
-        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
+        let clover = link_matrix
+            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
         assert_eq_matrix!(CMatrix3::identity() * Complex::from(4_f64), clover, EPSILON);
-        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
+        let f = link_matrix
+            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), f, EPSILON);
-        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        let b = link_matrix
+            .get_magnetic_field(&point, &dir_x, &lattice)
+            .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
         // ---
         link_matrix[0] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
-        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(2_f64, 0_f64), clover, EPSILON);
-        let clover = link_matrix.get_clover(&point, &dir_y, &dir_x, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(2_f64, 0_f64), clover, EPSILON);
-        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(0_f64, 0_f64), f, EPSILON);
-        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        let clover = link_matrix
+            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(2_f64, 0_f64),
+            clover,
+            EPSILON
+        );
+        let clover = link_matrix
+            .get_clover(&point, &dir_y, &dir_x, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(2_f64, 0_f64),
+            clover,
+            EPSILON
+        );
+        let f = link_matrix
+            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(0_f64, 0_f64),
+            f,
+            EPSILON
+        );
+        let b = link_matrix
+            .get_magnetic_field(&point, &dir_x, &lattice)
+            .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
         //--
         let mut link_matrix = LinkMatrix::new_cold(&lattice);
-        let link = LatticeLinkCanonical::new([1, 0 , 0].into(), dir_y).unwrap();
+        let link = LatticeLinkCanonical::new([1, 0, 0].into(), dir_y).unwrap();
         link_matrix[link.to_index(&lattice)] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
-        let clover = link_matrix.get_clover(&point, &dir_x, &dir_y, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(3_f64, 1_f64), clover, EPSILON);
-        let clover = link_matrix.get_clover(&point, &dir_y, &dir_x, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(3_f64, -1_f64), clover, EPSILON);
-        let f = link_matrix.get_f_mu_nu(&point, &dir_x, &dir_y, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new(0_f64, 0.25_f64), f, EPSILON);
-        let b = link_matrix.get_magnetic_field(&point, &dir_x, &lattice).unwrap();
+        let clover = link_matrix
+            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(3_f64, 1_f64),
+            clover,
+            EPSILON
+        );
+        let clover = link_matrix
+            .get_clover(&point, &dir_y, &dir_x, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(3_f64, -1_f64),
+            clover,
+            EPSILON
+        );
+        let f = link_matrix
+            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(0_f64, 0.25_f64),
+            f,
+            EPSILON
+        );
+        let b = link_matrix
+            .get_magnetic_field(&point, &dir_x, &lattice)
+            .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
-        let b = link_matrix.get_magnetic_field(&point, &dir_z, &lattice).unwrap();
-        assert_eq_matrix!(CMatrix3::identity() * Complex::new( 0.25_f64, 0_f64), b, EPSILON);
-        let b_2 = link_matrix.get_magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice).unwrap();
+        let b = link_matrix
+            .get_magnetic_field(&point, &dir_z, &lattice)
+            .unwrap();
+        assert_eq_matrix!(
+            CMatrix3::identity() * Complex::new(0.25_f64, 0_f64),
+            b,
+            EPSILON
+        );
+        let b_2 = link_matrix
+            .get_magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice)
+            .unwrap();
         assert_eq_matrix!(b, b_2, EPSILON);
     }
 }

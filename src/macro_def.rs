@@ -88,8 +88,6 @@ macro_rules! getter {
     }
 }
 
-
-
 /// Getter in a trait (without the pub )
 macro_rules! getter_trait {
     ($(#[$meta:meta])* $i:ident, $t:ty) => {
@@ -178,7 +176,6 @@ macro_rules! project_mut {
     };
 }
 
-
 #[macro_export]
 /// assert if two matrices are approximatively the same
 macro_rules! assert_eq_matrix {
@@ -207,51 +204,77 @@ macro_rules! assert_eq_complex {
     };
 }
 
-
 #[macro_export]
 /// assert if the matrix is U(2) ( unitary 2 x 2)
 macro_rules! assert_matrix_is_unitary_2 {
-    ($m:expr, $epsilon:expr) => {
-        {
-            use nalgebra::ComplexField;
-        assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {:?} is not of norm 1", $m.determinant().modulus(), $m);
-        assert!(($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon, "The matrix is not unitary");
-        }
-    }
+    ($m:expr, $epsilon:expr) => {{
+        use nalgebra::ComplexField;
+        assert!(
+            ($m.determinant().modulus() - 1_f64).abs() < $epsilon,
+            "determinant {} of {:?} is not of norm 1",
+            $m.determinant().modulus(),
+            $m
+        );
+        assert!(
+            ($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
+            "The matrix is not unitary"
+        );
+    }};
 }
 
 #[macro_export]
 /// assert if the matrix is U(3) (unitary 3 x 3)
 macro_rules! assert_matrix_is_unitary_3 {
-    ($m:expr, $epsilon:expr) => {
-        {
-            use nalgebra::ComplexField;
-            assert!(($m.determinant().modulus() - 1_f64).abs() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
-            assert!(($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon, "The matrix {} is not unitary", $m);
-        }
-    }
+    ($m:expr, $epsilon:expr) => {{
+        use nalgebra::ComplexField;
+        assert!(
+            ($m.determinant().modulus() - 1_f64).abs() < $epsilon,
+            "determinant {} of {} is not of norm 1",
+            $m.determinant().modulus(),
+            $m
+        );
+        assert!(
+            ($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
+            "The matrix {} is not unitary",
+            $m
+        );
+    }};
 }
 
 #[macro_export]
 /// assert if the matrix is SU(2) (special unitary)
 macro_rules! assert_matrix_is_su_2 {
-    ($m:expr, $epsilon:expr) => {
-        {
-            use nalgebra::ComplexField;
-            assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
-            assert!(($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon, "The matrix {} is not unitary", $m);
-        }
-    }
+    ($m:expr, $epsilon:expr) => {{
+        use nalgebra::ComplexField;
+        assert!(
+            ($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
+            "determinant {} of {} is not of norm 1",
+            $m.determinant().modulus(),
+            $m
+        );
+        assert!(
+            ($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
+            "The matrix {} is not unitary",
+            $m
+        );
+    }};
 }
 
 #[macro_export]
 /// assert if the matrix is SU(3) (special unitary)
 macro_rules! assert_matrix_is_su_3 {
-    ($m:expr, $epsilon:expr) => {
-        {
-            use nalgebra::ComplexField;
-            assert!(($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon, "determinant {} of {} is not of norm 1", $m.determinant().modulus(), $m);
-            assert!(($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon, "The matrix is not unitary {}", $m);
-        }
-    }
+    ($m:expr, $epsilon:expr) => {{
+        use nalgebra::ComplexField;
+        assert!(
+            ($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
+            "determinant {} of {} is not of norm 1",
+            $m.determinant().modulus(),
+            $m
+        );
+        assert!(
+            ($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
+            "The matrix is not unitary {}",
+            $m
+        );
+    }};
 }

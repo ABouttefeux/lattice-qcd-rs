@@ -1,30 +1,18 @@
-
 //! Overrelaxation methode
 //!
 //! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
 //! You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 
-use super::{
-    MonteCarlo,
-    get_staple,
-    super::{
-        super::{
-            Complex,
-            su3,
-            lattice::{
-                LatticeLinkCanonical,
-            },
-            error::Never,
-        },
-        state::{
-            LatticeState,
-            LatticeStateDefault,
-        },
-    },
-};
-
 #[cfg(feature = "serde-serialize")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+
+use super::{
+    super::{
+        super::{error::Never, lattice::LatticeLinkCanonical, su3, Complex},
+        state::{LatticeState, LatticeStateDefault},
+    },
+    get_staple, MonteCarlo,
+};
 
 /// Pseudo heat bath algorithm using rotation methode.
 ///
@@ -38,23 +26,30 @@ use serde::{Serialize, Deserialize};
 pub struct OverrelaxationSweepRotation;
 
 impl OverrelaxationSweepRotation {
-    
     /// Create a new Self with an given RNG
     pub const fn new() -> Self {
         Self {}
     }
-    
+
     #[inline]
-    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
-        let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
+    fn get_modif<const D: usize>(
+        state: &LatticeStateDefault<D>,
+        link: &LatticeLinkCanonical<D>,
+    ) -> na::Matrix3<Complex> {
+        let link_matrix = state
+            .link_matrix()
+            .get_matrix(&link.into(), state.lattice())
+            .unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
         let rot = svd.u.unwrap() * svd.v_t.unwrap();
         rot * link_matrix.adjoint() * rot
     }
-    
+
     #[inline]
-    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
+    fn get_next_element_default<const D: usize>(
+        mut state: LatticeStateDefault<D>,
+    ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
@@ -72,8 +67,12 @@ impl Default for OverrelaxationSweepRotation {
 
 impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepRotation {
     type Error = Never;
+
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
+    fn get_next_element(
+        &mut self,
+        state: LatticeStateDefault<D>,
+    ) -> Result<LatticeStateDefault<D>, Self::Error> {
         Ok(Self::get_next_element_default(state))
     }
 }
@@ -90,22 +89,31 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
 pub struct OverrelaxationSweepReverse;
 
 impl OverrelaxationSweepReverse {
-    
     /// Create a new Self with an given RNG
     pub const fn new() -> Self {
         Self {}
     }
-    
+
     #[inline]
-    fn get_modif<const D: usize>(state: &LatticeStateDefault<D>, link: &LatticeLinkCanonical<D>) -> na::Matrix3<Complex> {
-        let link_matrix = state.link_matrix().get_matrix(&link.into(), state.lattice()).unwrap();
+    fn get_modif<const D: usize>(
+        state: &LatticeStateDefault<D>,
+        link: &LatticeLinkCanonical<D>,
+    ) -> na::Matrix3<Complex> {
+        let link_matrix = state
+            .link_matrix()
+            .get_matrix(&link.into(), state.lattice())
+            .unwrap();
         let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
-        svd.u.unwrap() * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint()) * svd.v_t.unwrap()
+        svd.u.unwrap()
+            * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint())
+            * svd.v_t.unwrap()
     }
-    
+
     #[inline]
-    fn get_next_element_default<const D: usize>(mut state: LatticeStateDefault<D>) -> LatticeStateDefault<D> {
+    fn get_next_element_default<const D: usize>(
+        mut state: LatticeStateDefault<D>,
+    ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
@@ -123,26 +131,29 @@ impl Default for OverrelaxationSweepReverse {
 
 impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse {
     type Error = Never;
-    
+
     #[inline]
-    fn get_next_element(&mut self, state: LatticeStateDefault<D>) -> Result<LatticeStateDefault<D>, Self::Error>{
+    fn get_next_element(
+        &mut self,
+        state: LatticeStateDefault<D>,
+    ) -> Result<LatticeStateDefault<D>, Self::Error> {
         Ok(Self::get_next_element_default(state))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use super::super::MonteCarlo;
-    use super::super::super::{
-        state::{LatticeState, LatticeStateDefault},
-    };
     use rand::SeedableRng;
-    
+
+    use super::super::super::state::{LatticeState, LatticeStateDefault};
+    use super::super::MonteCarlo;
+    use super::*;
+
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
-    
+
     fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng)
-        where MC: MonteCarlo<LatticeStateDefault<3>, 3>,
+    where
+        MC: MonteCarlo<LatticeStateDefault<3>, 3>,
         MC::Error: core::fmt::Debug,
     {
         let state = LatticeStateDefault::<3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
@@ -154,7 +165,7 @@ mod test {
         // TODO use crate approx ?
         assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
     }
-    
+
     /// Here we test that OverrelaxationSweepReverse conserve the energy.
     #[test]
     fn same_energy_reverse() {
@@ -163,9 +174,8 @@ mod test {
         for _ in 0..10 {
             test_same_energy(&mut overrelax, &mut rng);
         }
-        
     }
-    
+
     /// Here we test that OverrelaxationSweepRotation conserve the energy.
     #[test]
     fn same_energy_rotation() {
