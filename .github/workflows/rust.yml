@@ -12,8 +12,10 @@ env:
 jobs:
   build:
     
-    runs-on: ubuntu-latest
-    
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -21,7 +23,7 @@ jobs:
     - name: Install Rust stable toolchain
       uses: actions-rs/toolchain@v1
       with:
-       toolchain: stable
+        toolchain: stable
     
     - name: Build with serd
       run: cargo build --all --verbose --features serde-serialize
