@@ -115,7 +115,7 @@ impl LatticeConfigScan {
     }
 
     pub fn is_valide_length(&self) -> bool {
-        let len = self.get_len_array();
+        let len = self.len_array();
         let iter = len.iter().filter_map(|el| *el);
         iter.clone().max() == iter.min()
     }
@@ -138,7 +138,7 @@ impl LatticeConfigScan {
         self.is_valide_length() && self.is_data_valide()
     }
 
-    fn get_len_array(&self) -> [Option<usize>; 3] {
+    fn len_array(&self) -> [Option<usize>; 3] {
         [
             self.lattice_beta.len_option(),
             self.lattice_number_of_points.len_option(),
@@ -147,7 +147,7 @@ impl LatticeConfigScan {
     }
 
     pub fn len_option(&self) -> Option<usize> {
-        let len = self.get_len_array();
+        let len = self.len_array();
         for i in len.iter() {
             if i.is_some() {
                 return *i;
@@ -236,7 +236,7 @@ impl SimConfigScan {
     }
 
     pub fn is_valide_length(&self) -> bool {
-        let len = self.get_len_array();
+        let len = self.len_array();
         let iter = len.iter().filter_map(|el| *el);
         self.mc_config.is_valide_length() && iter.clone().max() == iter.min()
     }
@@ -271,7 +271,7 @@ impl SimConfigScan {
         self.is_valide_length() && self.is_data_valide()
     }
 
-    fn get_len_array(&self) -> [Option<usize>; 5] {
+    fn len_array(&self) -> [Option<usize>; 5] {
         [
             self.number_of_thermalisation.len_option(),
             self.number_between_renorm.len_option(),
@@ -282,7 +282,7 @@ impl SimConfigScan {
     }
 
     pub fn len_option(&self) -> Option<usize> {
-        let len = self.get_len_array();
+        let len = self.len_array();
         for i in len.iter() {
             if i.is_some() {
                 return *i;
@@ -333,12 +333,12 @@ impl MonteCarloConfigScan {
         &self.spread
     }
 
-    fn get_len_array(&self) -> [Option<usize>; 2] {
+    fn len_array(&self) -> [Option<usize>; 2] {
         [self.number_of_rand.len_option(), self.spread.len_option()]
     }
 
     pub fn len_option(&self) -> Option<usize> {
-        let len = self.get_len_array();
+        let len = self.len_array();
         for i in len.iter() {
             if i.is_some() {
                 return *i;
@@ -348,7 +348,7 @@ impl MonteCarloConfigScan {
     }
 
     pub fn is_valide_length(&self) -> bool {
-        let len = self.get_len_array();
+        let len = self.len_array();
         let iter = len.iter().filter_map(|el| *el);
         iter.clone().max() == iter.min()
     }
@@ -405,7 +405,7 @@ impl ConfigScan {
         &self.sim_config
     }
 
-    fn get_len_array(&self) -> [Option<usize>; 2] {
+    fn len_array(&self) -> [Option<usize>; 2] {
         [
             self.lattice_config.len_option(),
             self.sim_config.len_option(),
@@ -413,7 +413,7 @@ impl ConfigScan {
     }
 
     pub fn len_option(&self) -> Option<usize> {
-        let len = self.get_len_array();
+        let len = self.len_array();
         for i in len.iter() {
             if i.is_some() {
                 return *i;
@@ -423,7 +423,7 @@ impl ConfigScan {
     }
 
     pub fn is_valide_length(&self) -> bool {
-        let len = self.get_len_array();
+        let len = self.len_array();
         let iter = len.iter().filter_map(|el| *el);
         self.lattice_config.is_valide_length()
             && self.sim_config.is_valide_length()
