@@ -1,0 +1,27 @@
+name: Rust Doc check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rustdoc-check:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      
+    - name: Install Rust stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    
+    - name: Doc
+      run: cargo doc --all --no-deps
