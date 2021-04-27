@@ -17,9 +17,11 @@ pub const GENERATOR_1: CMatrix3 = CMatrix3::new(
     ZERO,
     Complex::new(0.5_f64, 0_f64),
     ZERO,
+    // ---
     Complex::new(0.5_f64, 0_f64),
     ZERO,
     ZERO,
+    // ---
     ZERO,
     ZERO,
     ZERO,
@@ -35,9 +37,11 @@ pub const GENERATOR_2: CMatrix3 = CMatrix3::new(
     ZERO,
     Complex::new(0_f64, -0.5_f64),
     ZERO,
+    // ---
     Complex::new(0_f64, 0.5_f64),
     ZERO,
     ZERO,
+    // ---
     ZERO,
     ZERO,
     ZERO,
@@ -53,9 +57,11 @@ pub const GENERATOR_3: CMatrix3 = CMatrix3::new(
     Complex::new(0.5_f64, 0_f64),
     ZERO,
     ZERO,
+    // ---
     ZERO,
     Complex::new(-0.5_f64, 0_f64),
     ZERO,
+    // ---
     ZERO,
     ZERO,
     ZERO,
@@ -71,9 +77,11 @@ pub const GENERATOR_4: CMatrix3 = CMatrix3::new(
     ZERO,
     ZERO,
     Complex::new(0.5_f64, 0_f64),
+    // ---
     ZERO,
     ZERO,
     ZERO,
+    // ---
     Complex::new(0.5_f64, 0_f64),
     ZERO,
     ZERO,
@@ -89,9 +97,11 @@ pub const GENERATOR_5: CMatrix3 = CMatrix3::new(
     ZERO,
     ZERO,
     Complex::new(0_f64, -0.5_f64),
+    // ---
     ZERO,
     ZERO,
     ZERO,
+    // ---
     Complex::new(0_f64, 0.5_f64),
     ZERO,
     ZERO,
@@ -107,9 +117,11 @@ pub const GENERATOR_6: CMatrix3 = CMatrix3::new(
     ZERO,
     ZERO,
     ZERO,
+    // ---
     ZERO,
     ZERO,
     Complex::new(0.5_f64, 0_f64),
+    // ---
     ZERO,
     Complex::new(0.5_f64, 0_f64),
     ZERO,
@@ -125,9 +137,11 @@ pub const GENERATOR_7: CMatrix3 = CMatrix3::new(
     ZERO,
     ZERO,
     ZERO,
+    // ---
     ZERO,
     ZERO,
     Complex::new(0_f64, -0.5_f64),
+    // ---
     ZERO,
     Complex::new(0_f64, 0.5_f64),
     ZERO,
@@ -143,9 +157,11 @@ pub const GENERATOR_8: CMatrix3 = CMatrix3::new(
     Complex::new(ONE_OVER_2_SQRT_3, 0_f64),
     ZERO,
     ZERO,
+    // ---
     ZERO,
     Complex::new(ONE_OVER_2_SQRT_3, 0_f64),
     ZERO,
+    // ---
     ZERO,
     ZERO,
     Complex::new(MINUS_ONE_OVER_SQRT_3, 0_f64),
@@ -289,9 +305,11 @@ pub fn get_r(m: CMatrix2) -> CMatrix3 {
         m[(0, 0)],
         m[(0, 1)],
         ZERO,
+        // ---
         m[(1, 0)],
         m[(1, 1)],
         ZERO,
+        // ---
         ZERO,
         ZERO,
         ONE,
@@ -304,9 +322,11 @@ pub fn get_s(m: CMatrix2) -> CMatrix3 {
         m[(0, 0)],
         ZERO,
         m[(0, 1)],
+        // ---
         ZERO,
         ONE,
         ZERO,
+        // ---
         m[(1, 0)],
         ZERO,
         m[(1, 1)],
@@ -319,9 +339,11 @@ pub fn get_t(m: CMatrix2) -> CMatrix3 {
         ONE,
         ZERO,
         ZERO,
+        // ---
         ZERO,
         m[(0, 0)],
         m[(0, 1)],
+        // ---
         ZERO,
         m[(1, 0)],
         m[(1, 1)],
@@ -330,17 +352,35 @@ pub fn get_t(m: CMatrix2) -> CMatrix3 {
 
 /// get the [`CMatrix2`] sub block corresponing to [`get_r`]
 pub fn get_sub_block_r(m: CMatrix3) -> CMatrix2 {
-    CMatrix2::new(m[(0, 0)], m[(0, 1)], m[(1, 0)], m[(1, 1)])
+    CMatrix2::new(
+        m[(0, 0)],
+        m[(0, 1)],
+        // ---
+        m[(1, 0)],
+        m[(1, 1)],
+    )
 }
 
 /// get the [`CMatrix2`] sub block corresponing to [`get_s`]
 pub fn get_sub_block_s(m: CMatrix3) -> CMatrix2 {
-    CMatrix2::new(m[(0, 0)], m[(0, 2)], m[(2, 0)], m[(2, 2)])
+    CMatrix2::new(
+        m[(0, 0)],
+        m[(0, 2)],
+        // ---
+        m[(2, 0)],
+        m[(2, 2)],
+    )
 }
 
 /// get the [`CMatrix2`] sub block corresponing to [`get_t`]
 pub fn get_sub_block_t(m: CMatrix3) -> CMatrix2 {
-    CMatrix2::new(m[(1, 1)], m[(1, 2)], m[(2, 1)], m[(2, 2)])
+    CMatrix2::new(
+        m[(1, 1)],
+        m[(1, 2)],
+        // ---
+        m[(2, 1)],
+        m[(2, 2)],
+    )
 }
 
 /// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "r" sub block see
@@ -379,9 +419,11 @@ pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
 ///     Complex::from(1_f64),
 ///     Complex::from(2_f64),
 ///     Complex::from(3_f64),
+///     // ---
 ///     Complex::from(4_f64),
 ///     Complex::from(5_f64),
 ///     Complex::from(6_f64),
+///     // ---
 ///     Complex::from(7_f64),
 ///     Complex::from(8_f64),
 ///     Complex::from(9_f64),
@@ -390,9 +432,11 @@ pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
 ///     Complex::from(1_f64),
 ///     -Complex::from(2_f64),
 ///     -Complex::from(3_f64),
+///     // ---
 ///     -Complex::from(4_f64),
 ///     Complex::from(5_f64),
 ///     -Complex::from(6_f64),
+///     // ---
 ///     -Complex::from(7_f64),
 ///     -Complex::from(8_f64),
 ///     Complex::from(9_f64),
@@ -681,9 +725,11 @@ mod test {
             Complex::from(1_f64),
             Complex::from(2_f64),
             Complex::from(3_f64),
+            // ---
             Complex::from(4_f64),
             Complex::from(5_f64),
             Complex::from(6_f64),
+            // ---
             Complex::from(7_f64),
             Complex::from(8_f64),
             Complex::from(9_f64),
@@ -691,6 +737,7 @@ mod test {
         let r = CMatrix2::new(
             Complex::from(1_f64),
             Complex::from(2_f64),
+            // ---
             Complex::from(4_f64),
             Complex::from(5_f64),
         );
@@ -700,9 +747,11 @@ mod test {
             Complex::from(1_f64),
             Complex::from(2_f64),
             Complex::from(0_f64),
+            // ---
             Complex::from(4_f64),
             Complex::from(5_f64),
             Complex::from(0_f64),
+            // ---
             Complex::from(0_f64),
             Complex::from(0_f64),
             Complex::from(1_f64),
@@ -712,6 +761,7 @@ mod test {
         let s = CMatrix2::new(
             Complex::from(1_f64),
             Complex::from(3_f64),
+            // ---
             Complex::from(7_f64),
             Complex::from(9_f64),
         );
@@ -721,9 +771,11 @@ mod test {
             Complex::from(1_f64),
             Complex::from(0_f64),
             Complex::from(3_f64),
+            // ---
             Complex::from(0_f64),
             Complex::from(1_f64),
             Complex::from(0_f64),
+            // ---
             Complex::from(7_f64),
             Complex::from(0_f64),
             Complex::from(9_f64),
@@ -733,6 +785,7 @@ mod test {
         let t = CMatrix2::new(
             Complex::from(5_f64),
             Complex::from(6_f64),
+            // ---
             Complex::from(8_f64),
             Complex::from(9_f64),
         );
@@ -742,9 +795,11 @@ mod test {
             Complex::from(1_f64),
             Complex::from(0_f64),
             Complex::from(0_f64),
+            // ---
             Complex::from(0_f64),
             Complex::from(5_f64),
             Complex::from(6_f64),
+            // ---
             Complex::from(0_f64),
             Complex::from(8_f64),
             Complex::from(9_f64),
@@ -796,9 +851,11 @@ mod test {
                 Complex::new(1_f64, 0_f64),
                 ZERO,
                 ZERO,
+                // ---
                 ZERO,
                 Complex::new(1_f64, 0_f64),
                 ZERO,
+                // ---
                 ZERO,
                 ZERO,
                 Complex::new(-2_f64, 0_f64),

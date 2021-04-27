@@ -10,7 +10,10 @@ use super::{CMatrix2, Complex, ComplexField, Real, I, ONE, ZERO};
 /// 0   1
 /// 1   0
 /// ```
-pub const PAULI_1: CMatrix2 = CMatrix2::new(ZERO, ONE, ONE, ZERO);
+pub const PAULI_1: CMatrix2 = CMatrix2::new(
+    ZERO, ONE, // ---
+    ONE, ZERO,
+);
 
 /// Second Pauli matrix.
 ///
@@ -18,7 +21,13 @@ pub const PAULI_1: CMatrix2 = CMatrix2::new(ZERO, ONE, ONE, ZERO);
 /// 0  -i
 /// i   0
 /// ```
-pub const PAULI_2: CMatrix2 = CMatrix2::new(ZERO, Complex::new(0_f64, -1_f64), I, ZERO);
+pub const PAULI_2: CMatrix2 = CMatrix2::new(
+    ZERO,
+    Complex::new(0_f64, -1_f64),
+    // ---
+    I,
+    ZERO,
+);
 
 /// Third Pauli matrix.
 ///
@@ -26,7 +35,13 @@ pub const PAULI_2: CMatrix2 = CMatrix2::new(ZERO, Complex::new(0_f64, -1_f64), I
 /// 1   0
 /// 0  -1
 /// ```
-pub const PAULI_3: CMatrix2 = CMatrix2::new(ONE, ZERO, ZERO, Complex::new(1_f64, 0_f64));
+pub const PAULI_3: CMatrix2 = CMatrix2::new(
+    ONE,
+    ZERO,
+    // ---
+    ZERO,
+    Complex::new(1_f64, 0_f64),
+);
 
 /// List of Pauli matrices, see
 /// [wikipedia](https://en.wikipedia.org/w/index.php?title=Pauli_matrices&oldid=1002053121)

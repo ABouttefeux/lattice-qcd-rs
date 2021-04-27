@@ -45,9 +45,11 @@ fn test_exp(factor: Complex) {
         factor.cosh(),
         factor.sinh(),
         ZERO,
+        // ---
         factor.sinh(),
         factor.cosh(),
         ZERO,
+        // ---
         ZERO,
         ZERO,
         ONE,
@@ -64,9 +66,11 @@ fn test_exp(factor: Complex) {
             factor_i.cos(),
             -factor_i.sin(),
             ZERO,
+            // ---
             factor_i.sin(),
             factor_i.cos(),
             ZERO,
+            // ---
             ZERO,
             ZERO,
             ONE
@@ -93,9 +97,11 @@ fn test_exp_su3(factor: f64) {
         factor_i.cosh(),
         factor_i.sinh(),
         ZERO,
+        // ---
         factor_i.sinh(),
         factor_i.cosh(),
         ZERO,
+        // ---
         ZERO,
         ZERO,
         ONE,
@@ -111,9 +117,11 @@ fn test_exp_su3(factor: f64) {
         factor_mi.cos(),
         -factor_mi.sin(),
         ZERO,
+        // ---
         factor_mi.sin(),
         factor_mi.cos(),
         ZERO,
+        // ---
         ZERO,
         ZERO,
         ONE,
@@ -460,9 +468,11 @@ fn othonomralization() {
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
@@ -472,9 +482,11 @@ fn othonomralization() {
         Complex::new(2_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(2_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
@@ -484,9 +496,11 @@ fn othonomralization() {
         Complex::new(0_f64, 2_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 2_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
@@ -504,9 +518,11 @@ fn othonomralization() {
         Complex::new(0_f64, 0_f64),
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
@@ -515,9 +531,11 @@ fn othonomralization() {
         Complex::new(0_f64, 0_f64),
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(-1_f64, 0_f64),
@@ -528,9 +546,11 @@ fn othonomralization() {
         Complex::new(0_f64, 0_f64),
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
@@ -539,9 +559,11 @@ fn othonomralization() {
         Complex::new(0_f64, 0_f64),
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
+        // ---
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(1_f64, 0_f64),
+        // ---
         Complex::new(1_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
         Complex::new(0_f64, 0_f64),
