@@ -202,15 +202,15 @@ impl<const D: usize> LatticeCyclique<D> {
         dir: &Direction<D>,
     ) -> LatticePoint<D> {
         if dir.is_positive() {
-            point[dir.to_index()] = (point[dir.to_index()] + 1) % self.dim();
+            point[dir.index()] = (point[dir.index()] + 1) % self.dim();
         }
         else {
             let dir_pos = dir.to_positive();
-            if point[dir_pos.to_index()] == 0 {
-                point[dir_pos.to_index()] = self.dim() - 1;
+            if point[dir_pos.index()] == 0 {
+                point[dir_pos.index()] = self.dim() - 1;
             }
             else {
-                point[dir_pos.to_index()] = (point[dir_pos.to_index()] - 1) % self.dim();
+                point[dir_pos.index()] = (point[dir_pos.index()] - 1) % self.dim();
             }
         }
         point
@@ -410,7 +410,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator
                 IteratorElement::Element(Direction::new(0, IS_POSITIVE_DIRECTION).unwrap())
             }
             IteratorElement::Element(ref dir) => {
-                if let Some(dir) = Direction::new(dir.to_index() + 1, IS_POSITIVE_DIRECTION) {
+                if let Some(dir) = Direction::new(dir.index() + 1, IS_POSITIVE_DIRECTION) {
                     IteratorElement::Element(dir)
                 }
                 else {
@@ -426,7 +426,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = match self.element {
             IteratorElement::FirstElement => D,
-            IteratorElement::Element(ref dir) => D - (dir.to_index() + 1),
+            IteratorElement::Element(ref dir) => D - (dir.index() + 1),
             IteratorElement::LastElement => 0,
         };
         (size, Some(size))
@@ -658,13 +658,13 @@ impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D> {
 impl<const D: usize> LatticeElementToIndex<D> for Direction<D> {
     /// equivalent to [`Direction::to_index()`]
     fn to_index(&self, _: &LatticeCyclique<D>) -> usize {
-        self.to_index()
+        self.index()
     }
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
     fn to_index(&self, l: &LatticeCyclique<D>) -> usize {
-        self.pos().to_index(l) * D + self.dir().to_index()
+        self.pos().to_index(l) * D + self.dir().index()
     }
 }
 
@@ -931,12 +931,12 @@ impl<const D: usize> Direction<D> {
     /// # use lattice_qcd_rs::lattice::Direction;
     /// assert_eq!(Direction::<4>::new(1, false).unwrap().to_index(), 1);
     /// ```
-    pub const fn to_index(&self) -> usize {
+    pub const fn index(&self) -> usize {
         self.index_dir
     }
 
     /// Convert the direction into a vector of norm `a`;
-    pub fn to_vector(&self, a: f64) -> SVector<Real, D> {
+    pub fn to_vector(self, a: f64) -> SVector<Real, D> {
         self.to_unit_vector() * a
     }
 
@@ -946,7 +946,7 @@ impl<const D: usize> Direction<D> {
     }
 
     /// Convert the direction into a vector of norm `1`;
-    pub fn to_unit_vector(&self) -> SVector<Real, D> {
+    pub fn to_unit_vector(self) -> SVector<Real, D> {
         let mut v = SVector::zeros();
         v[self.index_dir] = 1_f64;
         v
@@ -1030,9 +1030,9 @@ impl<const D: usize> PartialOrd for Direction<D> {
             Some(Ordering::Equal)
         }
         else if self.is_positive() == other.is_positive() {
-            self.to_index().partial_cmp(&other.to_index())
+            self.index().partial_cmp(&other.index())
         }
-        else if self.to_index() == other.to_index() {
+        else if self.index() == other.index() {
             self.is_positive().partial_cmp(&other.is_positive())
         }
         else {
@@ -1061,14 +1061,14 @@ impl<const D: usize> Neg for &Direction<D> {
 /// Return [`Direction::to_index`].
 impl<const D: usize> From<Direction<D>> for usize {
     fn from(d: Direction<D>) -> Self {
-        d.to_index()
+        d.index()
     }
 }
 
 /// Return [`Direction::to_index`].
 impl<const D: usize> From<&Direction<D>> for usize {
     fn from(d: &Direction<D>) -> Self {
-        d.to_index()
+        d.index()
     }
 }
 

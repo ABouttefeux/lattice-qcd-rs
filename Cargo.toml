@@ -19,18 +19,18 @@ no-overflow-test= []
 members = ["simulation-bin", "average_of_plaquette", "procedural_macro"]
 
 [dependencies]
-nalgebra = { version = "0.26", features = ["serde-serialize"] }
+nalgebra = { version = "0.26.2", features = ["serde-serialize"] }
 approx = "0.4.0"
 num-traits = "0.2.14"
 rand = "0.8.3"
 rand_distr = "0.4.0"
 crossbeam = "0.8.0"
 rayon = "1.5.0"
-serde = { version = "1.0", features = ["derive"], optional = true }
+serde = { version = "1.0.117", features = ["derive"], optional = true }
 lattice_qcd_rs-procedural_macro = {path = "procedural_macro"}
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.3.4"
 
 [[bench]]
 name = "bench"

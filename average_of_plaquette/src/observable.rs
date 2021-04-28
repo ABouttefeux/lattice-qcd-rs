@@ -16,7 +16,7 @@ pub fn volume_obs(p: &LatticePoint<3>, state: &LatticeStateDefault<3>) -> f64 {
         .map(|dir_1| {
             directions_all
                 .iter()
-                .filter(|dir_2| dir_1.to_index() > dir_2.to_index())
+                .filter(|dir_2| dir_1.index() > dir_2.index())
                 .map(|dir_2| {
                     state
                         .link_matrix()

@@ -117,20 +117,20 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
             implem.push(quote! {
                 impl From<Direction<#i>> for Direction<#j> {
                     fn from(from: Direction<#i>) -> Self {
-                        Self::new(from.to_index(), from.is_positive()).unwrap()
+                        Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
 
                 impl From<&Direction<#i>> for Direction<#j> {
                     fn from(from: &Direction<#i>) -> Self {
-                        Self::new(from.to_index(), from.is_positive()).unwrap()
+                        Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
 
                 impl TryFrom<Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
                     fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
-                        Self::new(from.to_index(), from.is_positive())
+                        Self::new(from.index(), from.is_positive())
                             .ok_or(ErrorDirectionConversion::IndexOutOfBound)
                     }
                 }
@@ -138,7 +138,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
                 impl TryFrom<&Direction<#j>> for Direction<#i> {
                     type Error = ErrorDirectionConversion;
                     fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
-                        Self::new(from.to_index(), from.is_positive())
+                        Self::new(from.index(), from.is_positive())
                             .ok_or(ErrorDirectionConversion::IndexOutOfBound)
                     }
                 }

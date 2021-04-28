@@ -619,7 +619,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
                     .map(|dir_i| {
                         Direction::positive_directions()
                             .iter()
-                            .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                            .filter(|dir_j| dir_i.index() < dir_j.index())
                             .map(|dir_j| {
                                 1_f64
                                     - self

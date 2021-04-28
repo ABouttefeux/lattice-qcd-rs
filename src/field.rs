@@ -64,7 +64,7 @@ impl Su3Adjoint {
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
-    pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
+    pub fn to_matrix(self) -> Matrix3<na::Complex<Real>> {
         self.data
             .iter()
             .enumerate()
@@ -643,7 +643,7 @@ impl LinkMatrix {
                     .map(|dir_i| {
                         Direction::positive_directions()
                             .iter()
-                            .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                            .filter(|dir_j| dir_i.index() < dir_j.index())
                             .map(|dir_j| {
                                 self.get_pij(&point, dir_i, dir_j, lattice)
                                     .map(|el| el.trace())
@@ -696,7 +696,7 @@ impl LinkMatrix {
     ) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
         for dir in &Direction::<D>::positive_directions() {
-            vec[dir.to_index()] = self.get_magnetic_field(point, dir, lattice)?;
+            vec[dir.index()] = self.get_magnetic_field(point, dir, lattice)?;
         }
         Some(vec)
     }
@@ -716,8 +716,7 @@ impl LinkMatrix {
                     .map(|dir_j| {
                         let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
                         let lc = Complex::from(
-                            levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()])
-                                .to_f64(),
+                            levi_civita(&[dir.index(), dir_i.index(), dir_j.index()]).to_f64(),
                         );
                         Some(f_mn * lc)
                     })
@@ -887,7 +886,7 @@ impl<const D: usize> EField<D> {
     ) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
-            Some(vec) => vec.get(dir.to_index()),
+            Some(vec) => vec.get(dir.index()),
             None => None,
         }
     }
@@ -1018,7 +1017,7 @@ impl<const D: usize> EField<D> {
                             * (su3::GENERATORS[index]
                                 * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
                                     + su3::GENERATORS[index]
-                                        * na::Complex::from(e[dir.to_index()][index])))
+                                        * na::Complex::from(e[dir.index()][index])))
                             .trace()
                             .real()
                     }))
