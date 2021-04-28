@@ -1,6 +1,8 @@
 //! Metropolis Hastings methode
 
 use rand_distr::Distribution;
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
 
 use super::{
     super::{
@@ -22,6 +24,8 @@ use super::{
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastings {
     number_of_update: usize,
     spread: Real,
@@ -74,6 +78,8 @@ where
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsDiagnostic {
     number_of_update: usize,
     spread: Real,
@@ -161,6 +167,8 @@ where
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
     spread: Real,
     has_replace_last: bool,

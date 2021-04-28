@@ -3,11 +3,15 @@
 use core::fmt::{Debug, Display};
 use std::error::Error;
 
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
+
 use super::thread::ThreadError;
 
 /// Type that can never be (safly) initialized.
 /// This is temporary, until [`never`](https://doc.rust-lang.org/std/primitive.never.html) is accepted into stable rust.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Never {}
 
 impl core::fmt::Display for Never {
@@ -22,6 +26,7 @@ impl Error for Never {}
 /// somethimes this is better to return that instead of panicking.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum ImplementationError {
     /// We atain a portion of the code that was tought to be unreachable.
     Unreachable,
@@ -47,6 +52,7 @@ impl Error for ImplementationError {}
 /// Error return while doing multiple steps.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum MultiIntegrationError<Error> {
     /// atempting to integrate doing zero steps
     ZeroIntegration,
@@ -76,7 +82,7 @@ impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
 
 /// Error while initialising a state
 #[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Copy, Eq)]
 pub enum StateInitializationError {
     /// The parameter given for the normal distribution is incorrect.
     InvalideParameterNormalDistribution(rand_distr::NormalError),
@@ -164,7 +170,8 @@ impl Error for StateInitializationErrorThreaded {
 
 /// Error while initialising a lattice
 #[non_exhaustive]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum LatticeInitializationError {
     /// `size` must be stricly greater 0 than and be a finite number.
     NonPositiveSize,
@@ -188,6 +195,7 @@ impl Error for LatticeInitializationError {}
 
 /// A struct that combine an error with a owned value
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ErrorWithOnwnedValue<Error, State> {
     error: Error,
     owned: State,

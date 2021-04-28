@@ -96,18 +96,20 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
 
         /// Error return by try from for Directions
         #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-        pub enum ErrorDirectionConversion {
+        #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+        #[non_exhaustive]
+        pub enum DirectionConversionError {
             /// the index is out of bound
             IndexOutOfBound,
         }
 
-        impl core::fmt::Display for ErrorDirectionConversion{
+        impl core::fmt::Display for DirectionConversionError{
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "the index is out of bound")
             }
         }
 
-        impl std::error::Error for ErrorDirectionConversion {}
+        impl std::error::Error for DirectionConversionError {}
     }];
 
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
@@ -128,18 +130,18 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
                 }
 
                 impl TryFrom<Direction<#j>> for Direction<#i> {
-                    type Error = ErrorDirectionConversion;
+                    type Error = DirectionConversionError;
                     fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.index(), from.is_positive())
-                            .ok_or(ErrorDirectionConversion::IndexOutOfBound)
+                            .ok_or(DirectionConversionError::IndexOutOfBound)
                     }
                 }
 
                 impl TryFrom<&Direction<#j>> for Direction<#i> {
-                    type Error = ErrorDirectionConversion;
+                    type Error = DirectionConversionError;
                     fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.index(), from.is_positive())
-                            .ok_or(ErrorDirectionConversion::IndexOutOfBound)
+                            .ok_or(DirectionConversionError::IndexOutOfBound)
                     }
                 }
             });

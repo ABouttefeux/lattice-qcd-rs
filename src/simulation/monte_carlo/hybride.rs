@@ -5,14 +5,17 @@
 use core::fmt::{Debug, Display};
 use std::error::Error;
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
 use std::vec::Vec;
+
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
 
 use super::{super::state::LatticeState, MonteCarlo};
 
 /// Error given by [`HybrideMethodeVec`]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum HybrideMethodeVecError<Error> {
     /// An Error comming from one of the method.
     ///
@@ -71,32 +74,6 @@ where
 
     /// Getter for the reference holded by self.
     pub fn data(&'a mut self) -> &'a mut MC {
-        self.data
-    }
-}
-
-impl<'a, MC, State, ErrorBase, Error, const D: usize> Deref
-    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-where
-    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
-    ErrorBase: Into<Error>,
-    State: LatticeState<D>,
-{
-    type Target = MC;
-
-    fn deref(&self) -> &Self::Target {
-        self.data
-    }
-}
-
-impl<'a, MC, State, ErrorBase, Error, const D: usize> DerefMut
-    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
-where
-    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
-    ErrorBase: Into<Error>,
-    State: LatticeState<D>,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
         self.data
     }
 }
@@ -212,6 +189,7 @@ where
 
 /// Error given by [`HybrideMethodeCouple`]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum HybrideMethodeCoupleError<Error1, Error2> {
     /// First method gave an error
     ErrorFirst(Error1),
@@ -242,6 +220,7 @@ impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
 /// This method can combine any two methods. The down side is that it can be very verbose to write
 /// Couples for a large number of methods.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, const D: usize>
 where
     MC1: MonteCarlo<State, D, Error = Error1>,

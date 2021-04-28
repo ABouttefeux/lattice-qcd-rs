@@ -234,7 +234,7 @@ impl<const D: usize> LatticeCyclique<D> {
 }
 
 /// Iterator over [`LatticeLinkCanonical`] associated to a particular [`LatticeCyclique`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct IteratorLatticeLinkCanonical<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticeLinkCanonical<D>>,
@@ -304,6 +304,7 @@ impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCan
 
 /// Enum for internal use of interator. It store the previous element returned by `next`
 #[derive(Clone, Debug, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum IteratorElement<T> {
     /// First element of the iterator
     FirstElement,
@@ -334,7 +335,8 @@ impl<T> From<IteratorElement<T>> for Option<T> {
 /// assert_eq!(iter.next(), None);
 /// assert_eq!(iter.next(), None);
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct IteratorDirection<const D: usize, const IS_POSITIVE_DIRECTION: bool> {
     element: IteratorElement<Direction<D>>,
 }
@@ -444,7 +446,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::ExactSizeIter
 }
 
 /// Iterator over [`LatticePoint`]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct IteratorLatticePoint<'a, const D: usize> {
     lattice: &'a LatticeCyclique<D>,
     element: Option<LatticePoint<D>>,
@@ -1334,6 +1336,12 @@ impl DirectionList for DirectionEnum {
 
     fn get_all_positive_directions() -> &'static [Self] {
         &Self::POSITIVES
+    }
+}
+
+impl PartialOrd for DirectionEnum {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Direction::<4>::from(self).partial_cmp(&other.into())
     }
 }
 

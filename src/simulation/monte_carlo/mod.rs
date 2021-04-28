@@ -4,6 +4,8 @@ use std::marker::PhantomData;
 
 use na::ComplexField;
 use rand_distr::Distribution;
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
 
 use super::{
     super::{
@@ -98,7 +100,8 @@ where
 }
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct McWrapper<MCD, State, Rng, const D: usize>
 where
     MCD: MonteCarloDefault<State, D>,
