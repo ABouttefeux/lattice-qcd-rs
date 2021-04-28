@@ -931,7 +931,7 @@ impl<const D: usize> Direction<D> {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::Direction;
-    /// assert_eq!(Direction::<4>::new(1, false).unwrap().to_index(), 1);
+    /// assert_eq!(Direction::<4>::new(1, false).unwrap().index(), 1);
     /// ```
     pub const fn index(&self) -> usize {
         self.index_dir
