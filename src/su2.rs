@@ -158,7 +158,7 @@ mod test {
             assert!(p.trace().imaginary().abs() < EPSILON);
             assert!((p * p.adjoint() - CMatrix2::identity() * p.determinant()).norm() < EPSILON);
 
-            assert_matrix_is_su_2!((p / p.determinant().sqrt()), EPSILON);
+            assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
 
         for _ in 0..100 {

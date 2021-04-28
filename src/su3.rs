@@ -807,7 +807,7 @@ mod test {
         assert_eq_matrix!(get_t(t), m_t, EPSILON);
 
         for p in &extract_su2_unorm(m) {
-            assert_matrix_is_su_2!((p / p.determinant().sqrt()), EPSILON);
+            assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
     }
 
