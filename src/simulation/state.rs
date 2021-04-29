@@ -683,6 +683,22 @@ where
     }
 }
 
+impl<State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>, const D: usize> AsRef<State>
+    for SimulationStateLeap<State, D>
+{
+    fn as_ref(&self) -> &State {
+        self.state()
+    }
+}
+
+impl<State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>, const D: usize> AsMut<State>
+    for SimulationStateLeap<State, D>
+{
+    fn as_mut(&mut self) -> &mut State {
+        self.state_mut()
+    }
+}
+
 /// This state is a leap frog state
 impl<State, const D: usize> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D> where
     State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>

@@ -565,6 +565,16 @@ impl<const D: usize> LatticePoint<D> {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut usize> {
         self.data.iter_mut()
     }
+
+    /// Get the point as as [`nalgebra::SVector<usize, D>`]
+    pub const fn as_svector(&self) -> &SVector<usize, D> {
+        &self.data
+    }
+
+    /// Get the point as a mut ref to [`nalgebra::SVector<usize, D>`]
+    pub fn as_svector_mut(&mut self) -> &mut SVector<usize, D> {
+        &mut self.data
+    }
 }
 
 impl<const D: usize> Default for LatticePoint<D> {
@@ -636,6 +646,18 @@ where
 {
     fn from(data: LatticePoint<D>) -> [usize; D] {
         data.data.into()
+    }
+}
+
+impl<const D: usize> AsRef<SVector<usize, D>> for LatticePoint<D> {
+    fn as_ref(&self) -> &SVector<usize, D> {
+        self.as_svector()
+    }
+}
+
+impl<const D: usize> AsMut<SVector<usize, D>> for LatticePoint<D> {
+    fn as_mut(&mut self) -> &mut SVector<usize, D> {
+        self.as_svector_mut()
     }
 }
 

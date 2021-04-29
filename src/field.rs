@@ -57,6 +57,16 @@ impl Su3Adjoint {
         &self.data
     }
 
+    /// get the su3 adjoint as a [`Vector8`]
+    pub const fn as_vector(&self) -> &Vector8<Real> {
+        self.data()
+    }
+
+    /// get the su3 adjoint as mut ref to a [`Vector8`]
+    pub fn as_vector_mut(&mut self) -> &mut Vector8<Real> {
+        self.data_mut()
+    }
+
     /// return the su(3) (Lie algebra) matrix.
     /// # Example
     /// ```
@@ -187,6 +197,18 @@ impl Su3Adjoint {
     /// Get a mutlable reference over the data.
     pub fn data_mut(&mut self) -> &mut Vector8<Real> {
         &mut self.data
+    }
+}
+
+impl AsRef<Vector8<f64>> for Su3Adjoint {
+    fn as_ref(&self) -> &Vector8<f64> {
+        self.as_vector()
+    }
+}
+
+impl AsMut<Vector8<f64>> for Su3Adjoint {
+    fn as_mut(&mut self) -> &mut Vector8<f64> {
+        self.as_vector_mut()
     }
 }
 
@@ -506,6 +528,21 @@ impl LinkMatrix {
         &self.data
     }
 
+    /// Get the link_matrix as a Vec
+    pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
+        self.data()
+    }
+
+    /// Get the link_matrix as a Vec
+    pub fn as_slice(&self) -> &[Matrix3<na::Complex<Real>>] {
+        self.data()
+    }
+
+    /// Get the link_matrix as a mut ref to a slice
+    pub fn as_slice_mut(&mut self) -> &mut [Matrix3<na::Complex<Real>>] {
+        &mut self.data
+    }
+
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`].
     /// # Example
@@ -763,6 +800,24 @@ impl LinkMatrix {
     }
 }
 
+impl AsRef<Vec<CMatrix3>> for LinkMatrix {
+    fn as_ref(&self) -> &Vec<CMatrix3> {
+        self.as_vec()
+    }
+}
+
+impl AsRef<[CMatrix3]> for LinkMatrix {
+    fn as_ref(&self) -> &[CMatrix3] {
+        self.as_slice()
+    }
+}
+
+impl AsMut<[CMatrix3]> for LinkMatrix {
+    fn as_mut(&mut self) -> &mut [CMatrix3] {
+        self.as_slice_mut()
+    }
+}
+
 impl<'a> IntoIterator for &'a LinkMatrix {
     type IntoIter = <&'a Vec<CMatrix3> as IntoIterator>::IntoIter;
     type Item = &'a CMatrix3;
@@ -811,6 +866,21 @@ impl<const D: usize> EField<D> {
     /// Get the raw data.
     pub const fn data(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         &self.data
+    }
+
+    /// Get the e_field as a Vec of Vector of Su3Adjoint
+    pub const fn as_vec(&self) -> &Vec<SVector<Su3Adjoint, D>> {
+        self.data()
+    }
+
+    /// Get the e_field as a slice of Vector of Su3Adjoint
+    pub fn as_slice(&self) -> &[SVector<Su3Adjoint, D>] {
+        &self.data
+    }
+
+    /// Get the e_field as mut ref to slice of Vector of Su3Adjoint
+    pub fn as_slice_mut(&mut self) -> &mut [SVector<Su3Adjoint, D>] {
+        &mut self.data
     }
 
     /// Return the number of elements.
@@ -1025,6 +1095,24 @@ impl<const D: usize> EField<D> {
             })
             .collect();
         Self::new(data)
+    }
+}
+
+impl<const D: usize> AsRef<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
+    fn as_ref(&self) -> &Vec<SVector<Su3Adjoint, D>> {
+        self.as_vec()
+    }
+}
+
+impl<const D: usize> AsRef<[SVector<Su3Adjoint, D>]> for EField<D> {
+    fn as_ref(&self) -> &[SVector<Su3Adjoint, D>] {
+        self.as_slice()
+    }
+}
+
+impl<const D: usize> AsMut<[SVector<Su3Adjoint, D>]> for EField<D> {
+    fn as_mut(&mut self) -> &mut [SVector<Su3Adjoint, D>] {
+        self.as_slice_mut()
     }
 }
 

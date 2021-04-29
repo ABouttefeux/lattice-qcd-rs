@@ -73,8 +73,37 @@ where
     }
 
     /// Getter for the reference holded by self.
-    pub fn data(&'a mut self) -> &'a mut MC {
+    pub fn data_mut(&mut self) -> &mut MC {
         self.data
+    }
+
+    /// Getter for the reference holded by self.
+    pub fn data(&self) -> &MC {
+        self.data
+    }
+}
+
+impl<'a, MC, State, ErrorBase, Error, const D: usize> AsMut<MC>
+    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+    ErrorBase: Into<Error>,
+    State: LatticeState<D>,
+{
+    fn as_mut(&mut self) -> &mut MC {
+        self.data_mut()
+    }
+}
+
+impl<'a, MC, State, ErrorBase, Error, const D: usize> AsRef<MC>
+    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+where
+    MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
+    ErrorBase: Into<Error>,
+    State: LatticeState<D>,
+{
+    fn as_ref(&self) -> &MC {
+        self.data()
     }
 }
 
@@ -153,6 +182,26 @@ where
     /// Return wether the number is zero.
     pub fn is_empty(&self) -> bool {
         self.methods.is_empty()
+    }
+}
+
+impl<'a, State, E, const D: usize> AsRef<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
+    for HybrideMethodeVec<'a, State, E, D>
+where
+    State: LatticeState<D>,
+{
+    fn as_ref(&self) -> &Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
+        self.methods()
+    }
+}
+
+impl<'a, State, E, const D: usize> AsMut<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
+    for HybrideMethodeVec<'a, State, E, D>
+where
+    State: LatticeState<D>,
+{
+    fn as_mut(&mut self) -> &mut Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
+        self.methods_mut()
     }
 }
 
