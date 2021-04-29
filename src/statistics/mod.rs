@@ -261,12 +261,36 @@ mod test {
         let a = [1_f64; 100];
         assert_eq!(mean_and_variance_par_iter(a.par_iter()), [1_f64, 0_f64]);
         assert_eq!(mean_and_variance(&a), [1_f64, 0_f64]);
+        assert_eq!(mean_par_iter(a.par_iter()), 1_f64);
+        assert_eq!(variance_par_iter(a.par_iter()), 0_f64);
+        assert_eq!(variance(&a), 0_f64);
+        assert_eq!(mean_with_error_par_iter(a.par_iter()), [1_f64, 0_f64]);
+        assert_eq!(mean_with_error(&a), [1_f64, 0_f64]);
+
         let a = [0_f64, 1_f64, 0_f64, 1_f64];
         assert_eq!(
             mean_and_variance_par_iter(a.par_iter()),
             [0.5_f64, 1_f64 / 3_f64]
         );
         assert_eq!(mean_and_variance(&a), [0.5_f64, 1_f64 / 3_f64]);
+        assert_eq!(mean_par_iter(a.par_iter()), 0.5_f64);
+        assert_eq!(variance_par_iter(a.par_iter()), 1_f64 / 3_f64);
+        assert_eq!(variance(&a), 1_f64 / 3_f64);
+        assert_eq!(
+            mean_with_error_par_iter(a.par_iter()),
+            [0.5_f64, (1_f64 / 3_f64 / 4_f64).sqrt()]
+        );
+        assert_eq!(
+            mean_with_error(&a),
+            [0.5_f64, (1_f64 / 3_f64 / 4_f64).sqrt()]
+        );
+
+        assert_eq!(covariance(&[1_f64], &[0_f64, 1_f64]), None);
+        assert_eq!(
+            covariance_par_iter([1_f64].par_iter(), [0_f64, 1_f64].par_iter()),
+            None
+        );
+
         let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
         let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
         for _ in 0..100 {

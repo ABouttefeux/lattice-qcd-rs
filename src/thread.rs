@@ -30,7 +30,7 @@ impl core::fmt::Display for ThreadError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadNumberIncorect => write!(f, "Number of thread is incorrect"),
-            Self::Panic(any) => write!(f, "a thread panicked with message {:?}", any),
+            Self::Panic(any) => write!(f, "A thread panicked with \"{:?}\"", any),
         }
     }
 }
@@ -529,4 +529,31 @@ where
         .into_par_iter()
         .map(|el| closure(&el, common_data))
         .collect()
+}
+
+#[cfg(test)]
+mod test {
+    use std::error::Error;
+
+    use super::*;
+    use crate::error::ImplementationError;
+
+    #[test]
+    fn thread_error() {
+        assert_eq!(
+            format!("{}", ThreadError::ThreadNumberIncorect),
+            "Number of thread is incorrect"
+        );
+        assert!(format!("{}", ThreadError::Panic(Box::new(()))).contains("A thread panicked with"));
+
+        assert!(ThreadError::ThreadNumberIncorect.source().is_none());
+        assert!(ThreadError::Panic(Box::new(())).source().is_none());
+        assert_eq!(
+            format!(
+                "{:?}",
+                ThreadError::Panic(Box::new(ImplementationError::Unreachable)).source()
+            ),
+            "Some(Unreachable)"
+        );
+    }
 }

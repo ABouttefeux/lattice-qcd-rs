@@ -1133,7 +1133,12 @@ mod test {
             Err(ThreadError::ThreadNumberIncorect) => {}
             _ => panic!("unexpected ouptut"),
         }
-        assert!(LinkMatrix::new_random_threaded(&lattice, 2).is_ok())
+        let link_s = LinkMatrix::new_random_threaded(&lattice, 2);
+        assert!(link_s.is_ok());
+        let link = link_s.unwrap();
+        assert!(!link.is_empty());
+        let l2 = LinkMatrix::new(vec![]);
+        assert!(l2.is_empty());
     }
 
     #[test]
@@ -1156,6 +1161,12 @@ mod test {
             .get_magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        let b_vec = link_matrix
+            .get_magnetic_field_vec(&point, &lattice)
+            .unwrap();
+        for i in &b_vec {
+            assert_eq_matrix!(CMatrix3::zeros(), i, EPSILON);
+        }
         // ---
         link_matrix[0] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
         let clover = link_matrix
@@ -1186,6 +1197,19 @@ mod test {
             .get_magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        let b_vec = link_matrix
+            .get_magnetic_field_vec(&point, &lattice)
+            .unwrap();
+        for i in &b_vec {
+            assert_eq_matrix!(CMatrix3::zeros(), i, EPSILON);
+        }
+        assert_eq_matrix!(
+            link_matrix
+                .get_magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
+                .unwrap(),
+            b,
+            EPSILON
+        );
         //--
         let mut link_matrix = LinkMatrix::new_cold(&lattice);
         let link = LatticeLinkCanonical::new([1, 0, 0].into(), dir_y).unwrap();
@@ -1218,9 +1242,23 @@ mod test {
             .get_magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
+        assert_eq_matrix!(
+            link_matrix
+                .get_magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
+                .unwrap(),
+            b,
+            EPSILON
+        );
         let b = link_matrix
             .get_magnetic_field(&point, &dir_z, &lattice)
             .unwrap();
+        assert_eq_matrix!(
+            link_matrix
+                .get_magnetic_field_link(&LatticeLink::new(point, dir_z), &lattice)
+                .unwrap(),
+            b,
+            EPSILON
+        );
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(0.25_f64, 0_f64),
             b,
@@ -1230,5 +1268,16 @@ mod test {
             .get_magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice)
             .unwrap();
         assert_eq_matrix!(b, b_2, EPSILON);
+        let b_vec = link_matrix
+            .get_magnetic_field_vec(&point, &lattice)
+            .unwrap();
+        for (index, m) in b_vec.iter().enumerate() {
+            if index == 2 {
+                assert_eq_matrix!(m, b, EPSILON);
+            }
+            else {
+                assert_eq_matrix!(CMatrix3::zeros(), m, EPSILON);
+            }
+        }
     }
 }

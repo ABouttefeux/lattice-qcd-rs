@@ -1019,6 +1019,10 @@ implement_direction_from!();
 /// let dir_5 = Direction::<4>::new(3, true).unwrap();
 /// let dir_6 = Direction::<4>::new(1, false).unwrap();
 /// assert_eq!(dir_5.partial_cmp(&dir_6), None);
+/// //--------
+/// let dir_5 = Direction::<4>::new(1, false).unwrap();
+/// let dir_6 = Direction::<4>::new(1, false).unwrap();
+/// assert_eq!(dir_5.partial_cmp(&dir_6), Some(Ordering::Equal));
 /// ```
 impl<const D: usize> PartialOrd for Direction<D> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -1453,12 +1457,48 @@ mod test {
         for (index, dir) in dirs.iter().enumerate() {
             assert_eq!(*dir, Direction::new(index, false).unwrap());
         }
+
+        let dirs = Direction::<128>::positive_directions();
+        let dir_vec = Direction::<128>::positives_vec();
+        assert_eq!(dirs.to_vec(), dir_vec);
+
+        let dir_vec = Direction::<128>::directions_vec();
+        assert_eq!(dir_vec.len(), 256);
     }
 
     #[test]
-    fn lattice_pt_from() {
+    fn lattice_pt() {
         let array = [1, 2, 3, 4];
+        let mut pt = LatticePoint::from(array);
         assert_eq!(LatticePoint::from(array), LatticePoint::new(array.into()));
+
+        assert_eq!(<[usize; 4]>::from(pt), array);
+        assert!(!pt.is_empty());
+        assert_eq!(pt.iter().count(), 4);
+        assert_eq!(pt.iter_mut().count(), 4);
+        assert_eq!(pt.iter().copied().collect::<Vec<_>>(), vec![1, 2, 3, 4]);
+        assert_eq!(pt.iter_mut().collect::<Vec<_>>(), vec![&1, &2, &3, &4]);
+
+        let mut j = 0;
+        for i in &pt {
+            assert_eq!(*i, array[j]);
+            j += 1;
+        }
+
+        let mut j = 0;
+        for i in &mut pt {
+            assert_eq!(*i, array[j]);
+            j += 1;
+        }
+
+        pt.iter_mut().for_each(|el| *el = 0);
+        assert_eq!(pt, LatticePoint::new_zero());
+        assert_eq!(LatticePoint::<4>::default(), LatticePoint::new_zero());
+
+        let mut pt_2 = LatticePoint::<0>::new_zero();
+        assert!(pt_2.is_empty());
+        assert_eq!(pt_2.iter().count(), 0);
+        assert_eq!(pt_2.iter_mut().count(), 0);
     }
 
     #[test]
@@ -1497,6 +1537,14 @@ mod test {
 
         assert_eq!(Direction::<4>::get_all_directions().len(), 8);
         assert_eq!(Direction::<4>::get_all_positive_directions().len(), 4);
+
+        let l = LatticeCyclique::new(1_f64, 4).unwrap();
+        for dir in Direction::<3>::get_all_directions() {
+            assert_eq!(
+                <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
+                dir.to_index()
+            );
+        }
     }
 
     #[test]
@@ -1509,5 +1557,72 @@ mod test {
             link,
             LatticeLinkCanonical::new(pt, dir.to_positive()).unwrap()
         );
+
+        let mut link = LatticeLink::new(pt, DirectionEnum::YPos.into());
+        let pos = *link.pos();
+        let dir = *link.dir();
+        assert_eq!(pos, *link.pos_mut());
+        assert_eq!(dir, *link.dir_mut());
+        assert!(link.is_dir_positive());
+        *link.dir_mut() = DirectionEnum::YNeg.into();
+        assert!(!link.is_dir_positive());
+    }
+
+    #[test]
+    fn iterator() {
+        let l = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
+        let mut iterator = l.get_points();
+        assert_eq!(
+            iterator.size_hint(),
+            (l.get_number_of_points(), Some(l.get_number_of_points()))
+        );
+        assert_eq!(iterator.size_hint(), (16, Some(16)));
+        iterator.nth(9);
+        assert_eq!(
+            iterator.size_hint(),
+            (
+                l.get_number_of_points() - 10,       // 6
+                Some(l.get_number_of_points() - 10)  // 6
+            )
+        );
+        assert!(iterator.nth(4).is_some());
+        assert_eq!(iterator.size_hint(), (1, Some(1)));
+        assert!(iterator.next().is_some());
+        assert_eq!(iterator.size_hint(), (0, Some(0)));
+        assert!(iterator.next().is_none());
+        assert_eq!(iterator.size_hint(), (0, Some(0)));
+
+        let mut iterator = l.get_links();
+        assert_eq!(
+            iterator.size_hint(),
+            (
+                l.get_number_of_canonical_links_space(),
+                Some(l.get_number_of_canonical_links_space())
+            )
+        );
+        assert_eq!(iterator.size_hint(), (16 * 2, Some(16 * 2)));
+        iterator.nth(9);
+        assert_eq!(
+            iterator.size_hint(),
+            (
+                l.get_number_of_canonical_links_space() - 10,       // 6
+                Some(l.get_number_of_canonical_links_space() - 10)  // 6
+            )
+        );
+        assert!(iterator.nth(20).is_some());
+        assert_eq!(iterator.size_hint(), (1, Some(1)));
+        assert!(iterator.next().is_some());
+        assert_eq!(iterator.size_hint(), (0, Some(0)));
+        assert!(iterator.next().is_none());
+        assert_eq!(iterator.size_hint(), (0, Some(0)));
+
+        let mut iterator = IteratorDirection::<2, true>::new(None).unwrap();
+        assert_eq!(iterator.size_hint(), (2, Some(2)));
+        assert!(iterator.next().is_some());
+        assert_eq!(iterator.size_hint(), (1, Some(1)));
+        assert!(iterator.next().is_some());
+        assert_eq!(iterator.size_hint(), (0, Some(0)));
+        assert!(iterator.next().is_none());
+        assert!(iterator.next().is_none());
     }
 }
