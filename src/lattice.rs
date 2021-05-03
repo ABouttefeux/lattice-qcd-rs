@@ -1572,7 +1572,7 @@ mod test {
         for dir in Direction::<3>::get_all_directions() {
             assert_eq!(
                 <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
-                dir.to_index()
+                dir.index()
             );
         }
     }
