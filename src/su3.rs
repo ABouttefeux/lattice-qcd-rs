@@ -489,7 +489,7 @@ macro_rules! set_factorial_storage {
 }
 
 impl FactorialStorageStatic {
-    /// compile time evaluation of all 25 factorial numbers
+    /// compile time evaluation of all 34 factorial numbers
     #[allow(clippy::as_conversions)] // constant function cant use try into
     pub const fn new() -> Self {
         let mut data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] =
@@ -503,7 +503,7 @@ impl FactorialStorageStatic {
         Self { data }
     }
 
-    /// access in O(1). Return None if `value` is bigger than 25
+    /// access in O(1). Return None if `value` is bigger than 34
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
@@ -862,5 +862,64 @@ mod test {
             ) * Complex::from(0.5_f64 / 3_f64.sqrt()),
             GENERATOR_8
         );
+    }
+
+    #[test]
+    fn test_is_matrix_su3() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let m = CMatrix3::new(
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+        );
+        assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
+        let m = CMatrix3::new(
+            Complex::from(1_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+            Complex::from(0_f64),
+        );
+        assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64),);
+        let m = CMatrix3::new(
+            Complex::from(1_f64),
+            Complex::from(0_f64),
+            Complex::from(1_f64),
+            Complex::from(0_f64),
+            Complex::from(1_f64),
+            Complex::from(0_f64),
+            Complex::from(1_f64),
+            Complex::from(0_f64),
+            Complex::from(1_f64),
+        );
+        assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
+        for _ in 0..10 {
+            let m = get_random_su3(&mut rng);
+            assert!(is_matrix_su3(&m, f64::EPSILON * 100_f64));
+        }
+        for _ in 0..10 {
+            let m = get_random_su3(&mut rng) * Complex::from(1.1_f64);
+            assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
+        }
+    }
+
+    #[test]
+    fn factorial_storage() {
+        let storage = FactorialStorageStatic::new();
+        for (i, f) in storage.data.iter().enumerate() {
+            assert_eq!(utils::factorial(i), *f);
+        }
+        assert!(storage.try_get_factorial(35).is_none());
+        assert_eq!(storage.try_get_factorial(34), Some(&utils::factorial(34)));
     }
 }

@@ -12,6 +12,8 @@ use super::{
     Complex, Vector8, I, ONE, ZERO,
 };
 
+mod integrator;
+
 /// Defines a small value to compare f64.
 const EPSILON: f64 = 0.000000001_f64;
 
@@ -638,4 +640,18 @@ fn lattice_init_error() {
         LatticeCyclique::<0>::new(1_f64, 2),
         Err(LatticeInitializationError::ZeroDimension)
     );
+}
+
+#[test]
+fn test_length_compatible() {
+    let l1 = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
+    let l2 = LatticeCyclique::<2>::new(1_f64, 3).unwrap();
+    let link = LinkMatrix::new_cold(&l1);
+    let e_f = EField::new_cold(&l1);
+    assert!(l1.has_compatible_lenght(&link, &e_f));
+    let link2 = LinkMatrix::new_cold(&l2);
+    let e_f_2 = EField::new_cold(&l2);
+    assert!(!l1.has_compatible_lenght(&link2, &e_f));
+    assert!(!l1.has_compatible_lenght(&link2, &e_f_2));
+    assert!(l2.has_compatible_lenght(&link2, &e_f_2));
 }

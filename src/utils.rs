@@ -339,4 +339,53 @@ mod test {
         assert_eq!(Sign::Negative, Sign::sign_from_diff(1, 4));
         assert_eq!(Sign::Positive, Sign::sign_from_diff(4, 1));
     }
+
+    #[test]
+    fn sign() {
+        assert_eq!(Sign::sign(0_f64).to_f64(), 0_f64);
+        assert_eq!(Sign::sign(1_f64).to_f64(), 1_f64);
+        assert_eq!(Sign::sign(-1_f64).to_f64(), -1_f64);
+        assert_eq!(Sign::sign(34_f64), Sign::Positive);
+        assert_eq!(Sign::sign(-34_f64), Sign::Negative);
+        assert_eq!(Sign::from(-34_f64), Sign::Negative);
+        assert_eq!(f64::from(Sign::sign(-1_f64)), -1_f64);
+        assert_eq!(-Sign::Negative, Sign::Positive);
+        assert_eq!(-Sign::Positive, Sign::Negative);
+        assert_eq!(-Sign::Zero, Sign::Zero);
+
+        // mul
+        assert_eq!(Sign::Positive * Sign::Positive, Sign::Positive);
+        assert_eq!(Sign::Negative * Sign::Positive, Sign::Negative);
+        assert_eq!(Sign::Positive * Sign::Negative, Sign::Negative);
+        assert_eq!(Sign::Negative * Sign::Negative, Sign::Positive);
+
+        assert_eq!(Sign::Zero * Sign::Positive, Sign::Zero);
+        assert_eq!(Sign::Zero * Sign::Negative, Sign::Zero);
+        assert_eq!(Sign::Positive * Sign::Zero, Sign::Zero);
+        assert_eq!(Sign::Negative * Sign::Zero, Sign::Zero);
+
+        let mut sign = Sign::Negative;
+        sign *= Sign::Negative;
+        assert_eq!(sign, Sign::Positive);
+
+        // ord
+        assert_eq!(Sign::Positive.cmp(&Sign::Zero), Ordering::Greater);
+        assert_eq!(Sign::Positive.cmp(&Sign::Negative), Ordering::Greater);
+        assert_eq!(Sign::Negative.cmp(&Sign::Zero), Ordering::Less);
+        assert_eq!(Sign::Zero.cmp(&Sign::Zero), Ordering::Equal);
+
+        assert_eq!(
+            Sign::Positive.partial_cmp(&Sign::Zero),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            Sign::Positive.partial_cmp(&Sign::Negative),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            Sign::Negative.partial_cmp(&Sign::Zero),
+            Some(Ordering::Less)
+        );
+        assert_eq!(Sign::Zero.partial_cmp(&Sign::Zero), Some(Ordering::Equal));
+    }
 }
