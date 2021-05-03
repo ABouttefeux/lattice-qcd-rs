@@ -12,6 +12,8 @@ use super::{
     Complex, Vector8, I, ONE, ZERO,
 };
 
+mod integrator;
+
 /// Defines a small value to compare f64.
 const EPSILON: f64 = 0.000000001_f64;
 
