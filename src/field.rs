@@ -456,6 +456,12 @@ impl Default for Su3Adjoint {
     }
 }
 
+impl std::fmt::Display for Su3Adjoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_matrix())
+    }
+}
+
 impl Index<usize> for Su3Adjoint {
     type Output = Real;
 

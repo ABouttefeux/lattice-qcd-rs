@@ -85,12 +85,17 @@ impl std::error::Error for ThreadError {
 /// let us computes the value of `i^2 * c` for i in \[2,9999\] with 4 threads
 /// ```
 /// # use lattice_qcd_rs::thread::run_pool_parallel;
+/// # use std::error::Error;
+///
+/// # fn main() -> Result<(), Box<dyn Error>> {
 /// let iter = 2..10000;
 /// let c = 5;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
-/// let result = run_pool_parallel(iter, &c, &|i, c| i * i * c, 4, 10000 - 2).unwrap();
+/// let result = run_pool_parallel(iter, &c, &|i, c| i * i * c, 4, 10000 - 2)?;
 /// assert_eq!(*result.get(&40).unwrap(), 40 * 40 * c);
 /// assert_eq!(result.get(&1), None);
+/// # Ok(())
+/// # }
 /// ```
 /// In the next example a thread will panic, we demonstrate the return type.
 /// ```should_panic
@@ -148,6 +153,9 @@ where
 /// Let us create some value but we will greet the user from the threads
 /// ```
 /// # use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// # use std::error::Error;
+///
+/// # fn main() -> Result<(), Box<dyn Error>> {
 /// let iter = 0_u128..100000_u128;
 /// let c = 5_u128;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
@@ -164,8 +172,9 @@ where
 ///     || false,
 ///     4,
 ///     100000,
-/// )
-/// .unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 /// will print "Hello from the thread" four times.
 ///
@@ -176,8 +185,10 @@ where
 /// use lattice_qcd_rs::field::Su3Adjoint;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// # use std::error::Error;
 ///
-/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_with_initialisation_mutable(
 ///     l.get_links(),
@@ -186,8 +197,9 @@ where
 ///     rand::thread_rng,
 ///     4,
 ///     l.get_number_of_canonical_links_space(),
-/// )
-/// .unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 #[allow(clippy::needless_return)] // for lisibiliy
 pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
@@ -274,8 +286,10 @@ where
 /// use lattice_qcd_rs::field::Su3Adjoint;
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec;
+/// # use std::error::Error;
 ///
-/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
 /// let c = 5_usize;
 /// let result = run_pool_parallel_vec(
 ///     l.get_points(),
@@ -285,10 +299,11 @@ where
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     &0,
-/// )
-/// .unwrap();
+/// )?;
 /// let point = LatticePoint::new([3, 0, 5, 0].into());
-/// assert_eq!(result[point.to_index(&l)], point[0] * c)
+/// assert_eq!(result[point.to_index(&l)], point[0] * c);
+/// # Ok(())
+/// # }
 /// ```
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
     iter: impl Iterator<Item = Key> + Send,
@@ -330,7 +345,10 @@ where
 /// ```
 /// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
-/// let l = LatticeCyclique::<4>::new(1_f64, 25).unwrap();
+/// # use std::error::Error;
+///
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// let l = LatticeCyclique::<4>::new(1_f64, 25)?;
 /// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
@@ -349,8 +367,9 @@ where
 ///     100000,
 ///     &l,
 ///     &0,
-/// )
-/// .unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 /// will print "Hello from the thread" four times.
 ///
@@ -362,8 +381,10 @@ where
 /// use lattice_qcd_rs::field::Su3Adjoint;
 /// use lattice_qcd_rs::lattice::LatticeCyclique;
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
+/// # use std::error::Error;
 ///
-/// let l = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
 /// let result = run_pool_parallel_vec_with_initialisation_mutable(
 ///     l.get_links(),
@@ -374,8 +395,9 @@ where
 ///     l.get_number_of_canonical_links_space(),
 ///     &l,
 ///     &nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
-/// )
-/// .unwrap();
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_return)] // for lisibiliy

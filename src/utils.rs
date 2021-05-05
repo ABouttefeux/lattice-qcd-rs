@@ -1,4 +1,6 @@
 //! Utils function and structure
+//!
+//! Mainly things that I do not know where to put.
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -8,12 +10,12 @@ use approx::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-type FactorialNumber = u128;
+pub(crate) type FactorialNumber = u128;
 
-/// Smallest number such that (n+1)! overflow u128.
+/// Smallest number such that `(n+1)!` overflow [`u128`].
 pub const MAX_NUMBER_FACTORIAL: usize = 34;
 
-/// return n!.
+/// return n! (n factorial).
 ///
 /// # Panic
 /// It overflows if `n >= 35` and panics in debug.
@@ -42,9 +44,18 @@ pub const fn factorial(n: usize) -> FactorialNumber {
     }
 }
 
-/// Dynamical size factorial store
+/// Dynamical size factorial storage.
+///
+/// Used as a lazy cache for factoral number. This is not actually used and might be removed later.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FactorialStorageDyn {
     data: Vec<FactorialNumber>,
+}
+
+impl Default for FactorialStorageDyn {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FactorialStorageDyn {
@@ -68,7 +79,10 @@ impl FactorialStorageDyn {
 
     /// Get the factorial number. If it is not already computed build internal storage
     ///
-    /// #Example
+    /// # Panic
+    /// panic if value is greater than [`MAX_NUMBER_FACTORIAL`] (34) in debug, overflows otherwise.
+    ///
+    /// # Example
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
@@ -92,7 +106,6 @@ impl FactorialStorageDyn {
     }
 
     /// try get factorial from storage
-    ///
     ///
     /// #Example
     /// ```
@@ -148,10 +161,11 @@ impl Sign {
 
     /// Get the sign form a f64.
     ///
-    /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
+    /// If the value is very close to zero but not quite the sing will nonetheless be [`Sign::Zero`].
+    /// If f is NaN the sing will be [`Sign::Zero`].
     pub fn sign(f: f64) -> Self {
         // TODO manage NaN
-        if abs_diff_eq!(f, 0_f64) {
+        if abs_diff_eq!(f, 0_f64) || f.is_nan() {
             Sign::Zero
         }
         else if f > 0_f64 {
@@ -196,6 +210,22 @@ impl Sign {
         }
         else {
             Sign::Negative
+        }
+    }
+}
+
+impl Default for Sign {
+    fn default() -> Self {
+        Sign::Zero
+    }
+}
+
+impl std::fmt::Display for Sign {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Positive => write!(f, "positive"),
+            Self::Zero => write!(f, "zero"),
+            Self::Negative => write!(f, "negative"),
         }
     }
 }

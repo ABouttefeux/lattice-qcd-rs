@@ -233,6 +233,16 @@ impl<const D: usize> LatticeCyclique<D> {
     }
 }
 
+impl<const D: usize> std::fmt::Display for LatticeCyclique<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "cyclique lattice with {}^{} points and spacing {}",
+            self.dim, D, self.size
+        )
+    }
+}
+
 /// Iterator over [`LatticeLinkCanonical`] associated to a particular [`LatticeCyclique`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct IteratorLatticeLinkCanonical<'a, const D: usize> {
@@ -312,6 +322,22 @@ pub enum IteratorElement<T> {
     Element(T),
     /// The Iterator is exausted
     LastElement,
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for IteratorElement<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FirstElement => write!(f, "first element"),
+            Self::Element(t) => write!(f, "element {}", t),
+            Self::LastElement => write!(f, "last element"),
+        }
+    }
+}
+
+impl<T> Default for IteratorElement<T> {
+    fn default() -> Self {
+        Self::FirstElement
+    }
 }
 
 impl<T> From<IteratorElement<T>> for Option<T> {
@@ -583,6 +609,12 @@ impl<const D: usize> Default for LatticePoint<D> {
     }
 }
 
+impl<const D: usize> std::fmt::Display for LatticePoint<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
 impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D> {
     type IntoIter = <&'a SVector<usize, D> as IntoIterator>::IntoIter;
     type Item = &'a usize;
@@ -787,6 +819,28 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     }
 }
 
+impl<const D: usize> std::fmt::Display for LatticeLinkCanonical<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "canonical link : [position {}, direction {}]",
+            self.from, self.dir
+        )
+    }
+}
+
+impl<const D: usize> Default for LatticeLinkCanonical<D>
+where
+    Direction<D>: Default,
+{
+    fn default() -> Self {
+        Self {
+            from: LatticePoint::default(),
+            dir: Direction::default(),
+        }
+    }
+}
+
 impl<const D: usize> From<LatticeLinkCanonical<D>> for LatticeLink<D> {
     fn from(l: LatticeLinkCanonical<D>) -> Self {
         LatticeLink::new(l.from, l.dir)
@@ -848,6 +902,24 @@ impl<const D: usize> LatticeLink<D> {
     /// Get if the direction of the link is negative.
     pub const fn is_dir_negative(&self) -> bool {
         self.dir.is_negative()
+    }
+}
+
+impl<const D: usize> Default for LatticeLink<D>
+where
+    Direction<D>: Default,
+{
+    fn default() -> Self {
+        Self {
+            from: LatticePoint::default(),
+            dir: Direction::default(),
+        }
+    }
+}
+
+impl<const D: usize> std::fmt::Display for LatticeLink<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "link : [position {}, direction {}]", self.from, self.dir)
     }
 }
 
@@ -1010,6 +1082,20 @@ impl<const D: usize> Direction<D> {
         Self::new(index_max, is_positive).expect("Unreachable")
     }
 }
+
+// TODO default when condition on const generic is avaliable
+
+impl<const D: usize> std::fmt::Display for Direction<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[index {}, is positive: {}]",
+            self.index(),
+            self.is_positive()
+        )
+    }
+}
+
 /// List all possible direction
 pub trait DirectionList: Sized {
     /// List all directions.
@@ -1347,6 +1433,29 @@ impl DirectionEnum {
             DirectionEnum::YPos | DirectionEnum::YNeg => 1,
             DirectionEnum::ZPos | DirectionEnum::ZNeg => 2,
             DirectionEnum::TPos | DirectionEnum::TNeg => 3,
+        }
+    }
+}
+
+/// Return [`DirectionEnum::XPos`]
+impl Default for DirectionEnum {
+    ///Return [`DirectionEnum::XPos`]
+    fn default() -> Self {
+        Self::XPos
+    }
+}
+
+impl std::fmt::Display for DirectionEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DirectionEnum::XPos => write!(f, "X Positive"),
+            DirectionEnum::XNeg => write!(f, "X Negative"),
+            DirectionEnum::YPos => write!(f, "Y Positive"),
+            DirectionEnum::YNeg => write!(f, "Y Negative"),
+            DirectionEnum::ZPos => write!(f, "Z Positive"),
+            DirectionEnum::ZNeg => write!(f, "Z Negative"),
+            DirectionEnum::TPos => write!(f, "T Positive"),
+            DirectionEnum::TNeg => write!(f, "T Negative"),
         }
     }
 }
