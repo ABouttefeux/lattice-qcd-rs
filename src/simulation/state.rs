@@ -35,7 +35,7 @@ pub type LeapFrogStateDefault<const D: usize> =
 /// It defines only one field: `link_matrix` of type [`LinkMatrix`].
 pub trait LatticeState<const D: usize>
 where
-    Self: Sync + Sized + core::fmt::Debug,
+    Self: Sync + core::fmt::Debug,
 {
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
@@ -64,6 +64,7 @@ where
     /// Get an error if the simulation could not be advantaced
     fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, M::Error>
     where
+        Self: Sized,
         M: MonteCarlo<Self, D> + ?Sized,
     {
         m.get_next_element(self)

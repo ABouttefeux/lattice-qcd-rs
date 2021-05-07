@@ -100,7 +100,7 @@ where
 }
 
 /// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct McWrapper<MCD, State, Rng, const D: usize>
 where
