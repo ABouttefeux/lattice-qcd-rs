@@ -41,7 +41,7 @@ impl Display for ImplementationError {
                 write!(f, "internal error: entered unreachable code")
             }
             ImplementationError::OptionWithUnexpectedNone => {
-                write!(f, "An option contained an unexpected non_exhaustive value")
+                write!(f, "an option contained an unexpected non_exhaustive value")
             }
         }
     }
@@ -184,9 +184,12 @@ pub enum LatticeInitializationError {
 impl Display for LatticeInitializationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::NonPositiveSize => write!(f, "lattice initialization error : `size` must be stricly greater than 0 and be a finite number"),
-            Self::DimTooSmall => write!(f, "lattice initialization error : `dim` must be greater or equal to 2"),
-            Self::ZeroDimension => write!(f, "lattice initialization error : the dimension parameter `D = 0` is not valid"),
+            Self::NonPositiveSize => write!(
+                f,
+                "`size` must be stricly greater than 0 and be a finite number"
+            ),
+            Self::DimTooSmall => write!(f, "`dim` must be greater or equal to 2"),
+            Self::ZeroDimension => write!(f, "the dimension parameter `D = 0` is not valid"),
         }
     }
 }

@@ -581,9 +581,12 @@ impl Default for FactorialStorageStatic {
 
 impl std::fmt::Display for FactorialStorageStatic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Factorial Storage :")?;
+        write!(f, "factorial Storage : ")?;
         for (i, n) in self.iter().enumerate() {
-            write!(f, "{}! = {},", i, n)?;
+            write!(f, "{}! = {}", i, n)?;
+            if i < self.data.len() - 1 {
+                write!(f, ", ")?;
+            }
         }
         Ok(())
     }

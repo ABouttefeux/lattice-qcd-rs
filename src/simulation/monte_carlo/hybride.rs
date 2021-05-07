@@ -28,7 +28,7 @@ pub enum HybrideMethodeVecError<Error> {
 impl<Error: Display> Display for HybrideMethodeVecError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::NoMethod => write!(f, "error: no Monte Carlo method"),
+            Self::NoMethod => write!(f, "no monte carlo method"),
             Self::Error(index, error) => {
                 write!(f, "error during intgration step {}: {}", index, error)
             }
@@ -249,8 +249,8 @@ pub enum HybrideMethodeCoupleError<Error1, Error2> {
 impl<Error1: Display, Error2: Display> Display for HybrideMethodeCoupleError<Error1, Error2> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ErrorFirst(error) => write!(f, "Error during intgration step 1: {}", error),
-            Self::ErrorSecond(error) => write!(f, "Error during intgration step 2: {}", error),
+            Self::ErrorFirst(error) => write!(f, "error during intgration step 1: {}", error),
+            Self::ErrorSecond(error) => write!(f, "error during intgration step 2: {}", error),
         }
     }
 }

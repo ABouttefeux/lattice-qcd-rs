@@ -535,7 +535,7 @@ impl LinkMatrix {
     pub const fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         &self.data
     }
-    
+
     /// Get a mutable reference to the data
     pub fn data_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
         &mut self.data
@@ -545,7 +545,7 @@ impl LinkMatrix {
     pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         self.data()
     }
-    
+
     /// Get the link_matrix as a Vec
     pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
         self.data_mut()
@@ -941,7 +941,7 @@ impl<const D: usize> EField<D> {
     pub const fn data(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         &self.data
     }
-    
+
     /// Get a mut ref to the data data.
     pub fn data_mut(&mut self) -> &mut Vec<SVector<Su3Adjoint, D>> {
         &mut self.data
