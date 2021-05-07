@@ -1,11 +1,13 @@
 //! Represent the fields on the lattice.
 
+use std::iter::FromIterator;
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
     vec::Vec,
 };
 
 use na::{ComplexField, Matrix3, SVector};
+use rayon::iter::FromParallelIterator;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -533,10 +535,20 @@ impl LinkMatrix {
     pub const fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         &self.data
     }
+    
+    /// Get a mutable reference to the data
+    pub fn data_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+        &mut self.data
+    }
 
     /// Get the link_matrix as a Vec
     pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         self.data()
+    }
+    
+    /// Get the link_matrix as a Vec
+    pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+        self.data_mut()
     }
 
     /// Get the link_matrix as a Vec
@@ -812,6 +824,12 @@ impl AsRef<Vec<CMatrix3>> for LinkMatrix {
     }
 }
 
+impl AsMut<Vec<CMatrix3>> for LinkMatrix {
+    fn as_mut(&mut self) -> &mut Vec<CMatrix3> {
+        self.as_vec_mut()
+    }
+}
+
 impl AsRef<[CMatrix3]> for LinkMatrix {
     fn as_ref(&self) -> &[CMatrix3] {
         self.as_slice()
@@ -856,6 +874,56 @@ impl IndexMut<usize> for LinkMatrix {
     }
 }
 
+impl<A> FromIterator<A> for LinkMatrix
+where
+    Vec<CMatrix3>: FromIterator<A>,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = A>,
+    {
+        Self::new(Vec::from_iter(iter))
+    }
+}
+
+impl<A> FromParallelIterator<A> for LinkMatrix
+where
+    Vec<CMatrix3>: FromParallelIterator<A>,
+    A: Send,
+{
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = A>,
+    {
+        Self::new(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<T> ParallelExtend<T> for LinkMatrix
+where
+    Vec<CMatrix3>: ParallelExtend<T>,
+    T: Send,
+{
+    fn par_extend<I>(&mut self, par_iter: I)
+    where
+        I: IntoParallelIterator<Item = T>,
+    {
+        self.data.par_extend(par_iter)
+    }
+}
+
+impl<A> Extend<A> for LinkMatrix
+where
+    Vec<CMatrix3>: Extend<A>,
+{
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = A>,
+    {
+        self.data.extend(iter)
+    }
+}
+
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -872,6 +940,11 @@ impl<const D: usize> EField<D> {
     /// Get the raw data.
     pub const fn data(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         &self.data
+    }
+    
+    /// Get a mut ref to the data data.
+    pub fn data_mut(&mut self) -> &mut Vec<SVector<Su3Adjoint, D>> {
+        &mut self.data
     }
 
     /// Get the e_field as a Vec of Vector of Su3Adjoint
@@ -1110,6 +1183,12 @@ impl<const D: usize> AsRef<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
     }
 }
 
+impl<const D: usize> AsMut<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
+    fn as_mut(&mut self) -> &mut Vec<SVector<Su3Adjoint, D>> {
+        self.data_mut()
+    }
+}
+
 impl<const D: usize> AsRef<[SVector<Su3Adjoint, D>]> for EField<D> {
     fn as_ref(&self) -> &[SVector<Su3Adjoint, D>] {
         self.as_slice()
@@ -1151,6 +1230,56 @@ impl<const D: usize> Index<usize> for EField<D> {
 impl<const D: usize> IndexMut<usize> for EField<D> {
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
+    }
+}
+
+impl<A, const D: usize> FromIterator<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: FromIterator<A>,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = A>,
+    {
+        Self::new(Vec::from_iter(iter))
+    }
+}
+
+impl<A, const D: usize> FromParallelIterator<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: FromParallelIterator<A>,
+    A: Send,
+{
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = A>,
+    {
+        Self::new(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<T, const D: usize> ParallelExtend<T> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: ParallelExtend<T>,
+    T: Send,
+{
+    fn par_extend<I>(&mut self, par_iter: I)
+    where
+        I: IntoParallelIterator<Item = T>,
+    {
+        self.data.par_extend(par_iter)
+    }
+}
+
+impl<A, const D: usize> Extend<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: Extend<A>,
+{
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = A>,
+    {
+        self.data.extend(iter)
     }
 }
 
