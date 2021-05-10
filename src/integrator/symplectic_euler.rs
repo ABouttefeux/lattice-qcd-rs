@@ -41,7 +41,7 @@ impl<Error: core::fmt::Display> core::fmt::Display for SymplecticEulerError<Erro
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) => write!(f, "{}", error),
+            Self::StateInitializationError(error) => write!(f, "initialization error: {}", error),
         }
     }
 }
@@ -129,7 +129,17 @@ impl Default for SymplecticEuler {
     /// Default value using the number of threads rayon would use,
     /// see [`rayon::current_num_threads()`].
     fn default() -> Self {
-        Self::new(rayon::current_num_threads())
+        Self::new(rayon::current_num_threads().min(1))
+    }
+}
+
+impl std::fmt::Display for SymplecticEuler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Euler integrator with {} thread",
+            self.number_of_thread()
+        )
     }
 }
 

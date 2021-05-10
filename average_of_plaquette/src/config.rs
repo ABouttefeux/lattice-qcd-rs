@@ -13,17 +13,17 @@ pub struct LatticeConfig {
 
 impl LatticeConfig {
     pub fn new(
-        lattice_size: Real,
-        lattice_number_of_points: usize,
         lattice_beta: Real,
+        lattice_number_of_points: usize,
+        lattice_size: Real,
     ) -> Option<Self> {
         if lattice_size < 0_f64 || lattice_number_of_points < 2 {
             return None;
         }
         Some(Self {
-            lattice_size,
-            lattice_number_of_points,
             lattice_beta,
+            lattice_number_of_points,
+            lattice_size,
         })
     }
 
@@ -65,11 +65,11 @@ impl SimConfig {
         }
         else {
             Some(Self {
-                mc_config,
                 number_of_thermalisation,
                 number_between_renorm,
                 number_of_averages,
                 number_of_steps_between_average,
+                mc_config,
             })
         }
     }

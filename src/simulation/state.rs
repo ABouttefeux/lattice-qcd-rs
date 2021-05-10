@@ -33,10 +33,7 @@ pub type LeapFrogStateDefault<const D: usize> =
 /// trait to represent a pure gauge lattice state.
 ///
 /// It defines only one field: `link_matrix` of type [`LinkMatrix`].
-pub trait LatticeState<const D: usize>
-where
-    Self: Sync + core::fmt::Debug,
-{
+pub trait LatticeState<const D: usize> {
     /// The link matrices of this state.
     fn link_matrix(&self) -> &LinkMatrix;
 
@@ -578,8 +575,8 @@ impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D> {
         }
         Ok(Self {
             lattice,
-            link_matrix,
             beta,
+            link_matrix,
         })
     }
 }
@@ -642,7 +639,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
 
 /// wrapper for a simulation state using leap frog ([`SimulationStateLeap`]) using a synchrone type
 /// ([`SimulationStateSynchrone`]).
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SimulationStateLeap<State, const D: usize>
 where
@@ -660,6 +657,13 @@ where
         state,
         State
     );
+
+    /// Create a new SimulationStateLeap directly from a state without applying any modification.
+    ///
+    /// In most cases wou will prefer to build it using [`LatticeStateNew`] or [`Self::from_synchrone`].
+    pub fn new_from_state(state: State) -> Self {
+        Self { state }
+    }
 
     /// get a mutable reference to the state
     pub fn state_mut(&mut self) -> &mut State {
@@ -681,6 +685,24 @@ where
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field()
             .get_gauss(self.link_matrix(), point, self.lattice())
+    }
+}
+
+impl<State, const D: usize> Default for SimulationStateLeap<State, D>
+where
+    State: SimulationStateSynchrone<D> + Default,
+{
+    fn default() -> Self {
+        Self::new_from_state(State::default())
+    }
+}
+
+impl<State, const D: usize> std::fmt::Display for SimulationStateLeap<State, D>
+where
+    State: SimulationStateSynchrone<D> + std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "leapfrog {}", self.state())
     }
 }
 

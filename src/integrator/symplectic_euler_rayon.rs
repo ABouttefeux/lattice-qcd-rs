@@ -89,6 +89,12 @@ impl Default for SymplecticEulerRayon {
     }
 }
 
+impl std::fmt::Display for SymplecticEulerRayon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Euler integrator using rayon")
+    }
+}
+
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>
     for SymplecticEulerRayon
 where

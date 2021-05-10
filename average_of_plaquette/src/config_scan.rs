@@ -90,9 +90,9 @@ impl LatticeConfigScan {
         lattice_beta: ScanPossibility<Real>,
     ) -> Option<Self> {
         let s = Self {
-            lattice_size,
-            lattice_number_of_points,
             lattice_beta,
+            lattice_number_of_points,
+            lattice_size,
         };
         if s.is_valide() {
             Some(s)
@@ -183,11 +183,11 @@ impl SimConfigScan {
         number_of_steps_between_average: ScanPossibility<usize>,
     ) -> Option<Self> {
         let s = Self {
-            mc_config,
             number_of_thermalisation,
             number_between_renorm,
             number_of_averages,
             number_of_steps_between_average,
+            mc_config,
         };
         if s.is_valide() {
             Some(s)
