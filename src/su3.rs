@@ -193,7 +193,7 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
 pub trait MatrixExp<T> {
     /// Return the exponential of the matrix
-    fn exp(&self) -> T;
+    fn exp(self) -> T;
 }
 
 /// Basic implementation of matrix exponential for complex matrices.
@@ -209,8 +209,8 @@ where
         + Allocator<T, D>,
     OMatrix<T, D, D>: Clone,
 {
-    fn exp(&self) -> OMatrix<T, D, D> {
-        let decomposition = self.clone().schur();
+    fn exp(self) -> OMatrix<T, D, D> {
+        let decomposition = self.schur();
         // a complex matrix is always diagonalisable
         let eigens = decomposition.eigenvalues().unwrap();
         let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
