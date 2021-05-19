@@ -180,7 +180,9 @@ impl<const D: usize> LatticeCyclique<D> {
         self.size
     }
 
-    /// get the next point in the lattice following the direction `dir`
+    /// get the next point in the lattice following the direction `dir`.
+    /// It follows the cyclique property of the lattice.
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint};
@@ -198,19 +200,48 @@ impl<const D: usize> LatticeCyclique<D> {
     /// ```
     pub fn add_point_direction(
         &self,
-        mut point: LatticePoint<D>,
+        point: LatticePoint<D>,
         dir: &Direction<D>,
     ) -> LatticePoint<D> {
+        self.add_point_direction_n(point, dir, 1)
+    }
+
+    /// Returns the point given y mouving `shift_number` times in direction `dir` from position `point`.
+    /// It follows the cyclique property of the lattice.
+    ///
+    /// It is equivalent of doing [`Self::add_point_direction`] n times.
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::lattice::{LatticeCyclique, DirectionEnum, LatticePoint};
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let point = LatticePoint::<4>::from([1, 0, 2, 0]);
+    /// assert_eq!(
+    ///     lattice.add_point_direction_n(point, &DirectionEnum::XPos.into(), 2),
+    ///     LatticePoint::from([3, 0, 2, 0])
+    /// );
+    /// // In the following case we get [_, 1, _, _] because `dim = 4`, and this lattice is cyclique.
+    /// assert_eq!(
+    ///     lattice.add_point_direction_n(point, &DirectionEnum::YNeg.into(), 3),
+    ///     LatticePoint::from([1, 1, 2, 0])
+    /// );
+    /// ```
+    pub fn add_point_direction_n(
+        &self,
+        mut point: LatticePoint<D>,
+        dir: &Direction<D>,
+        shift_number: usize,
+    ) -> LatticePoint<D> {
+        let shift_number = shift_number % self.dim(); // we ensure that shift_number < % self.dim()
         if dir.is_positive() {
-            point[dir.index()] = (point[dir.index()] + 1) % self.dim();
+            point[dir.index()] = (point[dir.index()] + shift_number) % self.dim();
         }
         else {
             let dir_pos = dir.to_positive();
-            if point[dir_pos.index()] == 0 {
-                point[dir_pos.index()] = self.dim() - 1;
+            if point[dir_pos.index()] < shift_number {
+                point[dir_pos.index()] = self.dim() - (shift_number - point[dir_pos.index()]);
             }
             else {
-                point[dir_pos.index()] = (point[dir_pos.index()] - 1) % self.dim();
+                point[dir_pos.index()] = (point[dir_pos.index()] - shift_number) % self.dim();
             }
         }
         point
