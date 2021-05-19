@@ -11,7 +11,7 @@ keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
 publish = false
 
 [features]
-serde-serialize = ["serde"]
+serde-serialize = ["serde", "nalgebra/serde-serialize"]
 default = ["serde-serialize"]
 no-overflow-test= []
 
@@ -19,7 +19,7 @@ no-overflow-test= []
 members = ["simulation-bin", "average_of_plaquette", "procedural_macro"]
 
 [dependencies]
-nalgebra = { version = "0.26.2", features = ["serde-serialize"] }
+nalgebra = { version = "0.26.2" }
 approx = "0.4.0"
 num-traits = "0.2.14"
 rand = "0.8.3"
