@@ -191,6 +191,7 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 /// Exponential of matrices.
 ///
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
+#[deprecated(since = "0.2.0", note = "Please use nalgebra exp instead")]
 pub trait MatrixExp<T> {
     /// Return the exponential of the matrix
     fn exp(self) -> T;
@@ -199,6 +200,7 @@ pub trait MatrixExp<T> {
 /// Basic implementation of matrix exponential for complex matrices.
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
+#[allow(deprecated)]
 impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
 where
     T: ComplexField + Copy,
