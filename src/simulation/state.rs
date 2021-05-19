@@ -593,15 +593,15 @@ impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D> {
 impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     const CA: Real = 3_f64;
 
-    getter_trait!(
+    getter!(
         /// The link matrices of this state.
         link_matrix,
         LinkMatrix
     );
 
-    getter_trait!(lattice, LatticeCyclique<D>);
+    getter!(lattice, LatticeCyclique<D>);
 
-    getter_copy_trait!(beta, Real);
+    getter_copy!(beta, Real);
 
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
@@ -663,6 +663,7 @@ where
 {
     getter!(
         /// get a reference to the state
+        pub,
         state,
         State
     );

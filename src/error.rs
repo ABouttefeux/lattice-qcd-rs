@@ -206,17 +206,13 @@ pub struct ErrorWithOnwnedValue<Error, State> {
 
 impl<Error, State> ErrorWithOnwnedValue<Error, State> {
     getter!(
-        const,
         /// getter on the error
-        error,
-        Error
+        pub const error() -> Error
     );
 
     getter!(
-        const,
         /// getter on the owned value
-        owned,
-        State
+        pub const owned() -> State
     );
 
     /// Create a new Self with an error and an owned value

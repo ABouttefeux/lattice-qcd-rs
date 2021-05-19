@@ -55,40 +55,27 @@ where
 {
     getter!(
         /// Get a ref to the rng.
-        rng,
-        Rng
+        pub rng() -> Rng
     );
 
     project!(
-        pub,
         /// Get the integrator.
-        integrator,
-        internal,
-        &I
+        pub internal.integrator() -> &I
     );
 
     project_mut!(
-        pub,
         /// Get a mut ref to the integrator.
-        integrator_mut,
-        internal,
-        &mut I
+        pub internal.integrator_mut() -> &mut I
     );
 
     project!(
-        pub,
         /// Get `delta_t`.
-        delta_t,
-        internal,
-        Real
+        pub internal.delta_t() -> Real
     );
 
     project!(
-        pub,
         /// Get the number of steps.
-        number_of_steps,
-        internal,
-        usize
+        pub internal.number_of_steps() -> usize
     );
 
     /// gvies the following parameter for the HCM :
@@ -197,18 +184,21 @@ where
 {
     getter!(
         /// Get the integrator.
+        pub,
         integrator,
         I
     );
 
     getter_copy!(
         /// Get `delta_t`.
+        pub,
         delta_t,
         Real
     );
 
     getter_copy!(
         /// Get the number of steps.
+        pub,
         number_of_steps,
         usize
     );
@@ -313,37 +303,38 @@ where
 {
     getter!(
         /// Get a ref to the rng.
+        pub,
         rng,
         Rng
     );
 
     project!(
-        pub,
         /// Get the integrator.
+        pub,
         integrator,
         internal,
         &I
     );
 
     project_mut!(
-        pub,
         /// Get a mut ref to the integrator.
+        pub,
         integrator_mut,
         internal,
         &mut I
     );
 
     project!(
-        pub,
         /// Get `delta_t`.
+        pub,
         delta_t,
         internal,
         Real
     );
 
     project!(
-        pub,
         /// Get the number of steps.
+        pub,
         number_of_steps,
         internal,
         usize
@@ -467,18 +458,21 @@ where
 {
     getter!(
         /// Get the integrator.
+        pub,
         integrator,
         I
     );
 
     getter_copy!(
         /// Get `delta_t`.
+        pub,
         delta_t,
         Real
     );
 
     getter_copy!(
         /// Get the number of steps.
+        pub,
         number_of_steps,
         usize
     );

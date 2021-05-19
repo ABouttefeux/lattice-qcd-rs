@@ -108,7 +108,7 @@ where
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let mut random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     while !random_vector.norm().is_normal() {
-        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     }
     let vector_normalize = random_vector / Complex::from(random_vector.norm());
     CMatrix2::new(

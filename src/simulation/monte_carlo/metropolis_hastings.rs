@@ -188,18 +188,21 @@ pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
 impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     getter_copy!(
         /// Get the last probably of acceptance of the random change.
+        pub,
         prob_replace_last,
         Real
     );
 
     getter_copy!(
         /// Get if last step has accepted the replacement.
+        pub,
         has_replace_last,
         bool
     );
 
     getter!(
         /// Get a ref to the rng.
+        pub,
         rng,
         Rng
     );

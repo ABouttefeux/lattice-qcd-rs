@@ -67,8 +67,8 @@ pub struct SymplecticEuler {
 
 impl SymplecticEuler {
     getter_copy!(
-        const,
         /// getter on the number of thread the integrator use.
+        pub const,
         number_of_thread,
         usize
     );

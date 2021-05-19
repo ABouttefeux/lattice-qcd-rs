@@ -138,6 +138,7 @@ where
 {
     getter!(
         /// get the methods
+        pub,
         methods,
         Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>
     );
@@ -290,12 +291,14 @@ where
 {
     getter!(
         /// get the first method
+        pub,
         method_1,
         MC1
     );
 
     getter!(
         /// get the second method
+        pub,
         method_2,
         MC2
     );

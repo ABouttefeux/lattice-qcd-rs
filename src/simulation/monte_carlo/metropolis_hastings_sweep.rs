@@ -31,6 +31,7 @@ pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
 impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     getter!(
         /// Get a ref to the rng.
+        pub,
         rng,
         Rng
     );

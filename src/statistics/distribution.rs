@@ -43,6 +43,7 @@ where
 {
     getter_copy!(
         /// return the parameter `a`.
+        pub,
         param_exp,
         T
     );
@@ -148,6 +149,7 @@ where
 {
     getter_copy!(
         /// return the parameter `param_exp`.
+        pub,
         param_exp,
         T
     );
@@ -252,6 +254,7 @@ where
 {
     getter_copy!(
         /// return the parameter `param_exp`.
+        pub,
         param_exp,
         T
     );
@@ -334,8 +337,8 @@ pub struct CloseToUnit {
 
 impl CloseToUnit {
     getter_copy!(
-        const,
         /// Get the spread parameter
+        pub const,
         spread_parameter,
         f64
     );

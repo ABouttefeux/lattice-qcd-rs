@@ -126,6 +126,7 @@ where
 {
     getter!(
         /// Get a ref to the rng.
+        pub,
         rng,
         Rng
     );

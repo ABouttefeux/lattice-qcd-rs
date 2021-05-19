@@ -911,7 +911,7 @@ where
     where
         I: IntoParallelIterator<Item = T>,
     {
-        self.data.par_extend(par_iter)
+        self.data.par_extend(par_iter);
     }
 }
 
@@ -923,7 +923,7 @@ where
     where
         T: IntoIterator<Item = A>,
     {
-        self.data.extend(iter)
+        self.data.extend(iter);
     }
 }
 
@@ -1270,7 +1270,7 @@ where
     where
         I: IntoParallelIterator<Item = T>,
     {
-        self.data.par_extend(par_iter)
+        self.data.par_extend(par_iter);
     }
 }
 
@@ -1282,7 +1282,7 @@ where
     where
         T: IntoIterator<Item = A>,
     {
-        self.data.extend(iter)
+        self.data.extend(iter);
     }
 }
 

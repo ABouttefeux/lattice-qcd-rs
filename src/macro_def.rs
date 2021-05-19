@@ -15,18 +15,6 @@
 //!     getter!(const, b, usize);
 //! }
 //! ```
-//! # getter_trait!
-//! getter for trait (without the `pub` ident)
-//! ## Example
-//! ```ignore
-//! pub trait get_b {
-//!     fn b(&self) -> usize
-//! }
-//! struct a {b: usize}
-//! impl get_b for a {
-//!     getter_trait!(b, usize);
-//! }
-//! ```
 //! # getter_copy!
 //! create a getter that copy the value.
 //! ## Examples
@@ -74,103 +62,84 @@
 //! ```
 
 macro_rules! getter {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
+        getter!($(#[$meta])* $v $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $t:ty) => {
+        getter!($(#[$meta])* $v const $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self) -> &$t {
+        $v fn $i(&self) -> &$t {
             &self.$i
         }
     };
-    (const, $(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis const $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self) -> &$t {
-            &self.$i
-        }
-    }
-}
-
-/// Getter in a trait (without the pub )
-macro_rules! getter_trait {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
-        $(#[$meta])*
-        fn $i(&self) -> &$t {
+        $v const fn $i(&self) -> &$t {
             &self.$i
         }
     };
 }
 
 macro_rules! getter_copy {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
+        getter_copy!($(#[$meta])* $v $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $t:ty) => {
+        getter_copy!($(#[$meta])* $v const $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self) -> $t {
+        $v fn $i(&self) -> $t {
             self.$i
         }
     };
-    (const, $(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis const $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self) -> $t {
+        $v const fn $i(&self) -> $t {
             self.$i
         }
-    }
-}
-
-macro_rules! getter_copy_trait {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
-        $(#[$meta])*
-        fn $i(&self) -> $t {
-            self.$i
-        }
-    }
+    };
 }
 
 macro_rules! project {
-    (pub, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project!($(#[$meta])* $v $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project!($(#[$meta])* $v const $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $data:ident.$i:ident($($arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self $(, $arg : $type_arg)*) -> $t {
+        $v fn $i(&self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
-    (pub const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis const $data:ident.$i:ident($($arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    (const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        const fn $i(&self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    ($(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        fn $i(&self $(, $arg : $type_arg)*) -> $t {
+        $v const fn $i(&self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
 }
 
 macro_rules! project_mut {
-    (pub, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project_mut!($(#[$meta])* $v $data.$i($( $arg: $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project_mut!($(#[$meta])* $v const $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $data:ident.$i:ident($( $arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
+        $v fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
-    (pub const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis const $data:ident.$i:ident($( $arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    (const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    ($(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
+        $v const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };

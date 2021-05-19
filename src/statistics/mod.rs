@@ -45,9 +45,9 @@ where
         + Send
         + Sync
         + 'a
-        + Sub<T, Output = T>,
-    T: Mul<T, Output = T>,
-    T: Zero,
+        + Sub<T, Output = T>
+        + Mul<T, Output = T>
+        + Zero,
     It: IndexedParallelIterator<Item = &'a T> + Clone,
 {
     variance_par_iter_val(data.cloned())
@@ -61,9 +61,9 @@ where
         + std::iter::Sum<T>
         + std::iter::Sum<It::Item>
         + Send
-        + Sub<T, Output = T>,
-    T: Mul<T, Output = T>,
-    T: Zero,
+        + Sub<T, Output = T>
+        + Mul<T, Output = T>
+        + Zero,
     It: IndexedParallelIterator<Item = T> + Clone,
 {
     let [_, variance] = mean_and_variance_par_iter_val(data);
@@ -80,10 +80,10 @@ where
         + Send
         + Sync
         + 'a
-        + Sub<T, Output = T>,
-    T: Mul<T, Output = T>,
+        + Sub<T, Output = T>
+        + Mul<T, Output = T>
+        + Zero,
     It: IndexedParallelIterator<Item = &'a T> + Clone,
-    T: Zero,
 {
     mean_and_variance_par_iter_val(data.cloned())
 }
@@ -96,10 +96,10 @@ where
         + std::iter::Sum<T>
         + std::iter::Sum<It::Item>
         + Send
-        + Sub<T, Output = T>,
-    T: Mul<T, Output = T>,
+        + Sub<T, Output = T>
+        + Mul<T, Output = T>
+        + Zero,
     It: IndexedParallelIterator<Item = T> + Clone,
-    T: Zero,
 {
     let len = data.len();
     let (mean, mean_sqrt) = data
