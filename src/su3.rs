@@ -192,7 +192,7 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 ///
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
 #[deprecated(since = "0.2.0", note = "Please use nalgebra exp instead")]
-pub trait MatrixExp<T> {
+pub trait MatrixExp<T = Self> {
     /// Return the exponential of the matrix
     fn exp(self) -> T;
 }
@@ -304,7 +304,10 @@ pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
 }
 
 /// Generate Uniformly distributed SU(3) matrix
-pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
+pub fn get_random_su3<Rng>(rng: &mut Rng) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
     get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
 }
 
@@ -313,10 +316,10 @@ pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
 /// For a matrix Uniformly distributed amoung SU(3) use [`get_random_su3`].
 /// For a matrix close to unity use [`get_random_su3_close_to_unity`]
-fn get_rand_su3_with_dis(
-    rng: &mut impl rand::Rng,
-    d: &impl rand_distr::Distribution<Real>,
-) -> CMatrix3 {
+fn get_rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
     let mut v1 = get_random_vec_3(rng, d);
     while v1.norm() <= f64::EPSILON {
         v1 = get_random_vec_3(rng, d);
@@ -329,10 +332,13 @@ fn get_rand_su3_with_dis(
 }
 
 /// get a random [`na::Vector3<Complex>`].
-fn get_random_vec_3(
-    rng: &mut impl rand::Rng,
+fn get_random_vec_3<Rng>(
+    rng: &mut Rng,
     d: &impl rand_distr::Distribution<Real>,
-) -> na::Vector3<Complex> {
+) -> na::Vector3<Complex>
+where
+    Rng: rand::Rng + ?Sized,
+{
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
@@ -559,17 +565,17 @@ impl FactorialStorageStatic {
         Self { data }
     }
 
-    /// access in O(1). Return None if `value` is bigger than 34
+    /// access in O(1). Return None if `value` is bigger than 34.
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
 
-    /// Get an iterator over the factorial number form `0!` up to `34!`
+    /// Get an iterator over the factorial number form `0!` up to `34!`.
     pub fn iter(&self) -> impl Iterator<Item = &FactorialNumber> {
         self.data.iter()
     }
 
-    /// Get the slice of factoral number
+    /// Get the slice of factoral number.
     pub const fn as_slice(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
         &self.data
     }

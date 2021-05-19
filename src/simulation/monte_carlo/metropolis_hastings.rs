@@ -55,11 +55,14 @@ where
 {
     type Error = State::Error;
 
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
@@ -123,11 +126,14 @@ where
 {
     type Error = State::Error;
 
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let d = rand::distributions::Uniform::new(0, state.link_matrix().len());
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
@@ -141,11 +147,14 @@ where
         )
     }
 
-    fn get_next_element_default(
+    fn get_next_element_default<Rng>(
         &mut self,
         state: State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next)
             .min(1_f64)
@@ -188,6 +197,17 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         has_replace_last,
         bool
     );
+
+    getter!(
+        /// Get a ref to the rng.
+        rng,
+        Rng
+    );
+
+    /// Get a mutable reference to the rng.
+    pub fn rng_mut(&mut self) -> &mut Rng {
+        &mut self.rng
+    }
 
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
@@ -273,6 +293,18 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
             self.has_replace_last = false;
             state
         }
+    }
+}
+
+impl<Rng: rand::Rng> AsRef<Rng> for MetropolisHastingsDeltaDiagnostic<Rng> {
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<Rng: rand::Rng> AsMut<Rng> for MetropolisHastingsDeltaDiagnostic<Rng> {
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
     }
 }
 

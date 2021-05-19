@@ -53,6 +53,44 @@ where
     >,
     Rng: rand::Rng,
 {
+    getter!(
+        /// Get a ref to the rng.
+        rng,
+        Rng
+    );
+
+    project!(
+        pub,
+        /// Get the integrator.
+        integrator,
+        internal,
+        &I
+    );
+
+    project_mut!(
+        pub,
+        /// Get a mut ref to the integrator.
+        integrator_mut,
+        internal,
+        &mut I
+    );
+
+    project!(
+        pub,
+        /// Get `delta_t`.
+        delta_t,
+        internal,
+        Real
+    );
+
+    project!(
+        pub,
+        /// Get the number of steps.
+        number_of_steps,
+        internal,
+        usize
+    );
+
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
     /// - number_of_steps is the number of time
@@ -71,13 +109,45 @@ where
     }
 
     /// Get a mutlable reference to the rng.
-    pub fn get_rng(&mut self) -> &mut Rng {
+    pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
     /// Get the last probably of acceptance of the random change.
     pub fn rng_owned(self) -> Rng {
         self.rng
+    }
+}
+
+impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarlo<State, Rng, I, D>
+where
+    State: LatticeState<D> + Clone,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<
+        LatticeStateWithEFieldSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        D,
+    >,
+    Rng: rand::Rng,
+{
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarlo<State, Rng, I, D>
+where
+    State: LatticeState<D> + Clone,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<
+        LatticeStateWithEFieldSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        D,
+    >,
+    Rng: rand::Rng,
+{
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
     }
 }
 
@@ -97,7 +167,7 @@ where
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
             state,
-            self.get_rng(),
+            self.rng_mut(),
         );
         self.internal
             .get_next_element_default(state_internal, &mut self.rng)
@@ -125,6 +195,24 @@ where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    getter!(
+        /// Get the integrator.
+        integrator,
+        I
+    );
+
+    getter_copy!(
+        /// Get `delta_t`.
+        delta_t,
+        Real
+    );
+
+    getter_copy!(
+        /// Get the number of steps.
+        number_of_steps,
+        usize
+    );
+
     /// see [HybridMonteCarlo::new]
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
@@ -133,6 +221,30 @@ where
             integrator,
             _phantom: PhantomData,
         }
+    }
+
+    pub fn integrator_mut(&mut self) -> &mut I {
+        &mut self.integrator
+    }
+}
+
+impl<State, I, const D: usize> AsRef<I> for HybridMonteCarloInternal<State, I, D>
+where
+    State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+{
+    fn as_ref(&self) -> &I {
+        self.integrator()
+    }
+}
+
+impl<State, I, const D: usize> AsMut<I> for HybridMonteCarloInternal<State, I, D>
+where
+    State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+{
+    fn as_mut(&mut self) -> &mut I {
+        self.integrator_mut()
     }
 }
 
@@ -143,11 +255,14 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        _rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        _rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
@@ -196,6 +311,44 @@ where
     >,
     Rng: rand::Rng,
 {
+    getter!(
+        /// Get a ref to the rng.
+        rng,
+        Rng
+    );
+
+    project!(
+        pub,
+        /// Get the integrator.
+        integrator,
+        internal,
+        &I
+    );
+
+    project_mut!(
+        pub,
+        /// Get a mut ref to the integrator.
+        integrator_mut,
+        internal,
+        &mut I
+    );
+
+    project!(
+        pub,
+        /// Get `delta_t`.
+        delta_t,
+        internal,
+        Real
+    );
+
+    project!(
+        pub,
+        /// Get the number of steps.
+        number_of_steps,
+        internal,
+        usize
+    );
+
     /// gvies the following parameter for the HCM :
     /// - delta_t is the step size per intgration of the equation of motion
     /// - number_of_steps is the number of time
@@ -213,7 +366,7 @@ where
     }
 
     /// Get a mutlable reference to the rng.
-    pub fn get_rng(&mut self) -> &mut Rng {
+    pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
@@ -230,6 +383,38 @@ where
     /// Get the last probably of acceptance of the random change.
     pub fn rng_owned(self) -> Rng {
         self.rng
+    }
+}
+
+impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
+where
+    State: LatticeState<D> + Clone,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<
+        LatticeStateWithEFieldSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        D,
+    >,
+    Rng: rand::Rng,
+{
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
+where
+    State: LatticeState<D> + Clone,
+    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<
+        LatticeStateWithEFieldSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        D,
+    >,
+    Rng: rand::Rng,
+{
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
     }
 }
 
@@ -250,7 +435,7 @@ where
     fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
             state,
-            self.get_rng(),
+            self.rng_mut(),
         );
         self.internal
             .get_next_element_default(state_internal, &mut self.rng)
@@ -280,6 +465,24 @@ where
     State: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    getter!(
+        /// Get the integrator.
+        integrator,
+        I
+    );
+
+    getter_copy!(
+        /// Get `delta_t`.
+        delta_t,
+        Real
+    );
+
+    getter_copy!(
+        /// Get the number of steps.
+        number_of_steps,
+        usize
+    );
+
     /// see [HybridMonteCarlo::new]
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
@@ -301,6 +504,30 @@ where
     pub fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
+
+    pub fn integrator_mut(&mut self) -> &mut I {
+        &mut self.integrator
+    }
+}
+
+impl<State, I, const D: usize> AsRef<I> for HybridMonteCarloInternalDiagnostics<State, I, D>
+where
+    State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+{
+    fn as_ref(&self) -> &I {
+        self.integrator()
+    }
+}
+
+impl<State, I, const D: usize> AsMut<I> for HybridMonteCarloInternalDiagnostics<State, I, D>
+where
+    State: SimulationStateSynchrone<D>,
+    I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
+{
+    fn as_mut(&mut self) -> &mut I {
+        self.integrator_mut()
+    }
 }
 
 impl<State, I, const D: usize> MonteCarloDefault<State, D>
@@ -311,11 +538,14 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        _rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        _rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
@@ -326,11 +556,14 @@ where
             .max(0_f64)
     }
 
-    fn get_next_element_default(
+    fn get_next_element_default<Rng>(
         &mut self,
         state: State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next)
             .min(1_f64)

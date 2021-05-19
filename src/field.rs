@@ -116,7 +116,10 @@ impl Su3Adjoint {
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// let su3 = Su3Adjoint::random(&mut rng, &distribution);
     /// ```
-    pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn random<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> Self
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         Self {
             data: Vector8::<Real>::from_fn(|_, _| d.sample(rng)),
         }
@@ -579,9 +582,9 @@ impl LinkMatrix {
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
     /// );
     /// ```
-    pub fn new_deterministe<const D: usize>(
+    pub fn new_deterministe<Rng: rand::Rng + ?Sized, const D: usize>(
         l: &LatticeCyclique<D>,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
     ) -> Self {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
@@ -986,9 +989,9 @@ impl<const D: usize> EField<D> {
     ///     EField::new_deterministe(&lattice, &mut rng_2, &distribution)
     /// );
     /// ```
-    pub fn new_deterministe(
+    pub fn new_deterministe<Rng: rand::Rng + ?Sized>(
         l: &LatticeCyclique<D>,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.get_number_of_points());

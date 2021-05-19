@@ -101,7 +101,10 @@ pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
 }
 
 /// Get an Uniformly random SU(2) matrix.
-pub fn get_random_su2(rng: &mut impl rand::Rng) -> CMatrix2 {
+pub fn get_random_su2<Rng>(rng: &mut Rng) -> CMatrix2
+where
+    Rng: rand::Rng + ?Sized,
+{
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let mut random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     while !random_vector.norm().is_normal() {

@@ -60,11 +60,13 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error>;
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized;
 
     /// probability of the next element to replace the current one.
     ///
@@ -80,11 +82,14 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_next_element_default(
+    fn get_next_element_default<Rng>(
         &mut self,
         state: State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next)
             .min(1_f64)
@@ -119,6 +124,12 @@ where
     State: LatticeState<D>,
     Rng: rand::Rng,
 {
+    getter!(
+        /// Get a ref to the rng.
+        rng,
+        Rng
+    );
+
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self {
         Self {
@@ -136,6 +147,33 @@ where
     /// Get a reference to the [`MonteCarloDefault`] inside the wrapper.
     pub fn mcd(&self) -> &MCD {
         &self.mcd
+    }
+
+    /// Get a mutable reference to the rng
+    pub fn rng_mut(&mut self) -> &mut Rng {
+        &mut self.rng
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> AsRef<Rng> for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
+    Rng: rand::Rng,
+{
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> AsMut<Rng> for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
+    Rng: rand::Rng,
+{
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
     }
 }
 

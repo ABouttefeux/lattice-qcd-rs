@@ -176,45 +176,90 @@ where
     }
 }
 
-/// compute the mean from a slice
-pub fn mean<'a, T>(data: &'a [T]) -> T
+/// compute the mean from a collections
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::mean;
+/// use nalgebra::Complex;
+///
+/// mean(&[1_f64, 2_f64, 3_f64, 4_f64]);
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// mean(&vec);
+/// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
+/// mean(&vec_complex);
+/// ```
+pub fn mean<'a, T, IntoIter>(data: IntoIter) -> T
 where
-    T: Div<f64, Output = T> + std::iter::Sum<&'a T>,
+    T: Div<f64, Output = T> + std::iter::Sum<&'a T> + 'a,
+    IntoIter: IntoIterator<Item = &'a T>,
+    IntoIter::IntoIter: ExactSizeIterator,
 {
-    let mean: T = data.iter().sum();
-    mean / data.len() as f64
+    let iter = data.into_iter();
+    let len = iter.len() as f64;
+    let mean: T = iter.sum();
+    mean / len
 }
 
-/// compute the variance (squared of standard deviation) from a slice
-pub fn variance<'a, T>(data: &'a [T]) -> T
+/// compute the variance (squared of standard deviation) from a collections
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::variance;
+/// use nalgebra::Complex;
+///
+/// variance(&[1_f64, 2_f64, 3_f64, 4_f64]);
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// variance(&vec);
+/// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
+/// variance(&vec_complex);
+/// ```
+pub fn variance<'a, T, IntoIter>(data: IntoIter) -> T
 where
-    T: Div<f64, Output = T>
+    T: 'a
+        + Div<f64, Output = T>
         + std::iter::Sum<&'a T>
         + std::iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
+    IntoIter: IntoIterator<Item = &'a T> + Clone,
+    IntoIter::IntoIter: ExactSizeIterator,
 {
     let [_, variance] = mean_and_variance(data);
     variance
 }
 
-/// compute the mean and variance (squared of standard deviation) from a slice
-pub fn mean_and_variance<'a, T>(data: &'a [T]) -> [T; 2]
+/// compute the mean and variance (squared of standard deviation) from a collection
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::mean_and_variance;
+/// use nalgebra::Complex;
+///
+/// mean_and_variance(&[1_f64, 2_f64, 3_f64, 4_f64]);
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// mean_and_variance(&vec);
+/// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
+/// mean_and_variance(&vec_complex);
+/// ```
+pub fn mean_and_variance<'a, T, IntoIter>(data: IntoIter) -> [T; 2]
 where
-    T: Div<f64, Output = T>
+    T: 'a
+        + Div<f64, Output = T>
         + std::iter::Sum<&'a T>
         + std::iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
+    IntoIter: IntoIterator<Item = &'a T> + Clone,
+    IntoIter::IntoIter: ExactSizeIterator,
 {
-    let mean = mean(data);
-    let variance = data
-        .iter()
+    // often data is just a reference so cloning it is not a big deal
+    let mean = mean(data.clone());
+    let iter = data.into_iter();
+    let len = iter.len();
+    let variance = iter
         .map(|el| (el.clone() - mean.clone()) * (el.clone() - mean.clone()))
         .sum::<T>()
-        / (data.len() - 1) as f64;
+        / (len - 1) as f64;
     [mean, variance]
 }
 
@@ -227,22 +272,48 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
 
 /// compute the covariance between two slices.
 /// Return `None` if the slices are not of the same length
-pub fn covariance<'a, T>(data_1: &'a [T], data_2: &'a [T]) -> Option<T>
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::covariance;
+/// use nalgebra::Complex;
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let array = [1_f64, 2_f64, 3_f64, 4_f64];
+/// covariance(&array, &vec);
+///
+/// let array_complex = [Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
+/// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
+/// covariance(&vec_complex, &array_complex);
+///
+/// assert!(covariance(&[], &[1_f64]).is_none());
+/// ```
+pub fn covariance<'a, 'b, T, IntoIter1, IntoIter2>(
+    data_1: IntoIter1,
+    data_2: IntoIter2,
+) -> Option<T>
 where
-    T: Div<f64, Output = T>
-        + std::iter::Sum<&'a T>
+    T: 'a
+        + 'b
+        + Div<f64, Output = T>
+        + for<'c> std::iter::Sum<&'c T>
         + std::iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
+    IntoIter1: IntoIterator<Item = &'a T> + Clone,
+    IntoIter1::IntoIter: ExactSizeIterator,
+    IntoIter2: IntoIterator<Item = &'b T> + Clone,
+    IntoIter2::IntoIter: ExactSizeIterator,
 {
-    if data_1.len() == data_2.len() {
-        let mean_prod = data_1
-            .iter()
-            .zip(data_2.iter())
+    let iter_1 = data_1.clone().into_iter();
+    let iter_2 = data_2.clone().into_iter();
+    if iter_1.len() == iter_2.len() {
+        let len = iter_1.len();
+        let mean_prod = iter_1
+            .zip(iter_2)
             .map(|(el1, el2)| el1.clone() * el2.clone())
             .sum::<T>()
-            / data_2.len() as f64;
+            / len as f64;
         Some(mean_prod - mean(data_1) * mean(data_2))
     }
     else {

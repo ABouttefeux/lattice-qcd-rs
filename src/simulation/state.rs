@@ -107,12 +107,15 @@ where
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
 pub trait LatticeStateWithEField<const D: usize>
 where
-    Self: Sized + Sync + LatticeState<D> + core::fmt::Debug,
+    Self: LatticeState<D>,
 {
     /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
     /// # Errors
     /// Gives and error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
-    fn reset_e_field(&mut self, rng: &mut impl rand::Rng) -> Result<(), StateInitializationError> {
+    fn reset_e_field<Rng>(&mut self, rng: &mut Rng) -> Result<(), StateInitializationError>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / self.beta())?;
         let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
         if !self.lattice().has_compatible_lenght_e_field(&new_e_field) {
@@ -168,7 +171,7 @@ where
 /// Trait to create a simulation state
 pub trait LatticeStateWithEFieldNew<const D: usize>
 where
-    Self: LatticeStateWithEField<D>,
+    Self: LatticeStateWithEField<D> + Sized,
 {
     /// Error type
     type Error: From<rand_distr::NormalError>;
@@ -190,12 +193,15 @@ where
     /// # Errors
     /// Gives an error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     /// or propagate the error from [`LatticeStateWithEFieldNew::new`]
-    fn new_random_e(
+    fn new_random_e<R>(
         lattice: LatticeCyclique<D>,
         beta: Real,
         link_matrix: LinkMatrix,
-        rng: &mut impl rand::Rng,
-    ) -> Result<Self, Self::Error> {
+        rng: &mut R,
+    ) -> Result<Self, Self::Error>
+    where
+        R: rand::Rng + ?Sized,
+    {
         // TODO verify
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / beta)?;
         let e_field = EField::new_deterministe(&lattice, rng, &d)
@@ -420,7 +426,8 @@ where
         delta_t: Real,
     ) -> Result<State, I::Error>
     where
-        State: SimulationStateSynchrone<D>,
+        Self: Sized,
+        State: SimulationStateSynchrone<D> + ?Sized,
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
         integrator.integrate_leap_sync(&self, delta_t)
@@ -432,8 +439,9 @@ where
     /// Return an error if the integration could not be done.
     fn simulate_leap<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
     where
+        Self: Sized,
         I: SymplecticIntegrator<T, Self, D> + ?Sized,
-        T: SimulationStateSynchrone<D>,
+        T: SimulationStateSynchrone<D> + ?Sized,
     {
         integrator.integrate_leap_leap(&self, delta_t)
     }
@@ -450,8 +458,9 @@ where
         numbers_of_times: usize,
     ) -> Result<Self, MultiIntegrationError<I::Error>>
     where
+        Self: Sized,
         I: SymplecticIntegrator<T, Self, D> + ?Sized,
-        T: SimulationStateSynchrone<D>,
+        T: SimulationStateSynchrone<D> + ?Sized,
     {
         if numbers_of_times == 0 {
             return Err(MultiIntegrationError::ZeroIntegration);
@@ -643,14 +652,14 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SimulationStateLeap<State, const D: usize>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchrone<D> + ?Sized,
 {
     state: State,
 }
 
 impl<State, const D: usize> SimulationStateLeap<State, D>
 where
-    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>,
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + ?Sized,
 {
     getter!(
         /// get a reference to the state
@@ -690,7 +699,7 @@ where
 
 impl<State, const D: usize> Default for SimulationStateLeap<State, D>
 where
-    State: SimulationStateSynchrone<D> + Default,
+    State: SimulationStateSynchrone<D> + Default + ?Sized,
 {
     fn default() -> Self {
         Self::new_from_state(State::default())
@@ -699,7 +708,7 @@ where
 
 impl<State, const D: usize> std::fmt::Display for SimulationStateLeap<State, D>
 where
-    State: SimulationStateSynchrone<D> + std::fmt::Display,
+    State: SimulationStateSynchrone<D> + std::fmt::Display + ?Sized,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "leapfrog {}", self.state())
@@ -724,14 +733,14 @@ impl<State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>, const D: us
 
 /// This state is a leap frog state
 impl<State, const D: usize> SimulationStateLeapFrog<D> for SimulationStateLeap<State, D> where
-    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D>
+    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + ?Sized
 {
 }
 
 /// We just transmit the function of `State`, there is nothing new.
 impl<State, const D: usize> LatticeState<D> for SimulationStateLeap<State, D>
 where
-    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
+    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + ?Sized,
 {
     const CA: Real = State::CA;
 
@@ -780,7 +789,7 @@ where
 /// We just transmit the function of `State`, there is nothing new.
 impl<State, const D: usize> LatticeStateWithEField<D> for SimulationStateLeap<State, D>
 where
-    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D>,
+    State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + ?Sized,
 {
     project!(get_hamiltonian_efield, state, Real);
 
@@ -834,9 +843,8 @@ where
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeStateWithEFieldSyncDefault<State, const D: usize>
 where
-    State: LatticeState<D>,
+    State: LatticeState<D> + ?Sized,
 {
-    lattice_state: State,
     #[cfg_attr(
         feature = "serde-serialize",
         serde(bound(
@@ -846,15 +854,19 @@ where
     )]
     e_field: EField<D>,
     t: usize,
+    lattice_state: State, // the DST must be at the end
 }
 
 impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
 where
-    State: LatticeState<D>,
+    State: LatticeState<D> + ?Sized,
 {
     /// Absorbe self and return the state as owned.
     /// It essentialy deconstruct the structure.
-    pub fn get_state_owned(self) -> State {
+    pub fn get_state_owned(self) -> State
+    where
+        State: Sized,
+    {
         self.lattice_state
     }
 
@@ -870,7 +882,10 @@ where
 
     /// # Panic
     /// Panics if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
-    pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self {
+    pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self
+    where
+        State: Sized,
+    {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / lattice_state.beta())
             .expect("Distribution not valide, check Beta.");
         let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d)
@@ -884,7 +899,10 @@ where
     }
 
     /// Create a new Self from a state and a cold configuration of the e field (i.e. set to 0)
-    pub fn new_e_cold(lattice_state: State) -> Self {
+    pub fn new_e_cold(lattice_state: State) -> Self
+    where
+        State: Sized,
+    {
         let e_field = EField::new_cold(&lattice_state.lattice());
         Self {
             lattice_state,
@@ -897,7 +915,7 @@ where
 impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
 where
     Self: LatticeStateWithEField<D>,
-    State: LatticeState<D>,
+    State: LatticeState<D> + ?Sized,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
@@ -942,13 +960,16 @@ where
     ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
-    pub fn new_deterministe(
+    pub fn new_deterministe<R>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        rng: &mut impl rand::Rng,
+        rng: &mut R,
         d: &impl rand_distr::Distribution<Real>,
-    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error> {
+    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error>
+    where
+        R: rand::Rng + ?Sized,
+    {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let e_field = EField::new_deterministe(&lattice, rng, d);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
@@ -961,12 +982,15 @@ where
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
     /// for [`LatticeCyclique`].
     /// Or propagates the error form [`Self::new`].
-    pub fn new_deterministe_cold_e_hot_link(
+    pub fn new_deterministe_cold_e_hot_link<R>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        rng: &mut impl rand::Rng,
-    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error> {
+        rng: &mut R,
+    ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error>
+    where
+        R: rand::Rng + ?Sized,
+    {
         let lattice = LatticeCyclique::new(size, number_of_points)?;
         let e_field = EField::new_cold(&lattice);
         let link_matrix = LinkMatrix::new_deterministe(&lattice, rng);
@@ -1054,14 +1078,14 @@ where
 impl<State, const D: usize> SimulationStateSynchrone<D>
     for LatticeStateWithEFieldSyncDefault<State, D>
 where
-    State: LatticeState<D> + Clone,
+    State: LatticeState<D> + Clone + ?Sized,
     Self: LatticeStateWithEField<D>,
 {
 }
 
 impl<State, const D: usize> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
 where
-    State: LatticeState<D>,
+    State: LatticeState<D> + ?Sized,
 {
     const CA: Real = State::CA;
 
@@ -1114,9 +1138,9 @@ where
         let lattice_state_r = State::new(lattice, beta, link_matrix);
         match lattice_state_r {
             Ok(lattice_state) => Ok(Self {
-                lattice_state,
                 e_field,
                 t,
+                lattice_state,
             }),
             Err(err) => Err(err),
         }

@@ -29,6 +29,12 @@ pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
 }
 
 impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
+    getter!(
+        /// Get a ref to the rng.
+        rng,
+        Rng
+    );
+
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
     /// than 0.
     ///
@@ -61,6 +67,11 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     /// Get the last probably of acceptance of the random change.
     pub fn rng_owned(self) -> Rng {
         self.rng
+    }
+
+    /// Get a mutable reference to the rng.
+    pub fn rng_mut(&mut self) -> &mut Rng {
+        &mut self.rng
     }
 
     #[inline]
@@ -126,6 +137,18 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         });
         self.prob_replace_mean /= lattice.get_number_of_canonical_links_space() as f64;
         state
+    }
+}
+
+impl<Rng: rand::Rng> AsRef<Rng> for MetropolisHastingsSweep<Rng> {
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<Rng: rand::Rng> AsMut<Rng> for MetropolisHastingsSweep<Rng> {
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
     }
 }
 

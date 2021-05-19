@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::super::{su2, su3, CMatrix2, CMatrix3, Real};
 
 /// Distribution given by `x^2 e^{- 2 a x^2}`, `x >= 0` where `x` is the random variable and `a` a parameter of the distribution
-#[derive(Clone, Debug, Copy, PartialEq)]
+#[derive(Clone, Debug, Copy, PartialEq, Hash, Eq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ModifiedNormal<T>
 where
@@ -21,7 +21,6 @@ where
         + Add<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
         + FloatConst
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
@@ -37,7 +36,6 @@ where
         + Add<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
         + FloatConst
         + Zero
         + PartialOrd,
@@ -67,7 +65,6 @@ where
         + Add<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
         + FloatConst
         + rand_distr::uniform::SampleUniform
         + PartialOrd,
@@ -87,12 +84,7 @@ where
     }
 }
 
-/// Distribution for the Heat Bath methods with the parameter `param_exp = beta * sqrt(det(A))`.
-///
-/// With distribution `dP(X) = 1/(2 \pi^2) d \cos(\theta) d\phi dx_0 \sqrt(1-x_0^2) e^{param_exp x_0}`
-#[derive(Clone, Debug, Copy, PartialEq)]
-#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct HeatBathDistribution<T>
+impl<T> std::fmt::Display for ModifiedNormal<T>
 where
     T: One
         + Div<T, Output = T>
@@ -100,11 +92,37 @@ where
         + Add<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
+        + FloatConst
+        + PartialOrd
+        + std::fmt::Display,
+    rand::distributions::OpenClosed01: Distribution<T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "modified normal distribution with parameter {}",
+            self.param_exp()
+        )
+    }
+}
+
+/// Distribution for the Heat Bath methods with the parameter `param_exp = beta * sqrt(det(A))`.
+///
+/// With distribution `dP(X) = 1/(2 \pi^2) d \cos(\theta) d\phi dx_0 \sqrt(1-x_0^2) e^{param_exp x_0}`
+#[derive(Clone, Debug, Copy, PartialEq, Hash, Eq)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub struct HeatBathDistribution<T>
+where
+    T: One
+        + Div<T, Output = T>
+        + Mul<T, Output = T>
+        + Add<T, Output = T>
+        + Sub<T, Output = T>
+        + Neg<Output = T>
+        + Float
         + FloatConst
         + Zero
         + rand_distr::uniform::SampleUniform
-        + Sub<T, Output = T>
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -118,13 +136,12 @@ where
         + Div<T, Output = T>
         + Mul<T, Output = T>
         + Add<T, Output = T>
+        + Sub<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
         + FloatConst
         + Zero
         + rand_distr::uniform::SampleUniform
-        + Sub<T, Output = T>
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -167,10 +184,36 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
     }
 }
 
+impl<T> std::fmt::Display for HeatBathDistribution<T>
+where
+    T: One
+        + Div<T, Output = T>
+        + Mul<T, Output = T>
+        + Add<T, Output = T>
+        + Sub<T, Output = T>
+        + Neg<Output = T>
+        + Float
+        + FloatConst
+        + Zero
+        + rand_distr::uniform::SampleUniform
+        + PartialOrd
+        + std::fmt::Display,
+    rand::distributions::OpenClosed01: Distribution<T>,
+    Uniform<T>: Distribution<T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "heat bath distribution with parameter {}",
+            self.param_exp()
+        )
+    }
+}
+
 /// Distribution for the norm of the SU2 adjoint to generate the [`HeatBathDistribution`] with the parameter `param_exp = beta * qrt(det(A))`.
 ///
 /// With distribution `dP(x) = dx \sqrt(1-x_0^2) e^{-2 param_exp x^2}`
-#[derive(Clone, Debug, Copy, PartialEq)]
+#[derive(Clone, Debug, Copy, PartialEq, Hash, Eq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathDistributionNorm<T>
 where
@@ -178,13 +221,12 @@ where
         + Div<T, Output = T>
         + Mul<T, Output = T>
         + Add<T, Output = T>
+        + Sub<T, Output = T>
         + Neg<Output = T>
         + Float
-        + Copy
         + FloatConst
         + Zero
         + rand_distr::uniform::SampleUniform
-        + Sub<T, Output = T>
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -199,12 +241,11 @@ where
         + Mul<T, Output = T>
         + Add<T, Output = T>
         + Neg<Output = T>
+        + Sub<T, Output = T>
         + Float
-        + Copy
         + FloatConst
         + Zero
         + rand_distr::uniform::SampleUniform
-        + Sub<T, Output = T>
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -232,12 +273,11 @@ where
         + Mul<T, Output = T>
         + Add<T, Output = T>
         + Neg<Output = T>
+        + Sub<T, Output = T>
         + Float
-        + Copy
         + FloatConst
         + Zero
         + rand_distr::uniform::SampleUniform
-        + Sub<T, Output = T>
         + PartialOrd,
     rand::distributions::OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
@@ -256,6 +296,32 @@ where
                 return T::one() - two * lambda.powi(2);
             }
         }
+    }
+}
+
+impl<T> std::fmt::Display for HeatBathDistributionNorm<T>
+where
+    T: One
+        + Div<T, Output = T>
+        + Mul<T, Output = T>
+        + Add<T, Output = T>
+        + Neg<Output = T>
+        + Sub<T, Output = T>
+        + Float
+        + FloatConst
+        + Zero
+        + rand_distr::uniform::SampleUniform
+        + PartialOrd
+        + std::fmt::Display,
+    rand::distributions::OpenClosed01: Distribution<T>,
+    Uniform<T>: Distribution<T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "heat bath norm distribution with parameter {}",
+            self.param_exp()
+        )
     }
 }
 
@@ -298,5 +364,15 @@ impl Distribution<CMatrix3> for CloseToUnit {
         R: rand::Rng + ?Sized,
     {
         su3::get_random_su3_close_to_unity(self.spread_parameter, rng)
+    }
+}
+
+impl std::fmt::Display for CloseToUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "distribution closed to unit with spread parameter {}",
+            self.spread_parameter()
+        )
     }
 }
