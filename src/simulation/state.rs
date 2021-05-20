@@ -1065,13 +1065,15 @@ where
             let handel = s.spawn(move |_| EField::new_random(&lattice_clone, d));
             let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)?;
             let e_field = handel.join().map_err(|err| {
-                StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err))
+                StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(vec![err]))
             })?;
             // TODO not very clean: imporve
             Self::new(lattice, beta, e_field, link_matrix, 0)
                 .map_err(StateInitializationErrorThreaded::StateInitializationError)
         })
-        .map_err(|err| StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(err)))?
+        .map_err(|err| {
+            StateInitializationErrorThreaded::ThreadingError(ThreadError::Panic(vec![err]))
+        })?
     }
 }
 

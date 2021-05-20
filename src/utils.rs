@@ -59,7 +59,7 @@ impl Default for FactorialStorageDyn {
 }
 
 impl FactorialStorageDyn {
-    /// Create a new object with an empty storage
+    /// Create a new object with an empty storage.
     pub const fn new() -> Self {
         Self { data: Vec::new() }
     }
@@ -199,7 +199,7 @@ impl Sign {
         }
     }
 
-    /// Retuns the sign of `a - b`, witah a and b are usize
+    /// Retuns the sign of `a - b`, with a and b are usize
     #[allow(clippy::comparison_chain)]
     pub const fn sign_from_diff(a: usize, b: usize) -> Self {
         if a == b {
@@ -239,6 +239,18 @@ impl From<Sign> for f64 {
 impl From<f64> for Sign {
     fn from(f: f64) -> Sign {
         Sign::sign(f)
+    }
+}
+
+impl From<Sign> for i8 {
+    fn from(s: Sign) -> i8 {
+        s.to_i8()
+    }
+}
+
+impl From<i8> for Sign {
+    fn from(i: i8) -> Sign {
+        Sign::sign_i8(i)
     }
 }
 
