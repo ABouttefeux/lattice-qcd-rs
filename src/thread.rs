@@ -26,7 +26,7 @@ use super::lattice::{LatticeCyclique, LatticeElementToIndex};
 pub enum ThreadAnyError {
     /// Tried to run some jobs with 0 threads
     ThreadNumberIncorect,
-    /// One or more of the threads panicked. inside the [`Box`] is the panic message.
+    /// One or more of the threads panicked. Inside the [`Box`] is the panic message.
     /// see [`run_pool_parallel`] example.
     Panic(Vec<Box<dyn Any + Send + 'static>>),
 }
@@ -57,8 +57,12 @@ impl core::fmt::Display for ThreadAnyError {
                     else {
                         write!(f, "{:?}", element_any)?;
                     }
+
                     if index < any.len() - 1 {
                         write!(f, " ,")?;
+                    }
+                    else if n > 1 {
+                        write!(f, "]")?;
                     }
                 }
 
@@ -70,29 +74,29 @@ impl core::fmt::Display for ThreadAnyError {
 
 impl std::error::Error for ThreadAnyError {}
 
-pub type ThreadError = ThreadAnyError;
-
 /// Multithreading error with a string panic message.
 ///
 /// It is more convenient to use compared to [`ThreadAnyError`] and can be converted from it.
+/// It convert message of type [`String`] and [`&str`] otherwise set it to None.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[non_exhaustive]
-pub enum ThreadStringError {
+pub enum ThreadError {
     /// Tried to run some jobs with 0 threads
     ThreadNumberIncorect,
-    /// One of the thread panicked with a given message.
+    /// One of the thread panicked with the given messages.
     /// see [`run_pool_parallel`] example.
     Panic(Vec<Option<String>>),
 }
 
-impl core::fmt::Display for ThreadStringError {
+impl core::fmt::Display for ThreadError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadNumberIncorect => write!(f, "number of thread is incorrect"),
             Self::Panic(strings) => {
                 let n = strings.len();
                 if n == 0 {
+                    // this should not be used but it is possible to create an instance with an empty vec.
                     write!(f, "0 thread panicked")?;
                 }
                 else if n == 1 {
@@ -112,8 +116,12 @@ impl core::fmt::Display for ThreadStringError {
                     else {
                         write!(f, "None")?;
                     }
+
                     if index < strings.len() - 1 {
                         write!(f, " ,")?;
+                    }
+                    else if n > 1 {
+                        write!(f, "]")?;
                     }
                 }
 
@@ -123,9 +131,9 @@ impl core::fmt::Display for ThreadStringError {
     }
 }
 
-impl std::error::Error for ThreadStringError {}
+impl std::error::Error for ThreadError {}
 
-impl From<ThreadAnyError> for ThreadStringError {
+impl From<ThreadAnyError> for ThreadError {
     #[allow(clippy::manual_map)] // clarity / false positive ?
     fn from(f: ThreadAnyError) -> Self {
         match f {
@@ -149,11 +157,11 @@ impl From<ThreadAnyError> for ThreadStringError {
     }
 }
 
-impl From<ThreadStringError> for ThreadAnyError {
-    fn from(f: ThreadStringError) -> Self {
+impl From<ThreadError> for ThreadAnyError {
+    fn from(f: ThreadError) -> Self {
         match f {
-            ThreadStringError::ThreadNumberIncorect => Self::ThreadNumberIncorect,
-            ThreadStringError::Panic(strings) => Self::Panic(
+            ThreadError::ThreadNumberIncorect => Self::ThreadNumberIncorect,
+            ThreadError::Panic(strings) => Self::Panic(
                 strings
                     .iter()
                     .map(|string| -> Box<dyn Any + Send + 'static> {
@@ -215,7 +223,7 @@ impl From<ThreadStringError> for ThreadAnyError {
 /// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:51
 /// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:51
 /// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:51
-/// thread 'main' panicked at '4 threads panicked with ["panic message" ,"panic message" ,"panic message" ,"panic message"', src\thread.rs:9:17
+/// thread 'main' panicked at '4 threads panicked with ["panic message" ,"panic message" ,"panic message" ,"panic message"]', src\thread.rs:9:17
 /// ```
 pub fn run_pool_parallel<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
@@ -709,7 +717,9 @@ mod test {
         assert!(
             format!("{}", ThreadAnyError::Panic(vec![Box::new(())])).contains("a thread panicked")
         );
-        assert!(format!("{}", ThreadAnyError::Panic(vec![Box::new("message 1")])).contains("message 1"));
+        assert!(
+            format!("{}", ThreadAnyError::Panic(vec![Box::new("message 1")])).contains("message 1")
+        );
         assert!(format!("{}", ThreadAnyError::Panic(vec![])).contains("0 thread panicked"));
 
         assert!(ThreadAnyError::ThreadNumberIncorect.source().is_none());

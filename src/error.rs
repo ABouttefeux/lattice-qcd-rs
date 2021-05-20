@@ -130,7 +130,7 @@ impl Error for StateInitializationError {
 
 /// Error while initialising a state
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StateInitializationErrorThreaded {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),

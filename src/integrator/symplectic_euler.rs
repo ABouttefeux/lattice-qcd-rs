@@ -23,7 +23,8 @@ use super::{
 };
 
 /// Error for [`SymplecticEuler`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),
@@ -99,6 +100,7 @@ impl SymplecticEuler {
             lattice,
             &CMatrix3::zeros(),
         )
+        .map_err(|err| err.into())
     }
 
     fn get_e_field_integrate<State, const D: usize>(
@@ -122,6 +124,7 @@ impl SymplecticEuler {
             lattice,
             &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
+        .map_err(|err| err.into())
     }
 }
 
