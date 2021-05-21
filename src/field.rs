@@ -931,7 +931,7 @@ where
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField<const D: usize> {
-    data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
+    data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; D]> instead ?
 }
 
 impl<const D: usize> EField<D> {

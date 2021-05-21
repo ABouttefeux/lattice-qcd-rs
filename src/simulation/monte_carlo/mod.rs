@@ -191,6 +191,33 @@ where
     }
 }
 
+impl<MCD, State, Rng, const D: usize> Default for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D> + Default,
+    State: LatticeState<D>,
+    Rng: rand::Rng + Default,
+{
+    fn default() -> Self {
+        Self::new(MCD::default(), Rng::default())
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> std::fmt::Display for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D> + std::fmt::Display,
+    State: LatticeState<D>,
+    Rng: rand::Rng + std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Monte Carlo wrapper method {} with rng {}",
+            self.mcd(),
+            self.rng(),
+        )
+    }
+}
+
 #[inline]
 fn get_delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,

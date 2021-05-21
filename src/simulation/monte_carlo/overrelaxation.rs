@@ -59,6 +59,12 @@ impl OverrelaxationSweepRotation {
     }
 }
 
+impl std::fmt::Display for OverrelaxationSweepRotation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "overrelaxation method by rotation")
+    }
+}
+
 impl Default for OverrelaxationSweepRotation {
     fn default() -> Self {
         Self::new()
@@ -126,6 +132,12 @@ impl OverrelaxationSweepReverse {
 impl Default for OverrelaxationSweepReverse {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl std::fmt::Display for OverrelaxationSweepReverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "overrelaxation method by reverse")
     }
 }
 

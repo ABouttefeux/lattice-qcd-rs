@@ -47,6 +47,33 @@ impl MetropolisHastings {
             spread,
         })
     }
+
+    getter_copy!(
+        /// Get the number of updates per steps.
+        pub const number_of_update() -> usize
+    );
+
+    getter_copy!(
+        /// Get the spread parameter.
+        pub const spread() -> Real
+    );
+}
+
+impl Default for MetropolisHastings {
+    fn default() -> Self {
+        Self::new(1, 0.1_f64).unwrap()
+    }
+}
+
+impl std::fmt::Display for MetropolisHastings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Metropolis-Hastings method with {} update and spread {}",
+            self.number_of_update(),
+            self.spread()
+        )
+    }
 }
 
 impl<State, const D: usize> MonteCarloDefault<State, D> for MetropolisHastings
@@ -117,6 +144,35 @@ impl MetropolisHastingsDiagnostic {
     /// Get if last step has accepted the replacement.
     pub const fn has_replace_last(&self) -> bool {
         self.has_replace_last
+    }
+
+    getter_copy!(
+        /// Get the number of updates per steps.
+        pub const number_of_update() -> usize
+    );
+
+    getter_copy!(
+        /// Get the spread parameter.
+        pub const spread() -> Real
+    );
+}
+
+impl Default for MetropolisHastingsDiagnostic {
+    fn default() -> Self {
+        Self::new(1, 0.1_f64).unwrap()
+    }
+}
+
+impl std::fmt::Display for MetropolisHastingsDiagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Metropolis-Hastings method with {} update and spread {}, with diagnostics: has accepted last step {}, probability of acceptance of last step {}",
+            self.number_of_update(),
+            self.spread(),
+            self.has_replace_last(),
+            self.prob_replace_last()
+        )
     }
 }
 
@@ -205,6 +261,11 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         pub,
         rng,
         Rng
+    );
+
+    getter_copy!(
+        /// Get the spread parameter.
+        pub spread() -> Real
     );
 
     /// Get a mutable reference to the rng.
@@ -296,6 +357,27 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
             self.has_replace_last = false;
             state
         }
+    }
+}
+
+impl<Rng: rand::Rng + Default> Default for MetropolisHastingsDeltaDiagnostic<Rng> {
+    fn default() -> Self {
+        Self::new(0.1_f64, Rng::default()).unwrap()
+    }
+}
+
+impl<Rng: rand::Rng + std::fmt::Display> std::fmt::Display
+    for MetropolisHastingsDeltaDiagnostic<Rng>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Metropolis-Hastings delta method with rng {} and spread {}, with diagnostics: has accepted last step {}, probability of acceptance of last step {}",
+            self.rng(),
+            self.spread(),
+            self.has_replace_last(),
+            self.prob_replace_last()
+        )
     }
 }
 
