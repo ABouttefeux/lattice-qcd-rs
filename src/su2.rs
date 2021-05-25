@@ -155,7 +155,7 @@ mod test {
         );
         let p = project_to_su2(m);
         assert_eq_matrix!(p, CMatrix2::identity(), EPSILON);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
             let p = project_to_su2_unorm(r);
             assert!(p.trace().imaginary().abs() < EPSILON);
@@ -164,7 +164,7 @@ mod test {
             assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
 
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
             let p = project_to_su2(r);
             assert_matrix_is_su_2!(p, EPSILON);
@@ -174,15 +174,15 @@ mod test {
     #[test]
     fn random_su2() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng);
             assert_matrix_is_su_2!(m, EPSILON);
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng);
             assert!(is_matrix_su2(&m, EPSILON));
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng) * Complex::new(1.5_f64, 0.7_f64);
             assert!(!is_matrix_su2(&m, EPSILON));
         }

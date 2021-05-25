@@ -421,8 +421,8 @@ fn test_mh_delta() {
     let mut simulation =
         LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
 
-    let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01, rng).unwrap();
-    for _ in 0..10 {
+    let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01_f64, rng).unwrap();
+    for _ in 0_u32..10_u32 {
         let mut simulation2 = simulation.clone();
         let (link, matrix) = mcd.get_potential_modif(&simulation);
         *simulation2.get_link_mut(&link).unwrap() = matrix;

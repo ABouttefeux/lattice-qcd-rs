@@ -364,28 +364,28 @@ mod test {
 
         let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
         let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let mut vec = vec![];
-            for _ in 0..100 {
+            for _ in 0_u32..100_u32 {
                 vec.push(d.sample(&mut rng));
             }
             let mut vec2 = vec![];
-            for _ in 0..100 {
+            for _ in 0_u32..100_u32 {
                 vec2.push(d.sample(&mut rng));
             }
             assert!(
                 (mean_and_variance(&vec)[0] - mean_and_variance_par_iter(vec.par_iter())[0]).abs()
-                    < 0.00000001
+                    < 0.000_000_01_f64
             );
             assert!(
                 (mean_and_variance(&vec)[1] - mean_and_variance_par_iter(vec.par_iter())[1]).abs()
-                    < 0.00000001
+                    < 0.000_000_01_f64
             );
             assert!(
                 (covariance(&vec, &vec2).unwrap()
                     - covariance_par_iter(vec.par_iter(), vec2.par_iter()).unwrap())
                 .abs()
-                    < 0.00000001
+                    < 0.000_000_01_f64
             );
         }
     }

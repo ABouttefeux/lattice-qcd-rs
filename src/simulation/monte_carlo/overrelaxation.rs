@@ -183,7 +183,7 @@ mod test {
     fn same_energy_reverse() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepReverse::new();
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             test_same_energy(&mut overrelax, &mut rng);
         }
     }
@@ -193,7 +193,7 @@ mod test {
     fn same_energy_rotation() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepRotation::new();
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             test_same_energy(&mut overrelax, &mut rng);
         }
     }

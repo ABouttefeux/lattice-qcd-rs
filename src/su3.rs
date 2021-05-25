@@ -812,7 +812,7 @@ mod test {
     #[test]
     /// test that [`N`] is indeed what we need
     fn test_constante() {
-        assert_eq!(N, get_factorial_size_for_exp() + 1)
+        assert_eq!(N, get_factorial_size_for_exp() + 1);
     }
 
     #[test]
@@ -927,7 +927,7 @@ mod test {
             let output_i = matrix_su3_exp_i(**m);
             assert_eq_matrix!(output_i, (*m * I).exp(), EPSILON);
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             let output_r = matrix_su3_exp_r(m);
@@ -943,7 +943,7 @@ mod test {
         for m in &GENERATORS {
             assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
@@ -1009,11 +1009,11 @@ mod test {
             Complex::from(1_f64),
         );
         assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let m = get_random_su3(&mut rng);
             assert!(is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let m = get_random_su3(&mut rng) * Complex::from(1.1_f64);
             assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }

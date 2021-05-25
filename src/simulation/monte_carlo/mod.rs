@@ -232,6 +232,7 @@ fn get_delta_s_old_new_cmp<const D: usize>(
 }
 
 // TODO move in state
+#[inline]
 fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,

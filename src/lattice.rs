@@ -624,11 +624,27 @@ impl<const D: usize> LatticePoint<D> {
     }
 
     /// Get the point as as [`nalgebra::SVector<usize, D>`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::lattice::LatticePoint;
+    /// #
+    /// # let point = LatticePoint::<4>::default();
+    /// let max = point.as_svector().max();
+    /// let min = point.as_ref().min();
+    /// ```
     pub const fn as_svector(&self) -> &SVector<usize, D> {
         &self.data
     }
 
     /// Get the point as a mut ref to [`nalgebra::SVector<usize, D>`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::lattice::LatticePoint;
+    /// #
+    /// # let mut point = LatticePoint::<4>::new_zero();
+    /// point.as_svector_mut()[2] = 2;
+    /// point.as_mut()[0] = 1;
+    /// ```
     pub fn as_svector_mut(&mut self) -> &mut SVector<usize, D> {
         &mut self.data
     }
@@ -1669,6 +1685,8 @@ mod test {
         assert!(pt_2.is_empty());
         assert_eq!(pt_2.iter().count(), 0);
         assert_eq!(pt_2.iter_mut().count(), 0);
+
+        assert_eq!(pt.to_string(), pt.as_ref().to_string());
     }
 
     #[test]
@@ -1738,6 +1756,7 @@ mod test {
         assert!(!link.is_dir_positive());
     }
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn iterator() {
         let l = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
@@ -1794,5 +1813,30 @@ mod test {
         assert_eq!(iterator.size_hint(), (0, Some(0)));
         assert!(iterator.next().is_none());
         assert!(iterator.next().is_none());
+
+        //----
+
+        assert_eq!(
+            IteratorElement::<i32>::FirstElement.to_string(),
+            "first element"
+        );
+        assert_eq!(IteratorElement::Element(0_i32).to_string(), "element 0");
+        assert_eq!(
+            IteratorElement::<i32>::LastElement.to_string(),
+            "last element"
+        );
+        assert_eq!(
+            IteratorElement::<i32>::default(),
+            IteratorElement::<i32>::FirstElement,
+        );
+    }
+
+    #[test]
+    fn lattice() {
+        let lattice = LatticeCyclique::<3>::new(1_f64, 8).unwrap();
+        assert_eq!(
+            lattice.to_string(),
+            "cyclique lattice with 8^3 points and spacing 1"
+        );
     }
 }

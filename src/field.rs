@@ -60,11 +60,27 @@ impl Su3Adjoint {
     }
 
     /// get the su3 adjoint as a [`Vector8`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// #
+    /// # let adj = Su3Adjoint::default();
+    /// let max = adj.as_vector().max();
+    /// let norm = adj.as_ref().norm();
+    /// ```
     pub const fn as_vector(&self) -> &Vector8<Real> {
         self.data()
     }
 
     /// get the su3 adjoint as mut ref to a [`Vector8`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// #
+    /// # let mut adj = Su3Adjoint::default();
+    /// adj.as_vector_mut().apply(|el| el + 1_f64);
+    /// adj.as_mut().set_magnitude(1_f64);
+    /// ```
     pub fn as_vector_mut(&mut self) -> &mut Vector8<Real> {
         self.data_mut()
     }
@@ -189,11 +205,24 @@ impl Su3Adjoint {
     }
 
     /// Get an iterator over the ellements.
+    ///
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # let adj = Su3Adjoint::default();
+    /// let sum_abs = adj.iter().map(|el| el.abs()).sum::<f64>();
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = &Real> {
         self.data.iter()
     }
 
     /// Get an iterator over the mutable ref of ellements.
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # let mut adj = Su3Adjoint::default();
+    /// adj.iter_mut().for_each(|el| *el = *el / 2_f64);
+    /// ```
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
         self.data.iter_mut()
     }
@@ -1417,7 +1446,7 @@ mod test {
     fn test_su3_adj() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             assert_abs_diff_eq!(
@@ -1431,12 +1460,37 @@ mod test {
                 EPSILON
             );
             assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
+
+            // ----
+            let adj_1 = Su3Adjoint::default();
+            let adj_2 = Su3Adjoint::new_from_array([1_f64; 8]);
+            assert_eq!(adj_2, adj_2 + adj_1);
+            assert_eq!(adj_2, &adj_2 + &adj_1);
+            assert_eq!(adj_2, &adj_2 - &adj_1);
+            assert_eq!(adj_1, &adj_2 - &adj_2);
+            assert_eq!(adj_1, &adj_2 - adj_2);
+            assert_eq!(adj_1, adj_2 - &adj_2);
+            assert_eq!(adj_1, -&adj_1);
+            let adj_3 = Su3Adjoint::new_from_array([2_f64; 8]);
+            assert_eq!(adj_3, &adj_2 + &adj_2);
+            assert_eq!(adj_3, &adj_2 * &2_f64);
+            assert_eq!(adj_3, &2_f64 * &adj_2);
+            assert_eq!(adj_3, 2_f64 * adj_2);
+            assert_eq!(adj_3, &2_f64 * adj_2);
+            assert_eq!(adj_3, 2_f64 * &adj_2);
+            assert_eq!(adj_2, &adj_3 / &2_f64);
+            assert_eq!(adj_2, &adj_3 / 2_f64);
+            let mut adj_5 = Su3Adjoint::new_from_array([2_f64; 8]);
+            adj_5 /= &2_f64;
+            assert_eq!(adj_2, adj_5);
+            let adj_4 = Su3Adjoint::new_from_array([-1_f64; 8]);
+            assert_eq!(adj_2, -adj_4);
         }
 
         use crate::su3::su3_exp_r;
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             assert_eq!(su3_exp_r(v), v.exp());
         }
@@ -1451,10 +1505,36 @@ mod test {
         }
         let link_s = LinkMatrix::new_random_threaded(&lattice, 2);
         assert!(link_s.is_ok());
-        let link = link_s.unwrap();
+        let mut link = link_s.unwrap();
         assert!(!link.is_empty());
         let l2 = LinkMatrix::new(vec![]);
         assert!(l2.is_empty());
+
+        let _: &[_] = link.as_ref();
+        let _: &Vec<_> = link.as_ref();
+        let _: &mut [_] = link.as_mut();
+        let _: &mut Vec<_> = link.as_mut();
+        let _ = link.iter();
+        let _ = link.iter_mut();
+        let _ = (&link).into_iter();
+        let _ = (&mut link).into_iter();
+    }
+
+    #[test]
+    fn e_field() {
+        let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+        let e_field_s = LinkMatrix::new_random_threaded(&lattice, 2);
+        assert!(e_field_s.is_ok());
+        let mut e_field = e_field_s.unwrap();
+
+        let _: &[_] = e_field.as_ref();
+        let _: &Vec<_> = e_field.as_ref();
+        let _: &mut [_] = e_field.as_mut();
+        let _: &mut Vec<_> = e_field.as_mut();
+        let _ = e_field.iter();
+        let _ = e_field.iter_mut();
+        let _ = (&e_field).into_iter();
+        let _ = (&mut e_field).into_iter();
     }
 
     #[test]

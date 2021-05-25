@@ -321,12 +321,14 @@ pub const fn levi_civita(index: &[usize]) -> Sign {
 mod test {
     use super::*;
 
+    #[allow(clippy::missing_const_for_fn)]
     #[test]
     /// test that the factorial pass for MAX_NUMBER_FACTORIAL
     fn test_factorial_pass() {
         factorial(MAX_NUMBER_FACTORIAL);
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     #[test]
     #[should_panic]
     #[cfg(not(feature = "no-overflow-test"))]
@@ -382,6 +384,7 @@ mod test {
         assert_eq!(Sign::Positive, Sign::sign_from_diff(4, 1));
     }
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn sign() {
         assert_eq!(Sign::sign(0_f64).to_f64(), 0_f64);
@@ -394,6 +397,12 @@ mod test {
         assert_eq!(-Sign::Negative, Sign::Positive);
         assert_eq!(-Sign::Positive, Sign::Negative);
         assert_eq!(-Sign::Zero, Sign::Zero);
+
+        assert_eq!(i8::from(Sign::from(0_i8)), 0_i8);
+        assert_eq!(i8::from(Sign::from(1_i8)), 1_i8);
+        assert_eq!(i8::from(Sign::from(-3_i8)), -1_i8);
+
+        assert_eq!(Sign::default(), Sign::Zero);
 
         // mul
         assert_eq!(Sign::Positive * Sign::Positive, Sign::Positive);
@@ -429,5 +438,15 @@ mod test {
             Some(Ordering::Less)
         );
         assert_eq!(Sign::Zero.partial_cmp(&Sign::Zero), Some(Ordering::Equal));
+
+        // ---
+        assert_eq!(Sign::Positive.to_string(), "positive");
+        assert_eq!(Sign::Negative.to_string(), "negative");
+        assert_eq!(Sign::Zero.to_string(), "zero");
+    }
+
+    #[test]
+    fn factorial_storage_dyn() {
+        assert_eq!(FactorialStorageDyn::default(), FactorialStorageDyn::new());
     }
 }

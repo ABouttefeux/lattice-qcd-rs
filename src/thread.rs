@@ -110,9 +110,6 @@ impl core::fmt::Display for ThreadError {
                     if let Some(string) = string {
                         write!(f, "\"{}\"", string)?;
                     }
-                    else if let Some(string) = string {
-                        write!(f, "\"{}\"", string)?;
-                    }
                     else {
                         write!(f, "None")?;
                     }
@@ -730,5 +727,48 @@ mod test {
         assert!(ThreadAnyError::Panic(vec![Box::new("test")])
             .source()
             .is_none());
+        // -------
+        assert_eq!(
+            format!("{}", ThreadError::ThreadNumberIncorect),
+            "number of thread is incorrect"
+        );
+        assert!(format!("{}", ThreadError::Panic(vec![None])).contains("a thread panicked"));
+        assert!(format!("{}", ThreadError::Panic(vec![None, None])).contains("2 threads panicked"));
+        assert!(format!(
+            "{}",
+            ThreadError::Panic(vec![Some("message 1".to_string())])
+        )
+        .contains("message 1"));
+        assert!(format!("{}", ThreadError::Panic(vec![])).contains("0 thread panicked"));
+
+        assert!(ThreadError::ThreadNumberIncorect.source().is_none());
+        assert!(ThreadError::Panic(vec![None]).source().is_none());
+        assert!(ThreadError::Panic(vec![Some("".to_string())])
+            .source()
+            .is_none());
+        assert!(ThreadError::Panic(vec![Some("test".to_string())])
+            .source()
+            .is_none());
+        //---------------
+
+        let error = ThreadAnyError::Panic(vec![
+            Box::new(()),
+            Box::new("t1"),
+            Box::new("t2".to_string()),
+        ]);
+        let error2 = ThreadAnyError::Panic(vec![
+            Box::new(""),
+            Box::new("t1".to_string()),
+            Box::new("t2".to_string()),
+        ]);
+        let error3 = ThreadError::Panic(vec![None, Some("t1".to_string()), Some("t2".to_string())]);
+        assert_eq!(ThreadError::from(error), error3);
+        assert_eq!(ThreadAnyError::from(error3).to_string(), error2.to_string());
+
+        let error = ThreadAnyError::ThreadNumberIncorect;
+        let error2 = ThreadError::ThreadNumberIncorect;
+        assert_eq!(ThreadError::from(error), error2);
+        let error = ThreadAnyError::ThreadNumberIncorect;
+        assert_eq!(ThreadAnyError::from(error2).to_string(), error.to_string());
     }
 }
