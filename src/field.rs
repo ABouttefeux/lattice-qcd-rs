@@ -180,7 +180,6 @@ impl Su3Adjoint {
 
     /// Return the number of data. This number is 8
     /// ```
-    /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// # let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::zeros());
     /// assert_eq!(su3.len(), 8);
@@ -568,19 +567,21 @@ impl LinkMatrix {
     /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`].
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
     /// use rand::{rngs::StdRng, SeedableRng};
+    /// # use std::error::Error;
     ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4)?;
     /// assert_eq!(
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new_deterministe<Rng: rand::Rng + ?Sized, const D: usize>(
         l: &LatticeCyclique<D>,
@@ -599,6 +600,19 @@ impl LinkMatrix {
 
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrix::new_random_threaded(&lattice, 4)?;
+    /// assert!(!links.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     /// Returns [`ThreadError::ThreadNumberIncorect`] if `number_of_thread` is 0.
@@ -626,7 +640,19 @@ impl LinkMatrix {
         Ok(Self { data })
     }
 
-    /// Create a cold configuration ( where the link matrices is set to 1).
+    /// Create a cold configuration ( where the link matrices is set to the indentity).
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrix::new_cold(&lattice);
+    /// assert!(!links.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
         Self {
             data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()],
@@ -1005,13 +1031,39 @@ impl<const D: usize> EField<D> {
     }
 
     /// Single thread generation by seeding a new rng number.
-    /// To create a seedable and reproducible set use [`EField::new_deterministe`]..
+    /// To create a seedable and reproducible set use [`EField::new_deterministe`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let e_field = EField::new_random(&lattice, &distribution);
+    /// assert!(!e_field.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_random(l: &LatticeCyclique<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
         let mut rng = rand::thread_rng();
         EField::new_deterministe(l, &mut rng, d)
     }
 
     /// Create a new cold configuration for the electriccal field, i.e. all E ar set to 0.
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let e_field = EField::new_cold(&lattice);
+    /// assert!(!e_field.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
         Self {
@@ -1098,7 +1150,47 @@ impl<const D: usize> EField<D> {
             .sum::<Option<Real>>()
     }
 
-    /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
+    /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point).
+    ///
+    /// It is mainly use internally but can be use to correct numerical drit in simulations.
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::error::ImplementationError;
+    /// use lattice_qcd_rs::integrator::SymplecticEulerRayon;
+    /// use lattice_qcd_rs::simulation::LatticeState;
+    /// use lattice_qcd_rs::simulation::LatticeStateDefault;
+    /// use lattice_qcd_rs::simulation::LatticeStateWithEField;
+    /// use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
+    /// use lattice_qcd_rs::simulation::SimulationStateSynchrone;
+    ///
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let mut rng = rand::thread_rng();
+    /// let distribution =
+    ///     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
+    /// let mut state = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 6_f64, 4, &mut rng).unwrap(),
+    ///     &mut rng,
+    /// ); // <- here internally when choosing radomly the EField it is projected.
+    ///
+    /// let integrator = SymplecticEulerRayon::default();
+    /// for _ in 0..2 {
+    ///     for _ in 0..10 {
+    ///         state = state.simulate_sync(&integrator, 0.0001_f64)?;
+    ///     }
+    ///     // we correct the numberical drift of the EField.
+    ///     let new_e_field = state
+    ///         .e_field()
+    ///         .project_to_gauss(state.link_matrix(), state.lattice())
+    ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+    ///     state.set_e_field(new_e_field);
+    /// }
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// ```
     #[allow(clippy::as_conversions)] // no try into for f64
     #[inline]
     pub fn project_to_gauss(
@@ -1107,7 +1199,6 @@ impl<const D: usize> EField<D> {
         lattice: &LatticeCyclique<D>,
     ) -> Option<Self> {
         // TODO improve
-
         const NUMBER_FOR_LOOP: usize = 4;
 
         if lattice.get_number_of_points() != self.len()

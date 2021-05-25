@@ -38,6 +38,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         &mut self.rng
     }
 
+    /// Apply te SU2 heat bath methode.
     #[inline]
     fn get_heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
         let staple_coeef = staple.determinant().real().sqrt();
@@ -48,11 +49,13 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
             rand_m_r * v_r
         }
         else {
-            // if the determinant is 0 (or close to zero)
+            // just return a random matrix as all matrices
+            // have the same selection probability
             su2::get_random_su2(&mut self.rng)
         }
     }
 
+    /// Apply the pesudo heat bath methode and return the new link.
     #[inline]
     fn get_modif<const D: usize>(
         &mut self,

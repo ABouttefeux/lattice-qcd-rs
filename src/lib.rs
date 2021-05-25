@@ -56,7 +56,7 @@
 //!
 //! for _ in 0..100 {
 //!     for _ in 0..1_000 {
-//!         simulation = simulation.monte_carlo_step(mc).unwrap();
+//!         simulation = simulation.monte_carlo_step(&mut mc).unwrap();
 //!     }
 //!     // the more we advance te more the link matrices
 //!     // will deviate form SU(3), so we reprojet to SU(3)

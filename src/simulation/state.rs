@@ -30,11 +30,31 @@ use super::{
 pub type LeapFrogStateDefault<const D: usize> =
     SimulationStateLeap<LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, D>;
 
-/// trait to represent a pure gauge lattice state.
+/// trait to represent a pure gauge lattice state of dimention `D`.
 ///
 /// It defines only one field: `link_matrix` of type [`LinkMatrix`].
 pub trait LatticeState<const D: usize> {
-    /// The link matrices of this state.
+    /// Get the link matrices of this state.
+    ///
+    /// This is the field that stores the link matrices.
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::lattice::{DirectionEnum, LatticePoint};
+    /// use lattice_qcd_rs::simulation::{LatticeState, LatticeStateDefault};
+    ///
+    /// # use std::error::Error;
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let point = LatticePoint::new_zero();
+    /// let state = LatticeStateDefault::<4>::new_cold(1_f64, 10_f64, 4)?;
+    /// let _plaquette = state.link_matrix().get_pij(
+    ///     &point,
+    ///     &DirectionEnum::XPos.into(),
+    ///     &DirectionEnum::YPos.into(),
+    ///     state.lattice(),
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     fn link_matrix(&self) -> &LinkMatrix;
 
     /// Replace the links matrices with the given input. It should panic if link matrix is not of
@@ -49,16 +69,16 @@ pub trait LatticeState<const D: usize> {
     /// return the beta parameter of the states
     fn beta(&self) -> Real;
 
-    /// C_A constant of the model
+    /// C_A constant of the model, usually it is 3.
     const CA: Real;
 
     /// return the Hamiltonian of the links configuration
     fn get_hamiltonian_links(&self) -> Real;
 
-    /// Do one monte carlo step with the given
+    /// Do one monte carlo step with the given method.
     ///
     /// # Errors
-    /// Get an error if the simulation could not be advantaced
+    /// The error form `MonteCarlo::get_next_element` is propagated.
     fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, M::Error>
     where
         Self: Sized,
@@ -102,14 +122,14 @@ where
 /// [`LatticeStateWithEFieldSyncDefault`].
 ///
 /// If you want to solve the equation of motion using an [`SymplecticIntegrator`] also implement
-/// [`SimulationStateSynchrone`] and [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
+/// [`SimulationStateSynchrone`] and the wrapper [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
 ///
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
 pub trait LatticeStateWithEField<const D: usize>
 where
     Self: LatticeState<D>,
 {
-    /// Reset the e_field with radom value distributed as N(0, 1/beta ) [`rand_distr::StandardNormal`].
+    /// Reset the e_field with radom value distributed as N(0, 1 / beta) [`rand_distr::StandardNormal`].
     /// # Errors
     /// Gives and error if N(0, 0.5/beta ) is not a valide distribution (for exampple beta = 0)
     fn reset_e_field<Rng>(&mut self, rng: &mut Rng) -> Result<(), StateInitializationError>
@@ -549,6 +569,39 @@ impl<const D: usize> LatticeStateDefault<D> {
 
     /// Correct the numerical drift, reprojecting all the link matrices to SU(3).
     /// see [`LinkMatrix::normalize`].
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::error::ImplementationError;
+    /// use lattice_qcd_rs::prelude::*;
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let mut rng = rand::thread_rng();
+    ///
+    /// let size = 1_f64;
+    /// let number_of_pts = 3;
+    /// let beta = 1_f64;
+    ///
+    /// let mut simulation =
+    ///     LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
+    ///
+    /// let spread_parameter = 0.1_f64;
+    /// let mut mc = MetropolisHastingsSweep::new(1, spread_parameter, rng)
+    ///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+    ///
+    /// for _ in 0..2 {
+    ///     for _ in 0..10 {
+    ///         simulation = simulation.monte_carlo_step(&mut mc)?;
+    ///     }
+    ///     // the more we advance te more the link matrices
+    ///     // will deviate form SU(3), so we reprojet to SU(3)
+    ///     // every 10 steps.
+    ///     simulation.normalize_link_matrices();
+    /// }
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn normalize_link_matrices(&mut self) {
         self.link_matrix.normalize();
     }
@@ -910,6 +963,11 @@ where
             e_field,
             t: 0,
         }
+    }
+
+    /// Get a mutable reference to the efield
+    pub fn e_field_mut(&mut self) -> &mut EField<D> {
+        &mut self.e_field
     }
 }
 
