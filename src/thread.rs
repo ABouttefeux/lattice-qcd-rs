@@ -382,7 +382,7 @@ where
 
             Ok(hash_map)
         })
-        .map_err(|err| {
+        .unwrap_or_else(|err| {
             if err
                 .downcast_ref::<Vec<Box<dyn Any + 'static + Send>>>()
                 .is_some()
@@ -390,8 +390,7 @@ where
                 unreachable!("a failing handle is not joined")
             }
             unreachable!("main thread panicked")
-        })
-        .unwrap();
+        });
         return result;
     }
 }
@@ -619,7 +618,7 @@ where
 
             Ok(vec)
         })
-        .map_err(|err| {
+        .unwrap_or_else(|err| {
             if err
                 .downcast_ref::<Vec<Box<dyn Any + 'static + Send>>>()
                 .is_some()
@@ -627,8 +626,7 @@ where
                 unreachable!("a failing handle is not joined")
             }
             unreachable!("main thread panicked")
-        })
-        .unwrap();
+        });
         return result;
     }
 }
