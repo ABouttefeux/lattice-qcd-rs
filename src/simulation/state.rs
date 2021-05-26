@@ -1091,10 +1091,8 @@ where
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
     /// for [`LatticeCyclique`].
-    /// Return an [`SimulationError::ThreadingError`]([`ThreadError::ThreadNumberIncorect`])
-    /// if `number_of_points = 0`.
-    /// Returns an error if a thread panicked.
-    /// Or propagates the error form [`Self::new`].
+    /// Return [`ThreadError::ThreadNumberIncorect`] if `number_of_points = 0`.
+    /// Returns an error if a thread panicked. Finally, propagates the error form [`Self::new`].
     pub fn new_random_threaded<Distribution>(
         size: Real,
         beta: Real,

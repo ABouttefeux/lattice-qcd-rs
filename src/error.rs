@@ -23,14 +23,16 @@ impl core::fmt::Display for Never {
 impl Error for Never {}
 
 /// Errors in the implementation of the library. This is unwanted to return this type but
-/// somethimes this is better to return that instead of panicking.
+/// somethimes this is better to return that instead of panicking. It is also used in some example.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum ImplementationError {
     /// We atain a portion of the code that was tought to be unreachable.
     Unreachable,
-    /// An option contained an unexpected non_exhaustive value
+    /// An option contained an unexpected None value.
+    ///
+    /// Used when needing to retrun a dyn Error but [`std::option::NoneError`] does not implement [`Error`]
     OptionWithUnexpectedNone,
 }
 
@@ -41,7 +43,7 @@ impl Display for ImplementationError {
                 write!(f, "internal error: entered unreachable code")
             }
             ImplementationError::OptionWithUnexpectedNone => {
-                write!(f, "an option contained an unexpected non_exhaustive value")
+                write!(f, "an option contained an unexpected None value")
             }
         }
     }

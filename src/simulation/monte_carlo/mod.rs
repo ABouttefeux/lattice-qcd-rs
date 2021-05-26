@@ -1,4 +1,6 @@
-//! Module for Monte-Carlo algrorithme and the trait [`MonteCarlo`]
+//! Module for Monte-Carlo algrorithme, see the trait [`MonteCarlo`].
+//!
+//! This is one of the way to carry out simulation. This work by taking a state and progressively changing it (most of the time randomly).
 //!
 //! # Examples
 //! see [`MetropolisHastingsSweep`], [`HeatBathSweep`], [`overrelaxation`] etc...
@@ -86,7 +88,7 @@ where
     /// Error returned while getting the next ellement.
     type Error;
 
-    /// Generate a radom element from the previous element ( like a Markov chain).
+    /// Generate a radom element from the previous element (like a Markov chain).
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
@@ -248,6 +250,7 @@ where
     }
 }
 
+/// Get the delta of energy by changing a link.
 #[inline]
 fn get_delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
@@ -262,6 +265,7 @@ fn get_delta_s_old_new_cmp<const D: usize>(
 }
 
 // TODO move in state
+/// return the staple
 #[inline]
 fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,

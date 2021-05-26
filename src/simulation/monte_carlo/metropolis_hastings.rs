@@ -23,7 +23,11 @@ use super::{
     get_delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault,
 };
 
-/// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
+/// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead when applicable.
+///
+/// This a very general method that can manage every [`LatticeState`] but the tread off is that it is much slower than
+/// a dedicated algorithm knowing the from of the hamiltonian. If you want to use your own hamiltonian I advice to implemnt
+/// you own method too.
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
@@ -36,13 +40,13 @@ pub struct MetropolisHastings {
 
 impl MetropolisHastings {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
-    /// than 0.
+    /// than 0. `0.1_f64` is a good choice for this parameter.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
     /// `spread` is the spead factor for the random matrix change
     /// ( used in [`su3::get_random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real) -> Option<Self> {
-        if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
+        if number_of_update == 0 || !(spread > 0_f64 && spread < 1_f64) {
             return None;
         }
         Some(Self {
@@ -52,7 +56,7 @@ impl MetropolisHastings {
     }
 
     getter_copy!(
-        /// Get the number of updates per steps.
+        /// Get the number of atempted updates per steps.
         pub const number_of_update() -> usize
     );
 
@@ -109,6 +113,8 @@ where
 
 /// Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
+/// Similar to [`MetropolisHastingsDiagnostic`] but with diagnotic information.
+///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -122,7 +128,7 @@ pub struct MetropolisHastingsDiagnostic {
 
 impl MetropolisHastingsDiagnostic {
     /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
-    /// than 0.
+    /// than 0. `0.1_f64` is a good choice for this parameter.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
     /// `spread` is the spead factor for the random matrix change
