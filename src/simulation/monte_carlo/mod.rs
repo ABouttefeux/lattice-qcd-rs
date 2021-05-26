@@ -1,4 +1,7 @@
 //! Module for Monte-Carlo algrorithme and the trait [`MonteCarlo`]
+//!
+//! # Examples
+//! see [`MetropolisHastingsSweep`], [`HeatBathSweep`], [`overrelaxation`] etc...
 
 use std::marker::PhantomData;
 
@@ -17,21 +20,48 @@ use super::{
 };
 
 pub mod heat_bath;
-pub mod hybride;
-pub mod hybride_monte_carlo;
+pub mod hybrid;
+pub mod hybrid_monte_carlo;
 pub mod metropolis_hastings;
 pub mod metropolis_hastings_sweep;
 pub mod overrelaxation;
 
 pub use heat_bath::*;
-pub use hybride::*;
-pub use hybride_monte_carlo::*;
+pub use hybrid::*;
+pub use hybrid_monte_carlo::*;
 pub use metropolis_hastings::*;
 pub use metropolis_hastings_sweep::*;
 pub use overrelaxation::*;
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
-/// It is also a Markov chain
+/// It is also a Markov chain.
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{
+///     LatticeState, LatticeStateDefault, MetropolisHastingsSweep, MonteCarlo,
+/// };
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..10 {
+///     state = mh.get_next_element(state)?;
+///     // or state.monte_carlo_step(&mut hmc)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
 pub trait MonteCarlo<State, const D: usize>
 where
     State: LatticeState<D>,
@@ -104,7 +134,7 @@ where
     }
 }
 
-/// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
+/// A wrapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct McWrapper<MCD, State, Rng, const D: usize>

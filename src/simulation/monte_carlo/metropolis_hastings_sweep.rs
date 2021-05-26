@@ -1,4 +1,7 @@
 //! Metropolis Hastings methode
+//!
+//! # Example
+//! see [`MetropolisHastingsSweep`]
 
 use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]
@@ -18,6 +21,35 @@ use super::{
 };
 
 /// Metropolis Hastings methode by doing a pass on all points
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{LatticeState, LatticeStateDefault, MetropolisHastingsSweep};
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..10 {
+///     state = state.monte_carlo_step(&mut mh)?;
+///     println!(
+///         "mean probability of acceptance during last step {} and replaced {} links",
+///         mh.prob_replace_mean(),
+///         mh.number_replace_last()
+///     );
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
@@ -115,7 +147,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
         self.prob_replace_mean = 0_f64;
-        self.number_replace_last += 0;
+        self.number_replace_last = 0;
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.get_potential_modif(&state, &link);

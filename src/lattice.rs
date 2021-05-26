@@ -1653,6 +1653,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::explicit_counter_loop)]
     fn lattice_pt() {
         let array = [1, 2, 3, 4];
         let mut pt = LatticePoint::from(array);

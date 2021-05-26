@@ -12,49 +12,52 @@
 //! # Example
 //! let us create a basic random state and let us simulate.
 //! ```
-//! extern crate rand;
-//! extern crate rand_distr;
-//! use lattice_qcd_rs::integrator::SymplecticEuler;
-//! use lattice_qcd_rs::simulation::LatticeStateDefault;
-//! use lattice_qcd_rs::simulation::LatticeStateWithEField;
-//! use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
-//! use lattice_qcd_rs::simulation::SimulationStateSynchrone;
+//! # use std::error::Error;
+//! #
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! use lattice_qcd_rs::integrator::{SymplecticEuler, SymplecticIntegrator};
+//! use lattice_qcd_rs::simulation::{
+//!     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+//! };
+//! use rand::SeedableRng;
 //!
-//! let mut rng = rand::thread_rng();
-//! let distribution =
-//!     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
+//! let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
 //! let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(
-//!     LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(),
+//!     LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng)?,
 //!     &mut rng,
 //! );
-//! let state2 = state1
-//!     .simulate_sync(&SymplecticEuler::new(8), 0.0001_f64)
-//!     .unwrap();
-//! let state3 = state2
-//!     .simulate_sync(&SymplecticEuler::new(8), 0.0001_f64)
-//!     .unwrap();
+//! let integrator = SymplecticEuler::default();
+//! let state2 = integrator.integrate_sync_sync(&state1, 0.000_1_f64)?;
+//! let state3 = integrator.integrate_sync_sync(&state2, 0.000_1_f64)?;
+//! #     Ok(())
+//! # }
 //! ```
 //! Let us then compute and compare the Hamiltonian.
 //! ```
-//! # extern crate rand;
-//! # extern crate rand_distr;
-//! # use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
-//! # use lattice_qcd_rs::simulation::LatticeStateWithEField;
-//! # use lattice_qcd_rs::simulation::SimulationStateSynchrone;
-//! # use lattice_qcd_rs::simulation::LatticeStateDefault;
-//! # use lattice_qcd_rs::integrator::SymplecticEuler;
+//! # use std::error::Error;
 //! #
-//! # let mut rng = rand::thread_rng();
-//! # let distribution = rand::distributions::Uniform::from(
-//! #    -std::f64::consts::PI..std::f64::consts::PI
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! # use lattice_qcd_rs::integrator::{SymplecticEuler, SymplecticIntegrator};
+//! # use lattice_qcd_rs::simulation::{
+//! #     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+//! # };
+//! # use rand::SeedableRng;
+//! #
+//! # let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+//! # let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+//! #     LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng)?,
+//! #     &mut rng,
 //! # );
-//! # let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng).unwrap(), &mut rng);
-//! # let state2 = state1.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
-//! # let state3 = state2.simulate_sync(&SymplecticEuler::new(8), 0.0001_f64).unwrap();
+//! # let integrator = SymplecticEuler::default();
+//! # let state2 = integrator.integrate_sync_sync(&state1, 0.000_1_f64)?;
+//! # let state3 = integrator.integrate_sync_sync(&state2, 0.000_1_f64)?;
 //! let h = state1.get_hamiltonian_total();
 //! let h2 = state3.get_hamiltonian_total();
 //! println!("The error on the Hamiltonian is {}", h - h2);
+//! #     Ok(())
+//! # }
 //! ```
+//! See [`SimulationStateSynchrone`] for more convenient methods.
 
 use na::SVector;
 
@@ -89,6 +92,8 @@ pub trait Integrator<State, State2>
 /// The integrator should be capable of switching between Sync state
 /// (q (or link matrices) at time T , p (or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
+///
+/// For an example see the module level documentation [`super::integrator`].
 pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
 where
     StateSync: SimulationStateSynchrone<D>,
@@ -97,7 +102,10 @@ where
     /// Type of error returned by the Integrator.
     type Error;
 
-    /// Integrate a sync state to a sync state.
+    /// Integrate a sync state to a sync state by advaning the link matrices and the electrical field simultaneously.
+    ///
+    /// # Example
+    /// see the module level documentation [`super::integrator`].
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
@@ -105,11 +113,47 @@ where
 
     /// Integrate a leap state to a leap state using leap frog algorithm.
     ///
+    ///
+    /// # Example
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use lattice_qcd_rs::integrator::{SymplecticEulerRayon, SymplecticIntegrator};
+    /// use lattice_qcd_rs::simulation::{
+    ///     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+    /// };
+    /// use rand::SeedableRng;
+    ///
+    /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+    /// let state = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
+    ///     &mut rng,
+    /// );
+    /// let h = state.get_hamiltonian_total();
+    /// let integrator = SymplecticEulerRayon::default();
+    /// let mut leap_frog = integrator.integrate_sync_leap(&state, 0.000_001_f64)?;
+    /// drop(state);
+    /// for _ in 0..2 {
+    ///     // Realistically you would want more steps
+    ///     leap_frog = integrator.integrate_leap_leap(&leap_frog, 0.000_001_f64)?;
+    /// }
+    /// let state = integrator.integrate_leap_sync(&leap_frog, 0.000_001_f64)?;
+    /// let h2 = state.get_hamiltonian_total();
+    ///
+    /// println!("The error on the Hamiltonian is {}", h - h2);
+    /// #     Ok(())
+    /// # }
+    /// ```
+    ///
     /// # Errors
     /// Return an error if the integration encounter a problem
     fn integrate_leap_leap(&self, l: &StateLeap, delta_t: Real) -> Result<StateLeap, Self::Error>;
 
     /// Integrate a sync state to a leap state by doing a half step for the conjugate momenta.
+    ///
+    /// # Example
+    /// see [`SymplecticIntegrator::integrate_leap_leap`]
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
@@ -118,14 +162,47 @@ where
     /// Integrate a leap state to a sync state by finishing doing a step for the position and finishing
     /// the half step for the conjugate momenta.
     ///
+    ///  # Example
+    /// see [`SymplecticIntegrator::integrate_leap_leap`]
+    ///
     /// # Errors
     /// Return an error if the integration encounter a problem
     fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
 
     /// Integrate a Sync state by going to leap and then back to sync.
-    /// This is the symplectic methode of integration, which should conserve the hamiltonian
+    /// This is the symplectic methode of integration, which should conserve approximately the hamiltonian
     ///
     /// Note that you might want to override this method as it can save you from a clone.
+    ///
+    /// # Example
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use lattice_qcd_rs::integrator::{SymplecticEulerRayon, SymplecticIntegrator};
+    /// use lattice_qcd_rs::simulation::{
+    ///     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+    /// };
+    /// use rand::SeedableRng;
+    ///
+    /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+    /// let mut state = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
+    ///     &mut rng,
+    /// );
+    /// let h = state.get_hamiltonian_total();
+    ///
+    /// let integrator = SymplecticEulerRayon::default();
+    /// for _ in 0..1 {
+    ///     // Realistically you would want more steps
+    ///     state = integrator.integrate_symplectic(&state, 0.000_001_f64)?;
+    /// }
+    /// let h2 = state.get_hamiltonian_total();
+    ///
+    /// println!("The error on the Hamiltonian is {}", h - h2);
+    /// #     Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem

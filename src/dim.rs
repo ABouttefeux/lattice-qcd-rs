@@ -1,4 +1,4 @@
-//! module for dimension reexport.
+//! Depreciated, module for dimension reexport.
 
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {

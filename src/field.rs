@@ -859,6 +859,8 @@ impl LinkMatrix {
     }
 
     /// Correct the numerical drift, reprojecting all the matrices to SU(3).
+    ///
+    /// You can look at the example of [`super::simulation::LatticeStateDefault::normalize_link_matrices`]
     pub fn normalize(&mut self) {
         self.data.par_iter_mut().for_each(|el| {
             su3::orthonormalize_matrix_mut(el);
@@ -1443,6 +1445,8 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::op_ref)]
     fn test_su3_adj() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);

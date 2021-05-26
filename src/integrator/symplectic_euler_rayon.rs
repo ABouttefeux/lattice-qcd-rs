@@ -1,6 +1,4 @@
-//! Basic symplectic Euler integrator using Rayon.
-//!
-//! See [`SymplecticEulerRayon`]
+//! Basic symplectic Euler integrator using [`Rayon`](https://docs.rs/rayon/1.5.1/rayon/).
 
 use std::vec::Vec;
 
@@ -25,6 +23,30 @@ use super::{
 /// Basic symplectic Euler integrator using Rayon.
 ///
 /// It is slightly faster than [`super::SymplecticEuler`] but use slightly more memory.
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::integrator::{SymplecticEulerRayon, SymplecticIntegrator};
+/// use lattice_qcd_rs::simulation::{
+///     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+/// };
+/// use rand::SeedableRng;
+///
+/// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
+///     &mut rng,
+/// );
+/// let integrator = SymplecticEulerRayon::default();
+/// let state2 = integrator.integrate_symplectic(&state1, 0.000_001_f64)?;
+/// let h = state1.get_hamiltonian_total();
+/// let h2 = state2.get_hamiltonian_total();
+/// println!("The error on the Hamiltonian is {}", h - h2);
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEulerRayon;
@@ -59,7 +81,7 @@ impl SymplecticEulerRayon {
     }
 
     /// Get all the intregrated e field
-    // # Panics
+    /// # Panics
     /// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
     /// In debug panic if the lattice has not the same number link as link_matrix
     /// or not the same number of point as e_field.

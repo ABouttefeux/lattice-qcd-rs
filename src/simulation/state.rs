@@ -11,7 +11,7 @@ use super::{
     super::{
         error::{
             LatticeInitializationError, MultiIntegrationError, StateInitializationError,
-            StateInitializationErrorThreaded,
+            ThreadedStateInitializationError,
         },
         field::{EField, LinkMatrix, Su3Adjoint},
         integrator::SymplecticIntegrator,
@@ -1101,12 +1101,12 @@ where
         number_of_points: usize,
         d: &Distribution,
         number_of_thread: usize,
-    ) -> Result<Self, StateInitializationErrorThreaded>
+    ) -> Result<Self, ThreadedStateInitializationError>
     where
         Distribution: rand_distr::Distribution<Real> + Sync,
     {
         if number_of_thread == 0 {
-            return Err(StateInitializationErrorThreaded::ThreadingError(
+            return Err(ThreadedStateInitializationError::ThreadingError(
                 ThreadError::ThreadNumberIncorect,
             ));
         }
@@ -1116,23 +1116,23 @@ where
                 .map_err(|err| err.into());
         }
         let lattice = LatticeCyclique::new(size, number_of_points).map_err(|err| {
-            StateInitializationErrorThreaded::StateInitializationError(err.into())
+            ThreadedStateInitializationError::StateInitializationError(err.into())
         })?;
         thread::scope(|s| {
             let lattice_clone = lattice.clone();
             let handel = s.spawn(move |_| EField::new_random(&lattice_clone, d));
             let link_matrix = LinkMatrix::new_random_threaded(&lattice, number_of_thread - 1)?;
             let e_field = handel.join().map_err(|err| {
-                StateInitializationErrorThreaded::ThreadingError(
+                ThreadedStateInitializationError::ThreadingError(
                     ThreadAnyError::Panic(vec![err]).into(),
                 )
             })?;
             // TODO not very clean: imporve
             Self::new(lattice, beta, e_field, link_matrix, 0)
-                .map_err(StateInitializationErrorThreaded::StateInitializationError)
+                .map_err(ThreadedStateInitializationError::StateInitializationError)
         })
         .map_err(|err| {
-            StateInitializationErrorThreaded::ThreadingError(
+            ThreadedStateInitializationError::ThreadingError(
                 ThreadAnyError::Panic(vec![err]).into(),
             )
         })?

@@ -1,4 +1,7 @@
 //! Metropolis Hastings methode
+//!
+//! I recomand not using methode in this module, but they may have niche usage.
+//! look at [`super::metropolis_hastings_sweep`] for a more common algoritm.
 
 use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]

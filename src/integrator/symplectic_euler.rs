@@ -1,6 +1,6 @@
-//! Basic symplectic Euler integrator
+//! Basic symplectic Euler integrator.
 //!
-//! See [`SymplecticEuler`]
+//! For an example see the module level documentation [`super`].
 
 use std::vec::Vec;
 
@@ -60,6 +60,8 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 ///
 /// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
 /// but use less memory
+///
+/// For an example see the module level documentation [`super`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEuler {

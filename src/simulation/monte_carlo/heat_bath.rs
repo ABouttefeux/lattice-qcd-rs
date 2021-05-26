@@ -1,4 +1,7 @@
 //! Pseudo heat bath methods
+//!
+//! # Example
+//! see [`HeatBathSweep`].
 
 use na::ComplexField;
 #[cfg(feature = "serde-serialize")]
@@ -16,7 +19,28 @@ use super::{
 };
 
 /// Pseudo heat bath algorithm
-#[derive(Clone, Debug, PartialEq)]
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::simulation::{HeatBathSweep, LatticeState, LatticeStateDefault};
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mut heat_bath = HeatBathSweep::new(rng);
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..2 {
+///     state = state.monte_carlo_step(&mut heat_bath)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HeatBathSweep<Rng: rand::Rng> {
     rng: Rng,
@@ -34,8 +58,13 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     }
 
     /// Get a mutable reference to the rng.
-    pub fn rng(&mut self) -> &mut Rng {
+    pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
+    }
+
+    /// Get a reference to the rng.
+    pub fn rng(&self) -> &Rng {
+        &self.rng
     }
 
     /// Apply te SU2 heat bath methode.
@@ -92,6 +121,24 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
             *state.get_link_mut(&link).unwrap() = potential_modif;
         });
         state
+    }
+}
+
+impl<Rng: rand::Rng> AsRef<Rng> for HeatBathSweep<Rng> {
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<Rng: rand::Rng> AsMut<Rng> for HeatBathSweep<Rng> {
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
+    }
+}
+
+impl<Rng: rand::Rng + Default> Default for HeatBathSweep<Rng> {
+    fn default() -> Self {
+        Self::new(Rng::default())
     }
 }
 

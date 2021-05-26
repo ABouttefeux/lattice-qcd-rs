@@ -1,4 +1,35 @@
 //! Hybrid Monte Carlo methode
+//!
+//! # Example
+//! ```
+//! # use std::error::Error;
+//! #
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! use lattice_qcd_rs::integrator::SymplecticEulerRayon;
+//! use lattice_qcd_rs::simulation::{
+//!     HybridMonteCarloDiagnostic, LatticeState, LatticeStateDefault,
+//! };
+//! use rand::SeedableRng;
+//!
+//! let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+//! let mut hmc =
+//!     HybridMonteCarloDiagnostic::new(0.000_000_1_f64, 10, SymplecticEulerRayon::new(), rng);
+//! // Realistically you want more steps than 10
+//!
+//! let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+//! for _ in 0..1 {
+//!     state = state.monte_carlo_step(&mut hmc)?;
+//!     println!(
+//!         "probability of accept last step {}, has replaced {}",
+//!         hmc.prob_replace_last(),
+//!         hmc.has_replace_last()
+//!     );
+//!     // operation to track the progress or the evolution
+//! }
+//! // operation at the end of the simulation
+//! #     Ok(())
+//! # }
+//! ```
 
 use std::marker::PhantomData;
 

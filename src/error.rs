@@ -131,26 +131,26 @@ impl Error for StateInitializationError {
 /// Error while initialising a state
 #[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum StateInitializationErrorThreaded {
+pub enum ThreadedStateInitializationError {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),
     /// Other Error cause in non threaded section
     StateInitializationError(StateInitializationError),
 }
 
-impl From<ThreadError> for StateInitializationErrorThreaded {
+impl From<ThreadError> for ThreadedStateInitializationError {
     fn from(err: ThreadError) -> Self {
         Self::ThreadingError(err)
     }
 }
 
-impl From<StateInitializationError> for StateInitializationErrorThreaded {
+impl From<StateInitializationError> for ThreadedStateInitializationError {
     fn from(err: StateInitializationError) -> Self {
         Self::StateInitializationError(err)
     }
 }
 
-impl Display for StateInitializationErrorThreaded {
+impl Display for ThreadedStateInitializationError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
@@ -159,7 +159,7 @@ impl Display for StateInitializationErrorThreaded {
     }
 }
 
-impl Error for StateInitializationErrorThreaded {
+impl Error for ThreadedStateInitializationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::ThreadingError(error) => Some(error),

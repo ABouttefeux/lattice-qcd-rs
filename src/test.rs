@@ -221,14 +221,15 @@ fn creat_sim_threaded() {
 /// return 1 if i==j 0 otherwise
 const fn delta(i: usize, j: usize) -> f64 {
     if i == j {
-        return 1_f64;
+        1_f64
     }
     else {
-        return 0_f64;
+        0_f64
     }
 }
 
 #[test]
+#[allow(clippy::needless_range_loop)]
 /// Test the properties of generators
 fn test_generators() {
     for i in 0..7 {
