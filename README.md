@@ -11,6 +11,8 @@ Classical lattice QCD simulation and tools.
 This library provides tool to simulate a pure gauge SU(3) theory on a lattice. It aimed to provide generic tool such that many different simulation or methods can be used.
 You can easily choose the Monte Carlo algorithm, you can implement you own Hamiltonian etc. It provides also an easy way to do simulation in dimension between 1 and `usize::MAX`. So this library is not limited to d = 3 or d = 4.
 
+Check out my other repo [plaquette](https://github.com/ABouttefeux/plaquette), a set of simulation binary I used for my research.
+
 **Features**:
 - Generic dimension;
 - Configurable Monte Carlo algorithm;
@@ -71,6 +73,8 @@ let average = simulation.average_trace_plaquette().unwrap().real() / 3_f64;
 ```
 
 This library use rayon as a way to do some computation in parallel. However not everything can be parallelized. I advice that if you want to do multiple similar simulation (for instance you want to do for Beta = 1, 1.1, 1.2, ...) to use rayon. In order to do multiple parallel simulation.
+
+Looking for more concrete example ? Check out my other repo [plaquette](https://github.com/ABouttefeux/plaquette). It contain the binary I use for my research.
 
 ### I want to do my own thing.
 
