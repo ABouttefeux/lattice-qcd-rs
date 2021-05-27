@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["MAX_NUMBER_FACTORIAL","Smallest number such that (n+1)! overflow u128."]],"enum":[["Sign","Represent a sign."]],"fn":[["factorial","return n!."],["levi_civita","Return the levi civita symbol of the given index"]],"struct":[["FactorialStorageDyn","Dynamical size factorial store"]]});

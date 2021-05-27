@@ -1,0 +1,1 @@
+initSidebarItems({"macro":[["implement_direction_from","Implement trait [`From`] and [`std::convert::TryFrom`] and for directions"],["implement_direction_list","Implement `DirectionList` for `Direction` of `U1` to `U127`. Using const generics might render this unecessary."]]});

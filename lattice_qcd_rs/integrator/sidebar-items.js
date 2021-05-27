@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["symplectic_euler","Basic symplectic Euler integrator"],["symplectic_euler_rayon","Basic symplectic Euler integrator using Rayon."]],"trait":[["SymplecticIntegrator","Define an symplectic numerical integrator"]]});

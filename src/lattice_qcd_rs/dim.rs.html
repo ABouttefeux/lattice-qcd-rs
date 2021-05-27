@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/dim.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>dim.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../lattice_qcd_rs/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
+<span id="2"> 2</span>
+<span id="3"> 3</span>
+<span id="4"> 4</span>
+<span id="5"> 5</span>
+<span id="6"> 6</span>
+<span id="7"> 7</span>
+<span id="8"> 8</span>
+<span id="9"> 9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="doccomment">//! module for dimension reexport.</span>
+
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">reexport_name_dim</span>{
+    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">i</span>:<span class="ident">ident</span>) ,<span class="op">+</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        $(
+            <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">na</span>::<span class="ident">base</span>::<span class="ident">dimension</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">i</span>;
+        )<span class="op">*</span>
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">na</span>::<span class="ident">base</span>::<span class="ident">dimension</span>::<span class="ident">DimName</span>;
+<span class="macro">reexport_name_dim</span><span class="macro">!</span>(
+    <span class="ident">U0</span>, <span class="ident">U1</span>, <span class="ident">U2</span>, <span class="ident">U3</span>, <span class="ident">U4</span>, <span class="ident">U5</span>, <span class="ident">U6</span>, <span class="ident">U7</span>, <span class="ident">U8</span>, <span class="ident">U9</span>, <span class="ident">U10</span>, <span class="ident">U11</span>, <span class="ident">U12</span>, <span class="ident">U13</span>, <span class="ident">U14</span>, <span class="ident">U15</span>, <span class="ident">U16</span>, <span class="ident">U17</span>, <span class="ident">U18</span>, <span class="ident">U19</span>, <span class="ident">U20</span>,
+    <span class="ident">U21</span>, <span class="ident">U22</span>, <span class="ident">U23</span>, <span class="ident">U24</span>, <span class="ident">U25</span>, <span class="ident">U26</span>, <span class="ident">U27</span>, <span class="ident">U28</span>, <span class="ident">U29</span>, <span class="ident">U30</span>, <span class="ident">U31</span>, <span class="ident">U32</span>, <span class="ident">U33</span>, <span class="ident">U34</span>, <span class="ident">U35</span>, <span class="ident">U36</span>, <span class="ident">U37</span>, <span class="ident">U38</span>, <span class="ident">U39</span>,
+    <span class="ident">U40</span>, <span class="ident">U41</span>, <span class="ident">U42</span>, <span class="ident">U43</span>, <span class="ident">U44</span>, <span class="ident">U45</span>, <span class="ident">U46</span>, <span class="ident">U47</span>, <span class="ident">U48</span>, <span class="ident">U49</span>, <span class="ident">U50</span>, <span class="ident">U51</span>, <span class="ident">U52</span>, <span class="ident">U53</span>, <span class="ident">U54</span>, <span class="ident">U55</span>, <span class="ident">U56</span>, <span class="ident">U57</span>, <span class="ident">U58</span>,
+    <span class="ident">U59</span>, <span class="ident">U60</span>, <span class="ident">U61</span>, <span class="ident">U62</span>, <span class="ident">U63</span>, <span class="ident">U64</span>, <span class="ident">U65</span>, <span class="ident">U66</span>, <span class="ident">U67</span>, <span class="ident">U68</span>, <span class="ident">U69</span>, <span class="ident">U70</span>, <span class="ident">U71</span>, <span class="ident">U72</span>, <span class="ident">U73</span>, <span class="ident">U74</span>, <span class="ident">U75</span>, <span class="ident">U76</span>, <span class="ident">U77</span>,
+    <span class="ident">U78</span>, <span class="ident">U79</span>, <span class="ident">U80</span>, <span class="ident">U81</span>, <span class="ident">U82</span>, <span class="ident">U83</span>, <span class="ident">U84</span>, <span class="ident">U85</span>, <span class="ident">U86</span>, <span class="ident">U87</span>, <span class="ident">U88</span>, <span class="ident">U89</span>, <span class="ident">U90</span>, <span class="ident">U91</span>, <span class="ident">U92</span>, <span class="ident">U93</span>, <span class="ident">U94</span>, <span class="ident">U95</span>, <span class="ident">U96</span>,
+    <span class="ident">U97</span>, <span class="ident">U98</span>, <span class="ident">U99</span>, <span class="ident">U100</span>, <span class="ident">U101</span>, <span class="ident">U102</span>, <span class="ident">U103</span>, <span class="ident">U104</span>, <span class="ident">U105</span>, <span class="ident">U106</span>, <span class="ident">U107</span>, <span class="ident">U108</span>, <span class="ident">U109</span>, <span class="ident">U110</span>, <span class="ident">U111</span>, <span class="ident">U112</span>,
+    <span class="ident">U113</span>, <span class="ident">U114</span>, <span class="ident">U115</span>, <span class="ident">U116</span>, <span class="ident">U117</span>, <span class="ident">U118</span>, <span class="ident">U119</span>, <span class="ident">U120</span>, <span class="ident">U121</span>, <span class="ident">U122</span>, <span class="ident">U123</span>, <span class="ident">U124</span>, <span class="ident">U125</span>, <span class="ident">U126</span>, <span class="ident">U127</span>
+);
+
+<span class="comment">/*
+U0, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, U17, U18,
+U19, U20, U21, U22, U23, U24, U25, U26, U27, U28, U29, U30, U31, U32, U33, U34, U35, U36, U37,
+U38, U39, U40, U41, U42, U43, U44, U45, U46, U47, U48, U49, U50, U51, U52, U53, U54, U55, U56,
+U57, U58, U59, U60, U61, U62, U63, U64, U65, U66, U67, U68, U69, U70, U71, U72, U73, U74, U75,
+U76, U77, U78, U79, U80, U81, U82, U83, U84, U85, U86, U87, U88, U89, U90, U91, U92, U93, U94,
+U95, U96, U97, U98, U99, U100, U101, U102, U103, U104, U105, U106, U107, U108, U109, U110,
+U111, U112, U113, U114, U115, U116, U117, U118, U119, U120, U121, U122, U123, U124, U125, U126,
+U127
+*/</span>
+
+<span class="comment">/*
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+9, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
+38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75,
+76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
+95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
+111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126,
+127
+*/</span>
+<span class="comment">/*
+(0, U0), (1, U1), (2, U2), (3, U3), (4, U4), (5, U5), (6, U6), (7, U7), (8, U8), (9, U9),
+(10, U10), (11, U11), (12, U12), (13, U13), (14, U14), (15, U15), (16, U16), (17, U17),
+(18, U18), (19, U19), (20, U20), (21, U21), (22, U22), (23, U23), (24, U24), (25, U25),
+(26, U26), (27, U27), (28, U28), (29, U29), (30, U30), (31, U31), (32, U32), (33, U33),
+(34, U34), (35, U35), (36, U36), (37, U37), (38, U38), (39, U39), (40, U40), (41, U41),
+(42, U42), (43, U43), (44, U44), (45, U45), (46, U46), (47, U47), (48, U48), (49, U49),
+(50, U50), (51, U51), (52, U52), (53, U53), (54, U54), (55, U55), (56, U56), (57, U57),
+(58, U58), (59, U59), (60, U60), (61, U61), (62, U62), (63, U63), (64, U64), (65, U65),
+(66, U66), (67, U67), (68, U68), (69, U69), (70, U70), (71, U71), (72, U72), (73, U73),
+(74, U74), (75, U75), (76, U76), (77, U77), (78, U78), (79, U79), (80, U80), (81, U81),
+(82, U82), (83, U83), (84, U84), (85, U85), (86, U86), (87, U87), (88, U88), (89, U89),
+(90, U90), (91, U91), (92, U92), (93, U93), (94, U94), (95, U95), (96, U96), (97, U97),
+(98, U98), (99, U99), (100, U100), (101, U101), (102, U102), (103, U103), (104, U104),
+(105, U105), (106, U106), (107, U107), (108, U108), (109, U109), (110, U110), (111, U111),
+(112, U112), (113, U113), (114, U114), (115, U115), (116, U116), (117, U117), (118, U118),
+(119, U119), (120, U120), (121, U121), (122, U122), (123, U123), (124, U124), (125, U125),
+(126, U126), (127, U127),
+*/</span>
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="lattice_qcd_rs" data-search-js="../../search-index.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script></body></html>

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MetropolisHastings","Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead."],["MetropolisHastingsDeltaDiagnostic","Metropolis Hastings algorithm with diagnostics."],["MetropolisHastingsDiagnostic","Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead."]]});

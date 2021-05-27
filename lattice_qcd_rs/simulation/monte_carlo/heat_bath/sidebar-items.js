@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["HeatBathSweep","Pseudo heat bath algorithm"]]});

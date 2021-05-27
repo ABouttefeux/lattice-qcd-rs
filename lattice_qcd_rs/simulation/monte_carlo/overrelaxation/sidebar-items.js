@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["OverrelaxationSweepReverse","Alone it can’t advance the simulation as it preserved the hamiltonian. You need to use other methode with this one. You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`]."],["OverrelaxationSweepRotation","Pseudo heat bath algorithm using rotation methode."]]});

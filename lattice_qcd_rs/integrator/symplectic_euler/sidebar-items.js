@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["SymplecticEulerError","Error for [`SymplecticEuler`]."]],"struct":[["SymplecticEuler","Basic symplectic Euler integrator"]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["ComplexField","Trait shared by all complex fields and its subfields (like real numbers)."]],"type":[["U3",""],["U4",""]]});

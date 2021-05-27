@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["EField","Represent an electric field."],["LinkMatrix","Represents the link matrices"],["Su3Adjoint","Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra). See [`su3::GENERATORS`] to view the order of generators. Note that the generators are normalize such that `Tr[T^a T^b] = \\delta^{ab} / 2`"]]});

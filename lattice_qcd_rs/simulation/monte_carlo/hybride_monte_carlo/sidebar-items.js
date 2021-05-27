@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["HybridMonteCarlo","Hybrid Monte Carlo algorithm (HCM for short)."],["HybridMonteCarloDiagnostic","Hybrid Monte Carlo algorithm ( HCM for short) with diagnostics."]]});

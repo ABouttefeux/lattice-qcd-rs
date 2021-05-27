@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["monte_carlo","Module for Monte-Carlo algrorithme and the trait [`MonteCarlo`]"],["state","Module containing the simulation State"]]});

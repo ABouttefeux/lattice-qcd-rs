@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FixedPointNumber","Fix point number."]],"type":[["I32U128","Fixe point number representewd by i32 for the integer part and 128 bits (16 bytes) as the decimal part"]]});
