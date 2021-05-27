@@ -1,0 +1,34 @@
+name: Rust-Beta
+
+on:
+  push:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-beta:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    
+    - name: Install Rust beta toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: beta
+    
+    - name: Build beta with serd
+      run: cargo build --all --verbose --features serde-serialize
+    
+    - name: Run tests beta with serd
+      run: cargo test --all --verbose --features serde-serialize
+    
+    - name: Build beta no features
+      run: cargo build --all --verbose --no-default-features
+      
+    - name: Run tests beta no features
+      run: cargo test --all --verbose --no-default-features

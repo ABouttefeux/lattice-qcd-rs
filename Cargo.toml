@@ -1,0 +1,45 @@
+[package]
+name = "lattice-qcd-rs"
+version = "0.2.0"
+authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
+categories = ["Science", "Simulation"]
+description = "Lattice QCD simulation"
+keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
+publish = false
+
+[features]
+serde-serialize = ["serde"]
+default = ["serde-serialize"]
+no-overflow-test= []
+
+[workspace]
+members = ["procedural_macro"]
+
+[dependencies]
+nalgebra = { version = "0.26", features = ["serde-serialize"] }
+approx = "0.4.0"
+num-traits = "0.2.14"
+rand = "0.8.3"
+rand_distr = "0.4.0"
+crossbeam = "0.8.0"
+rayon = "1.5.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
+lattice_qcd_rs-procedural_macro = {path = "procedural_macro"}
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[profile.test]
+opt-level = 2 # in order to have resonable test time
+
+
+[profile.release]
+codegen-units = 1
+lto = true
