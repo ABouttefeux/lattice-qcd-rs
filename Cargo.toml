@@ -16,7 +16,7 @@ default = ["serde-serialize"]
 no-overflow-test= []
 
 [workspace]
-members = ["simulation-bin", "average_of_plaquette", "procedural_macro"]
+members = ["procedural_macro"]
 
 [dependencies]
 nalgebra = { version = "0.26", features = ["serde-serialize"] }

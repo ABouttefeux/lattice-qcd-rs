@@ -655,3 +655,27 @@ fn test_length_compatible() {
     assert!(!l1.has_compatible_lenght(&link2, &e_f_2));
     assert!(l2.has_compatible_lenght(&link2, &e_f_2));
 }
+
+#[test]
+fn test_leap_frog() {
+    let mut rng = rand::thread_rng();
+    let size = 1000_f64;
+    let number_of_pts = 4;
+    let beta = 1_f64;
+    let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    println!("h_l {}", state.get_hamiltonian_links());
+    let state_hmc =
+        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(
+            state, &mut rng,
+        );
+    let h1 = state_hmc.get_hamiltonian_total();
+    println!("h_t {}", h1);
+    let state_hmc_2 = state_hmc
+        .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01, 1)
+        .unwrap();
+    let h2 = state_hmc_2.get_hamiltonian_total();
+    println!("h_t {}", h2);
+    println!("{}", (h1 - h2).exp());
+
+    assert!((h1 - h2).abs() < 0.000_01);
+}
