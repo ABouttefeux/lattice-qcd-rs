@@ -137,6 +137,41 @@ where
 }
 
 /// A wrapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{
+///     LatticeState, LatticeStateDefault, McWrapper, MetropolisHastingsDiagnostic, MonteCarlo,
+/// };
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mh = MetropolisHastingsDiagnostic::new(1, 0.1_f64)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// let mut wrapper = McWrapper::new(mh, rng);
+///
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..100 {
+///     state = state.monte_carlo_step(&mut wrapper)?;
+///     println!(
+///         "probability of acceptance during last step {}, does it accepted the chnage ? {}",
+///         mh.prob_replace_last(),
+///         mh.has_replace_last()
+///     );
+///     // or state.monte_carlo_step(&mut wrapper)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// let (_, rng) = wrapper.deconstruct(); // get the rng back
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct McWrapper<MCD, State, Rng, const D: usize>

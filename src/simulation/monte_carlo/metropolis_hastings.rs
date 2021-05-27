@@ -117,6 +117,9 @@ where
 ///
 /// Note that this methode does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+///
+/// # Example
+/// see example of [`super::McWrapper`]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsDiagnostic {
@@ -419,40 +422,78 @@ where
 }
 
 #[cfg(test)]
-#[test]
-fn test_mh_delta() {
+mod test {
+
     use rand::SeedableRng;
-    let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
 
-    let size = 1_000_f64;
-    let number_of_pts = 4;
-    let beta = 2_f64;
-    let mut simulation =
-        LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    use super::*;
+    use crate::simulation::state::*;
 
-    let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01_f64, rng).unwrap();
-    for _ in 0_u32..10_u32 {
-        let mut simulation2 = simulation.clone();
-        let (link, matrix) = mcd.get_potential_modif(&simulation);
-        *simulation2.get_link_mut(&link).unwrap() = matrix;
-        let ds = MetropolisHastingsDeltaDiagnostic::<rand::rngs::StdRng>::get_delta_s(
-            simulation.link_matrix(),
-            simulation.lattice(),
-            &link,
-            &matrix,
-            simulation.beta(),
+    const SEED: u64 = 0x45_78_93_f4_4a_b0_67_f0;
+
+    #[test]
+    fn test_mh_delta() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED);
+
+        let size = 1_000_f64;
+        let number_of_pts = 4;
+        let beta = 2_f64;
+        let mut simulation =
+            LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)
+                .unwrap();
+
+        let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01_f64, rng).unwrap();
+        for _ in 0_u32..10_u32 {
+            let mut simulation2 = simulation.clone();
+            let (link, matrix) = mcd.get_potential_modif(&simulation);
+            *simulation2.get_link_mut(&link).unwrap() = matrix;
+            let ds = MetropolisHastingsDeltaDiagnostic::<rand::rngs::StdRng>::get_delta_s(
+                simulation.link_matrix(),
+                simulation.lattice(),
+                &link,
+                &matrix,
+                simulation.beta(),
+            );
+            println!(
+                "ds {}, dh {}",
+                ds,
+                -simulation.get_hamiltonian_links() + simulation2.get_hamiltonian_links()
+            );
+            let prob_of_replacement = (simulation.get_hamiltonian_links()
+                - simulation2.get_hamiltonian_links())
+            .exp()
+            .min(1_f64)
+            .max(0_f64);
+            assert!(((-ds).exp().min(1_f64).max(0_f64) - prob_of_replacement).abs() < 1E-8_f64);
+            simulation = simulation2;
+        }
+    }
+    #[test]
+    fn methods_common_traits() {
+        assert_eq!(
+            MetropolisHastings::default(),
+            MetropolisHastings::new(1, 0.1_f64).unwrap()
         );
-        println!(
-            "ds {}, dh {}",
-            ds,
-            -simulation.get_hamiltonian_links() + simulation2.get_hamiltonian_links()
+        assert_eq!(
+            MetropolisHastingsDiagnostic::default(),
+            MetropolisHastingsDiagnostic::new(1, 0.1_f64).unwrap()
         );
-        let prob_of_replacement = (simulation.get_hamiltonian_links()
-            - simulation2.get_hamiltonian_links())
-        .exp()
-        .min(1_f64)
-        .max(0_f64);
-        assert!(((-ds).exp().min(1_f64).max(0_f64) - prob_of_replacement).abs() < 1E-8_f64);
-        simulation = simulation2;
+
+        let rng = rand::rngs::StdRng::seed_from_u64(SEED);
+        assert!(MetropolisHastingsDeltaDiagnostic::new(0_f64, rng.clone()).is_none());
+        assert!(MetropolisHastings::new(0, 0.1_f64).is_none());
+        assert!(MetropolisHastingsDiagnostic::new(1, 0_f64).is_none());
+
+        assert_eq!(
+            MetropolisHastings::new(2, 0.2_f64).unwrap().to_string(),
+            "Metropolis-Hastings method with 2 update and spread 0.2"
+        );
+        assert_eq!(
+            MetropolisHastingsDiagnostic::new(2, 0.2_f64).unwrap().to_string(),
+            "Metropolis-Hastings method with 2 update and spread 0.2, with diagnostics: has accepted last step false, probability of acceptance of last step 0"
+        );
+        let mut mhdd = MetropolisHastingsDeltaDiagnostic::new(0.1_f64, rng).unwrap();
+        let _: &rand::rngs::StdRng = mhdd.as_ref();
+        let _: &mut rand::rngs::StdRng = mhdd.as_mut();
     }
 }

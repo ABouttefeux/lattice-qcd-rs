@@ -870,21 +870,9 @@ impl<const D: usize> std::fmt::Display for LatticeLinkCanonical<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "canonical link : [position {}, direction {}]",
+            "canonical link [position {}, direction {}]",
             self.from, self.dir
         )
-    }
-}
-
-impl<const D: usize> Default for LatticeLinkCanonical<D>
-where
-    Direction<D>: Default,
-{
-    fn default() -> Self {
-        Self {
-            from: LatticePoint::default(),
-            dir: Direction::default(),
-        }
     }
 }
 
@@ -952,21 +940,9 @@ impl<const D: usize> LatticeLink<D> {
     }
 }
 
-impl<const D: usize> Default for LatticeLink<D>
-where
-    Direction<D>: Default,
-{
-    fn default() -> Self {
-        Self {
-            from: LatticePoint::default(),
-            dir: Direction::default(),
-        }
-    }
-}
-
 impl<const D: usize> std::fmt::Display for LatticeLink<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "link : [position {}, direction {}]", self.from, self.dir)
+        write!(f, "link [position {}, direction {}]", self.from, self.dir)
     }
 }
 
@@ -1132,11 +1108,37 @@ impl<const D: usize> Direction<D> {
 
 // TODO default when condition on const generic is avaliable
 
+/*
+impl<const D: usize> Default for LatticeLinkCanonical<D>
+where
+    Direction<D>: Default,
+{
+    fn default() -> Self {
+        Self {
+            from: LatticePoint::default(),
+            dir: Direction::default(),
+        }
+    }
+}
+
+impl<const D: usize> Default for LatticeLink<D>
+where
+    Direction<D>: Default,
+{
+    fn default() -> Self {
+        Self {
+            from: LatticePoint::default(),
+            dir: Direction::default(),
+        }
+    }
+}
+*/
+
 impl<const D: usize> std::fmt::Display for Direction<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[index {}, is positive: {}]",
+            "[index {}, is positive {}]",
             self.index(),
             self.is_positive()
         )
@@ -1495,14 +1497,14 @@ impl Default for DirectionEnum {
 impl std::fmt::Display for DirectionEnum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DirectionEnum::XPos => write!(f, "X Positive"),
-            DirectionEnum::XNeg => write!(f, "X Negative"),
-            DirectionEnum::YPos => write!(f, "Y Positive"),
-            DirectionEnum::YNeg => write!(f, "Y Negative"),
-            DirectionEnum::ZPos => write!(f, "Z Positive"),
-            DirectionEnum::ZNeg => write!(f, "Z Negative"),
-            DirectionEnum::TPos => write!(f, "T Positive"),
-            DirectionEnum::TNeg => write!(f, "T Negative"),
+            DirectionEnum::XPos => write!(f, "positive X direction"),
+            DirectionEnum::XNeg => write!(f, "negative X direction"),
+            DirectionEnum::YPos => write!(f, "positive Y direction"),
+            DirectionEnum::YNeg => write!(f, "negative Y direction"),
+            DirectionEnum::ZPos => write!(f, "positive Z direction"),
+            DirectionEnum::ZNeg => write!(f, "negative Z direction"),
+            DirectionEnum::TPos => write!(f, "positive T direction"),
+            DirectionEnum::TNeg => write!(f, "negative T direction"),
         }
     }
 }
@@ -1721,6 +1723,15 @@ mod test {
         assert_eq!(-&DirectionEnum::XNeg, &DirectionEnum::XPos);
         assert_eq!(-&DirectionEnum::XPos, &DirectionEnum::XNeg);
 
+        assert_eq!(-DirectionEnum::TNeg, DirectionEnum::TPos);
+        assert_eq!(-DirectionEnum::TPos, DirectionEnum::TNeg);
+        assert_eq!(-DirectionEnum::ZNeg, DirectionEnum::ZPos);
+        assert_eq!(-DirectionEnum::ZPos, DirectionEnum::ZNeg);
+        assert_eq!(-DirectionEnum::YNeg, DirectionEnum::YPos);
+        assert_eq!(-DirectionEnum::YPos, DirectionEnum::YNeg);
+        assert_eq!(-DirectionEnum::XNeg, DirectionEnum::XPos);
+        assert_eq!(-DirectionEnum::XPos, DirectionEnum::XNeg);
+
         assert_eq!(DirectionEnum::get_all_directions().len(), 8);
         assert_eq!(DirectionEnum::get_all_positive_directions().len(), 4);
 
@@ -1732,6 +1743,15 @@ mod test {
             assert_eq!(
                 <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
                 dir.index()
+            );
+        }
+
+        let array_dir_name = ["X", "Y", "Z", "T"];
+        let array_pos = ["positive", "negative"];
+        for (i, dir) in DirectionEnum::get_all_directions().iter().enumerate() {
+            assert_eq!(
+                dir.to_string(),
+                format!("{} {} direction", array_pos[i / 4], array_dir_name[i % 4])
             );
         }
     }
@@ -1755,6 +1775,29 @@ mod test {
         assert!(link.is_dir_positive());
         *link.dir_mut() = DirectionEnum::YNeg.into();
         assert!(!link.is_dir_positive());
+
+        assert_eq!(
+            link.to_string(),
+            format!(
+                "link [position {}, direction [index 1, is positive false]]",
+                SVector::<usize, 4>::zeros()
+            )
+        );
+
+        let vector = SVector::<usize, 5>::from([1, 0, 0, 0, 0]);
+        let canonical_link = LatticeLinkCanonical::<5>::new(
+            LatticePoint::new(vector),
+            Direction::new(0, true).unwrap(),
+        )
+        .unwrap();
+        println!("{}", canonical_link);
+        assert_eq!(
+            canonical_link.to_string(),
+            format!(
+                "canonical link [position {}, direction [index 0, is positive true]]",
+                vector
+            )
+        );
     }
 
     #[allow(clippy::cognitive_complexity)]

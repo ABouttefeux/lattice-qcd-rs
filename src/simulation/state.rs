@@ -291,9 +291,6 @@ where
                 Ok(state) => state_leap = state,
                 Err(error) => {
                     match error {
-                        MultiIntegrationError::IntegrationError(0, error) => {
-                            return Err(MultiIntegrationError::IntegrationError(1, error))
-                        }
                         MultiIntegrationError::IntegrationError(i, error) => {
                             return Err(MultiIntegrationError::IntegrationError(i + 1, error))
                         }
@@ -573,10 +570,11 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// ```
     /// use lattice_qcd_rs::error::ImplementationError;
     /// use lattice_qcd_rs::prelude::*;
+    /// use rand::SeedableRng;
     /// # use std::error::Error;
     ///
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// let mut rng = rand::thread_rng();
+    /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
     ///
     /// let size = 1_f64;
     /// let number_of_pts = 3;
@@ -1297,5 +1295,31 @@ where
             return_vector[index] = element?;
         }
         Some(return_vector)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::error::StateInitializationError;
+
+    #[test]
+    fn leap_frog_simulation() -> Result<(), StateInitializationError> {
+        let state = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_cold(
+            1_f64, 6_f64, 4,
+        )?;
+
+        let mut leap_frog = SimulationStateLeap::new_from_state(state.clone());
+        assert_eq!(&state, leap_frog.as_ref());
+
+        assert_eq!(
+            state.get_gauss(&LatticePoint::default()),
+            leap_frog.get_gauss(&LatticePoint::default())
+        );
+
+        let _: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3> =
+            leap_frog.as_mut();
+        Ok(())
     }
 }

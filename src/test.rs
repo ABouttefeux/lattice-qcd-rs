@@ -644,6 +644,31 @@ fn lattice_init_error() {
 }
 
 #[test]
+fn state_init_error() {
+    let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+
+    assert_eq!(
+        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+            0_f64, 1_f64, 4, &d, 2,
+        ),
+        Err(ThreadedStateInitializationError::StateInitializationError(
+            StateInitializationError::LatticeInitializationError(
+                LatticeInitializationError::NonPositiveSize
+            )
+        ))
+    );
+
+    assert_eq!(
+        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+            1_f64, 1_f64, 4, &d, 0,
+        ),
+        Err(ThreadedStateInitializationError::ThreadingError(
+            ThreadError::ThreadNumberIncorect
+        ))
+    );
+}
+
+#[test]
 fn test_length_compatible() {
     let l1 = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
     let l2 = LatticeCyclique::<2>::new(1_f64, 3).unwrap();
@@ -659,7 +684,7 @@ fn test_length_compatible() {
 
 #[test]
 fn test_leap_frog() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0);
     let size = 1000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;

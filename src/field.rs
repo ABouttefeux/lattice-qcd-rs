@@ -124,9 +124,7 @@ impl Su3Adjoint {
     /// create a new random SU3 adjoint.
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// use lattice_qcd_rs::field::Su3Adjoint;
     ///
     /// let mut rng = rand::thread_rng();
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
@@ -1189,16 +1187,16 @@ impl<const D: usize> EField<D> {
     /// ```
     /// use lattice_qcd_rs::error::ImplementationError;
     /// use lattice_qcd_rs::integrator::SymplecticEulerRayon;
-    /// use lattice_qcd_rs::simulation::LatticeState;
-    /// use lattice_qcd_rs::simulation::LatticeStateDefault;
-    /// use lattice_qcd_rs::simulation::LatticeStateWithEField;
-    /// use lattice_qcd_rs::simulation::LatticeStateWithEFieldSyncDefault;
-    /// use lattice_qcd_rs::simulation::SimulationStateSynchrone;
+    /// use lattice_qcd_rs::simulation::{
+    ///     LatticeState, LatticeStateDefault, LatticeStateWithEField,
+    ///     LatticeStateWithEFieldSyncDefault, SimulationStateSynchrone,
+    /// };
+    /// use rand::SeedableRng;
     ///
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// let mut rng = rand::thread_rng();
+    /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
     /// let distribution =
     ///     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
     /// let mut state = LatticeStateWithEFieldSyncDefault::new_random_e_state(

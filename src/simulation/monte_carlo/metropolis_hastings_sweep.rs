@@ -199,3 +199,25 @@ where
         Ok(self.get_next_element_default(state))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::error::Error;
+
+    use rand::SeedableRng;
+
+    use super::*;
+    use crate::error::ImplementationError;
+
+    #[test]
+    fn as_ref_as_mut() -> Result<(), Box<dyn Error>> {
+        let rng = rand::rngs::StdRng::seed_from_u64(0);
+        let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng.clone())
+            .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+        assert_eq!(&rng, mh.as_ref());
+
+        let _: &mut rand::rngs::StdRng = mh.as_mut();
+
+        Ok(())
+    }
+}
