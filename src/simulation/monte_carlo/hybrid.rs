@@ -5,14 +5,17 @@
 use core::fmt::{Debug, Display};
 use std::error::Error;
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
 use std::vec::Vec;
+
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
 
 use super::{super::state::LatticeState, MonteCarlo};
 
 /// Error given by [`HybrideMethodeVec`]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum HybrideMethodeVecError<Error> {
     /// An Error comming from one of the method.
     ///
@@ -25,7 +28,7 @@ pub enum HybrideMethodeVecError<Error> {
 impl<Error: Display> Display for HybrideMethodeVecError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::NoMethod => write!(f, "error: no Monte Carlo method"),
+            Self::NoMethod => write!(f, "no monte carlo method"),
             Self::Error(index, error) => {
                 write!(f, "error during intgration step {}: {}", index, error)
             }
@@ -70,34 +73,37 @@ where
     }
 
     /// Getter for the reference holded by self.
-    pub fn data(&'a mut self) -> &'a mut MC {
+    pub fn data_mut(&mut self) -> &mut MC {
+        self.data
+    }
+
+    /// Getter for the reference holded by self.
+    pub fn data(&self) -> &MC {
         self.data
     }
 }
 
-impl<'a, MC, State, ErrorBase, Error, const D: usize> Deref
+impl<'a, MC, State, ErrorBase, Error, const D: usize> AsMut<MC>
     for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
 {
-    type Target = MC;
-
-    fn deref(&self) -> &Self::Target {
-        self.data
+    fn as_mut(&mut self) -> &mut MC {
+        self.data_mut()
     }
 }
 
-impl<'a, MC, State, ErrorBase, Error, const D: usize> DerefMut
+impl<'a, MC, State, ErrorBase, Error, const D: usize> AsRef<MC>
     for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.data
+    fn as_ref(&self) -> &MC {
+        self.data()
     }
 }
 
@@ -132,6 +138,7 @@ where
 {
     getter!(
         /// get the methods
+        pub,
         methods,
         Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>
     );
@@ -179,6 +186,26 @@ where
     }
 }
 
+impl<'a, State, E, const D: usize> AsRef<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
+    for HybrideMethodeVec<'a, State, E, D>
+where
+    State: LatticeState<D>,
+{
+    fn as_ref(&self) -> &Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
+        self.methods()
+    }
+}
+
+impl<'a, State, E, const D: usize> AsMut<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
+    for HybrideMethodeVec<'a, State, E, D>
+where
+    State: LatticeState<D>,
+{
+    fn as_mut(&mut self) -> &mut Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
+        self.methods_mut()
+    }
+}
+
 impl<'a, State, E, const D: usize> Default for HybrideMethodeVec<'a, State, E, D>
 where
     State: LatticeState<D>,
@@ -212,6 +239,7 @@ where
 
 /// Error given by [`HybrideMethodeCouple`]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum HybrideMethodeCoupleError<Error1, Error2> {
     /// First method gave an error
     ErrorFirst(Error1),
@@ -222,8 +250,8 @@ pub enum HybrideMethodeCoupleError<Error1, Error2> {
 impl<Error1: Display, Error2: Display> Display for HybrideMethodeCoupleError<Error1, Error2> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ErrorFirst(error) => write!(f, "Error during intgration step 1: {}", error),
-            Self::ErrorSecond(error) => write!(f, "Error during intgration step 2: {}", error),
+            Self::ErrorFirst(error) => write!(f, "error during intgration step 1: {}", error),
+            Self::ErrorSecond(error) => write!(f, "error during intgration step 2: {}", error),
         }
     }
 }
@@ -242,6 +270,7 @@ impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
 /// This method can combine any two methods. The down side is that it can be very verbose to write
 /// Couples for a large number of methods.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, const D: usize>
 where
     MC1: MonteCarlo<State, D, Error = Error1>,
@@ -262,12 +291,14 @@ where
 {
     getter!(
         /// get the first method
+        pub,
         method_1,
         MC1
     );
 
     getter!(
         /// get the second method
+        pub,
         method_2,
         MC2
     );

@@ -1,7 +1,35 @@
 //! Overrelaxation methode
 //!
+//! The goal of the overrelaxation is to move thought the phase space as much as possible but conserving the hamiltonian.
+//! It can be used to improve the speed of thermalisation by vising more states.
 //! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
 //! You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
+//!
+//! In my limimited experience [`OverrelaxationSweepReverse`] moves a bit more though the phase space than [`OverrelaxationSweepRotation`].
+//! The difference is slight though.
+//!
+//! # Example
+//! ```
+//! # use std::error::Error;
+//! #
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! use lattice_qcd_rs::simulation::{HeatBathSweep, LatticeState, LatticeStateDefault, OverrelaxationSweepReverse};
+//! use rand::SeedableRng;
+//!
+//! let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+//! let mut heat_bath = HeatBathSweep::new(rng);
+//! let mut overrelax = OverrelaxationSweepReverse::default();
+//!
+//! let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 8_f64, 4)?; // 1_f64 : size, 8_f64: beta, 4 number of points.
+//! for _ in 0..2 {
+//!     state = state.monte_carlo_step(&mut heat_bath)?;
+//!     state = state.monte_carlo_step(&mut overrelax)?;
+//!     // operation to track the progress or the evolution
+//! }
+//! // operation at the end of the simulation
+//! #     Ok(())
+//! # }
+//! ```
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -14,13 +42,36 @@ use super::{
     get_staple, MonteCarlo,
 };
 
-/// Pseudo heat bath algorithm using rotation methode.
+/// Overrelaxation algortihm using rotation methode.
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
+/// The algorrtihm is described (https://arxiv.org/abs/hep-lat/0503041) in section 2.1 up to step 2 using `\hat X_{NN}`
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::simulation::{HeatBathSweep, LatticeState, LatticeStateDefault, OverrelaxationSweepRotation};
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mut heat_bath = HeatBathSweep::new(rng);
+/// let mut overrelax = OverrelaxationSweepRotation::default();
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 8_f64, 4)?; // 1_f64 : size, 8_f64: beta, 4 number of points.
+/// for _ in 0..2 {
+///     state = state.monte_carlo_step(&mut heat_bath)?;
+///     state = state.monte_carlo_step(&mut overrelax)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct OverrelaxationSweepRotation;
@@ -59,6 +110,12 @@ impl OverrelaxationSweepRotation {
     }
 }
 
+impl std::fmt::Display for OverrelaxationSweepRotation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "overrelaxation method by rotation")
+    }
+}
+
 impl Default for OverrelaxationSweepRotation {
     fn default() -> Self {
         Self::new()
@@ -77,13 +134,16 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
     }
 }
 
-// Pseudo heat bath algorithm using the reverse methode.
+/// Overrelaxation algortihm using the reverse methode.
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// see (https://doi.org/10.1016/0370-2693(90)90032-2)
+/// The algorrtihm is described in (https://doi.org/10.1016/0370-2693(90)90032-2).
+///
+/// # Example
+/// see level module documentation [`super::overrelaxation`]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct OverrelaxationSweepReverse;
@@ -129,6 +189,12 @@ impl Default for OverrelaxationSweepReverse {
     }
 }
 
+impl std::fmt::Display for OverrelaxationSweepReverse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "overrelaxation method by reverse")
+    }
+}
+
 impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSweepReverse {
     type Error = Never;
 
@@ -171,7 +237,7 @@ mod test {
     fn same_energy_reverse() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepReverse::new();
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             test_same_energy(&mut overrelax, &mut rng);
         }
     }
@@ -181,7 +247,7 @@ mod test {
     fn same_energy_rotation() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepRotation::new();
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             test_same_energy(&mut overrelax, &mut rng);
         }
     }

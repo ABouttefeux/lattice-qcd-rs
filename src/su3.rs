@@ -1,11 +1,18 @@
 //! Module for SU(3) matrices and su(3) (that is the generators of SU(3) )
 //!
-//! The module defines the SU(3) generator we use the same matrices as on [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices) **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+//! The module defines the SU(3) generator we use the same matrices as on
+//! [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices)
+//! **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+
+use std::iter::FusedIterator;
 
 use na::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
 use rand_distr::Distribution;
 
-use super::{field::Su3Adjoint, su2, utils, CMatrix2, CMatrix3, Complex, Real, I, ONE, ZERO};
+use super::{
+    field::Su3Adjoint, su2, utils, utils::FactorialNumber, CMatrix2, CMatrix3, Complex, Real, I,
+    ONE, ZERO,
+};
 
 /// SU(3) generator
 /// ```textrust
@@ -167,7 +174,9 @@ pub const GENERATOR_8: CMatrix3 = CMatrix3::new(
     Complex::new(MINUS_ONE_OVER_SQRT_3, 0_f64),
 );
 
+/// -1/sqrt(3), used for [`GENERATOR_8`].
 const MINUS_ONE_OVER_SQRT_3: f64 = -0.577_350_269_189_625_8_f64;
+/// 2/sqrt(3), used for [`GENERATOR_8`].
 const ONE_OVER_2_SQRT_3: f64 = 0.288_675_134_594_812_9_f64;
 
 /// list of SU(3) generators
@@ -186,14 +195,16 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 /// Exponential of matrices.
 ///
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
-pub trait MatrixExp<T> {
+#[deprecated(since = "0.2.0", note = "Please use nalgebra exp instead")]
+pub trait MatrixExp<T = Self> {
     /// Return the exponential of the matrix
-    fn exp(&self) -> T;
+    fn exp(self) -> T;
 }
 
 /// Basic implementation of matrix exponential for complex matrices.
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
+#[allow(deprecated)]
 impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
 where
     T: ComplexField + Copy,
@@ -204,8 +215,8 @@ where
         + Allocator<T, D>,
     OMatrix<T, D, D>: Clone,
 {
-    fn exp(&self) -> OMatrix<T, D, D> {
-        let decomposition = self.clone().schur();
+    fn exp(self) -> OMatrix<T, D, D> {
+        let decomposition = self.schur();
         // a complex matrix is always diagonalisable
         let eigens = decomposition.eigenvalues().unwrap();
         let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
@@ -215,7 +226,57 @@ where
     }
 }
 
-/// Create a matrix (v1, v2 , v1* x v2*)
+/// Create a [`Matrix3`] of the form `[v1, v2, v1* x v2*]` where v1* is the conjugate of v1 and
+/// `x` is the cross product
+/// # Example
+/// ```ignore
+/// # use nalgebra::{Vector3, Complex, Matrix3};
+/// # use lattice_qcd_rs::{assert_eq_matrix};
+/// let v1 = Vector3::new(
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let v2 = Vector3::new(
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// assert_eq_matrix!(
+///     Matrix3::identity(),
+///     create_matrix_from_2_vector(v1, v2),
+///     0.000_000_1_f64
+/// );
+///
+/// let v1 = Vector3::new(
+///     Complex::new(0_f64, 1_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let v2 = Vector3::new(
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let m = Matrix3::new(
+///     Complex::new(0_f64, 1_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     // ---
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     // ---
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, -1_f64),
+/// );
+/// assert_eq_matrix!(
+///     m,
+///     create_matrix_from_2_vector(v1, v2),
+///     0.000_000_1_f64
+/// );
+/// ```
 fn create_matrix_from_2_vector(
     v1: na::Vector3<Complex>,
     v2: na::Vector3<Complex>,
@@ -246,20 +307,23 @@ pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
     *matrix = orthonormalize_matrix(matrix);
 }
 
-/// Generate Uniformly distributed SU(3)
-pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
+/// Generate Uniformly distributed SU(3) matrix
+pub fn get_random_su3<Rng>(rng: &mut Rng) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
     get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
 }
 
-/// get a random su3 with the given distribution.
+/// get a random SU3 with the given distribution.
 ///
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
 /// For a matrix Uniformly distributed amoung SU(3) use [`get_random_su3`].
 /// For a matrix close to unity use [`get_random_su3_close_to_unity`]
-fn get_rand_su3_with_dis(
-    rng: &mut impl rand::Rng,
-    d: &impl rand_distr::Distribution<Real>,
-) -> CMatrix3 {
+fn get_rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
     let mut v1 = get_random_vec_3(rng, d);
     while v1.norm() <= f64::EPSILON {
         v1 = get_random_vec_3(rng, d);
@@ -272,10 +336,13 @@ fn get_rand_su3_with_dis(
 }
 
 /// get a random [`na::Vector3<Complex>`].
-fn get_random_vec_3(
-    rng: &mut impl rand::Rng,
+fn get_random_vec_3<Rng>(
+    rng: &mut Rng,
     d: &impl rand_distr::Distribution<Real>,
-) -> na::Vector3<Complex> {
+) -> na::Vector3<Complex>
+where
+    Rng: rand::Rng + ?Sized,
+{
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
@@ -455,9 +522,6 @@ pub fn reverse(input: CMatrix3) -> CMatrix3 {
     })
 }
 
-// u64 is just not enough.
-type FactorialNumber = u128;
-
 /// Return N such that `1/(N-7)!` < [`f64::EPSILON`].
 ///
 /// This number is needed for the computation of exponential matrix
@@ -472,9 +536,11 @@ pub fn get_factorial_size_for_exp() -> usize {
     n
 }
 
+/// Size of the array for FactorialStorageStatic
 const FACTORIAL_STORAGE_STAT_SIZE: usize = utils::MAX_NUMBER_FACTORIAL + 1;
 
 /// static store for factorial number
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct FactorialStorageStatic {
     data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE],
 }
@@ -503,9 +569,55 @@ impl FactorialStorageStatic {
         Self { data }
     }
 
-    /// access in O(1). Return None if `value` is bigger than 34
+    /// access in O(1). Return None if `value` is bigger than 34.
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
+    }
+
+    /// Get an iterator over the factorial number form `0!` up to `34!`.
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = &FactorialNumber> + ExactSizeIterator + FusedIterator {
+        self.data.iter()
+    }
+
+    /// Get the slice of factoral number.
+    pub const fn as_slice(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
+        &self.data
+    }
+}
+
+impl Default for FactorialStorageStatic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for FactorialStorageStatic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "factorial Storage : ")?;
+        for (i, n) in self.iter().enumerate() {
+            write!(f, "{}! = {}", i, n)?;
+            if i < self.data.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'a> IntoIterator for &'a FactorialStorageStatic {
+    type IntoIter = <&'a [u128; FACTORIAL_STORAGE_STAT_SIZE] as IntoIterator>::IntoIter;
+    type Item = &'a u128;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl AsRef<[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE]> for FactorialStorageStatic {
+    fn as_ref(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
+        self.as_slice()
     }
 }
 
@@ -682,13 +794,13 @@ pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + matrix * q1 + matrix * matrix * q2
 }
 
-/// return wether the input matrix is SU(3) up to epsilon.
+/// Return wether the input matrix is SU(3) up to epsilon.
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
     ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon)
         && ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
 }
 
-/// Returns wether the given matric is in the lie algebra su(3) that generates SU(3) up to epsilon
+/// Returns wether the given matric is in the lie algebra su(3) that generates SU(3) up to epsilon.
 pub fn is_matrix_su3_lie(matrix: &CMatrix3, epsilon: Real) -> bool {
     matrix.trace().modulus() < epsilon && (matrix - matrix.adjoint()).norm() < epsilon
 }
@@ -706,7 +818,7 @@ mod test {
     #[test]
     /// test that [`N`] is indeed what we need
     fn test_constante() {
-        assert_eq!(N, get_factorial_size_for_exp() + 1)
+        assert_eq!(N, get_factorial_size_for_exp() + 1);
     }
 
     #[test]
@@ -807,7 +919,7 @@ mod test {
         assert_eq_matrix!(get_t(t), m_t, EPSILON);
 
         for p in &extract_su2_unorm(m) {
-            assert_matrix_is_su_2!((p / p.determinant().sqrt()), EPSILON);
+            assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
     }
 
@@ -821,7 +933,7 @@ mod test {
             let output_i = matrix_su3_exp_i(**m);
             assert_eq_matrix!(output_i, (*m * I).exp(), EPSILON);
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             let output_r = matrix_su3_exp_r(m);
@@ -837,7 +949,7 @@ mod test {
         for m in &GENERATORS {
             assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
@@ -903,11 +1015,11 @@ mod test {
             Complex::from(1_f64),
         );
         assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let m = get_random_su3(&mut rng);
             assert!(is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let m = get_random_su3(&mut rng) * Complex::from(1.1_f64);
             assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }

@@ -1,9 +1,16 @@
-//! Module for Monte-Carlo algrorithme and the trait [`MonteCarlo`]
+//! Module for Monte-Carlo algrorithme, see the trait [`MonteCarlo`].
+//!
+//! This is one of the way to carry out simulation. This work by taking a state and progressively changing it (most of the time randomly).
+//!
+//! # Examples
+//! see [`MetropolisHastingsSweep`], [`HeatBathSweep`], [`overrelaxation`] etc...
 
 use std::marker::PhantomData;
 
 use na::ComplexField;
 use rand_distr::Distribution;
+#[cfg(feature = "serde-serialize")]
+use serde::{Deserialize, Serialize};
 
 use super::{
     super::{
@@ -15,21 +22,48 @@ use super::{
 };
 
 pub mod heat_bath;
-pub mod hybride;
-pub mod hybride_monte_carlo;
+pub mod hybrid;
+pub mod hybrid_monte_carlo;
 pub mod metropolis_hastings;
 pub mod metropolis_hastings_sweep;
 pub mod overrelaxation;
 
 pub use heat_bath::*;
-pub use hybride::*;
-pub use hybride_monte_carlo::*;
+pub use hybrid::*;
+pub use hybrid_monte_carlo::*;
 pub use metropolis_hastings::*;
 pub use metropolis_hastings_sweep::*;
 pub use overrelaxation::*;
 
 /// Monte-Carlo algorithm, giving the next element in the simulation.
-/// It is also a Markov chain
+/// It is also a Markov chain.
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{
+///     LatticeState, LatticeStateDefault, MetropolisHastingsSweep, MonteCarlo,
+/// };
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..10 {
+///     state = mh.get_next_element(state)?;
+///     // or state.monte_carlo_step(&mut hmc)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
 pub trait MonteCarlo<State, const D: usize>
 where
     State: LatticeState<D>,
@@ -54,15 +88,17 @@ where
     /// Error returned while getting the next ellement.
     type Error;
 
-    /// Generate a radom element from the previous element ( like a Markov chain).
+    /// Generate a radom element from the previous element (like a Markov chain).
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_potential_next_element(
+    fn get_potential_next_element<Rng>(
         &mut self,
         state: &State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error>;
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized;
 
     /// probability of the next element to replace the current one.
     ///
@@ -78,11 +114,14 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_next_element_default(
+    fn get_next_element_default<Rng>(
         &mut self,
         state: State,
-        rng: &mut impl rand::Rng,
-    ) -> Result<State, Self::Error> {
+        rng: &mut Rng,
+    ) -> Result<State, Self::Error>
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         let potential_next = self.get_potential_next_element(&state, rng)?;
         let proba = Self::get_probability_of_replacement(&state, &potential_next)
             .min(1_f64)
@@ -97,8 +136,44 @@ where
     }
 }
 
-/// A arapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
-#[derive(Clone, Debug)]
+/// A wrapper used to implement [`MonteCarlo`] from a [`MonteCarloDefault`]
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{
+///     LatticeState, LatticeStateDefault, McWrapper, MetropolisHastingsDiagnostic, MonteCarlo,
+/// };
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mh = MetropolisHastingsDiagnostic::new(1, 0.1_f64)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// let mut wrapper = McWrapper::new(mh, rng);
+///
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..100 {
+///     state = state.monte_carlo_step(&mut wrapper)?;
+///     println!(
+///         "probability of acceptance during last step {}, does it accepted the chnage ? {}",
+///         mh.prob_replace_last(),
+///         mh.has_replace_last()
+///     );
+///     // or state.monte_carlo_step(&mut wrapper)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// let (_, rng) = wrapper.deconstruct(); // get the rng back
+/// #     Ok(())
+/// # }
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct McWrapper<MCD, State, Rng, const D: usize>
 where
     MCD: MonteCarloDefault<State, D>,
@@ -116,6 +191,13 @@ where
     State: LatticeState<D>,
     Rng: rand::Rng,
 {
+    getter!(
+        /// Get a ref to the rng.
+        pub,
+        rng,
+        Rng
+    );
+
     /// Create the wrapper.
     pub fn new(mcd: MCD, rng: Rng) -> Self {
         Self {
@@ -134,6 +216,33 @@ where
     pub fn mcd(&self) -> &MCD {
         &self.mcd
     }
+
+    /// Get a mutable reference to the rng
+    pub fn rng_mut(&mut self) -> &mut Rng {
+        &mut self.rng
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> AsRef<Rng> for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
+    Rng: rand::Rng,
+{
+    fn as_ref(&self) -> &Rng {
+        self.rng()
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> AsMut<Rng> for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D>,
+    State: LatticeState<D>,
+    Rng: rand::Rng,
+{
+    fn as_mut(&mut self) -> &mut Rng {
+        self.rng_mut()
+    }
 }
 
 impl<T, State, Rng, const D: usize> MonteCarlo<State, D> for McWrapper<T, State, Rng, D>
@@ -149,6 +258,34 @@ where
     }
 }
 
+impl<MCD, State, Rng, const D: usize> Default for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D> + Default,
+    State: LatticeState<D>,
+    Rng: rand::Rng + Default,
+{
+    fn default() -> Self {
+        Self::new(MCD::default(), Rng::default())
+    }
+}
+
+impl<MCD, State, Rng, const D: usize> std::fmt::Display for McWrapper<MCD, State, Rng, D>
+where
+    MCD: MonteCarloDefault<State, D> + std::fmt::Display,
+    State: LatticeState<D>,
+    Rng: rand::Rng + std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Monte Carlo wrapper method {} with rng {}",
+            self.mcd(),
+            self.rng(),
+        )
+    }
+}
+
+/// Get the delta of energy by changing a link.
 #[inline]
 fn get_delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
@@ -163,6 +300,8 @@ fn get_delta_s_old_new_cmp<const D: usize>(
 }
 
 // TODO move in state
+/// return the staple
+#[inline]
 fn get_staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,

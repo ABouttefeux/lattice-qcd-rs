@@ -1,11 +1,13 @@
 //! Represent the fields on the lattice.
 
+use std::iter::{FromIterator, FusedIterator};
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
     vec::Vec,
 };
 
 use na::{ComplexField, Matrix3, SVector};
+use rayon::iter::FromParallelIterator;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -57,6 +59,32 @@ impl Su3Adjoint {
         &self.data
     }
 
+    /// get the su3 adjoint as a [`Vector8`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// #
+    /// # let adj = Su3Adjoint::default();
+    /// let max = adj.as_vector().max();
+    /// let norm = adj.as_ref().norm();
+    /// ```
+    pub const fn as_vector(&self) -> &Vector8<Real> {
+        self.data()
+    }
+
+    /// get the su3 adjoint as mut ref to a [`Vector8`]
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// #
+    /// # let mut adj = Su3Adjoint::default();
+    /// adj.as_vector_mut().apply(|el| el + 1_f64);
+    /// adj.as_mut().set_magnitude(1_f64);
+    /// ```
+    pub fn as_vector_mut(&mut self) -> &mut Vector8<Real> {
+        self.data_mut()
+    }
+
     /// return the su(3) (Lie algebra) matrix.
     /// # Example
     /// ```
@@ -64,7 +92,7 @@ impl Su3Adjoint {
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
-    pub fn to_matrix(&self) -> Matrix3<na::Complex<Real>> {
+    pub fn to_matrix(self) -> Matrix3<na::Complex<Real>> {
         self.data
             .iter()
             .enumerate()
@@ -96,15 +124,16 @@ impl Su3Adjoint {
     /// create a new random SU3 adjoint.
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// use lattice_qcd_rs::field::Su3Adjoint;
     ///
     /// let mut rng = rand::thread_rng();
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// let su3 = Su3Adjoint::random(&mut rng, &distribution);
     /// ```
-    pub fn random(rng: &mut impl rand::Rng, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn random<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> Self
+    where
+        Rng: rand::Rng + ?Sized,
+    {
         Self {
             data: Vector8::<Real>::from_fn(|_, _| d.sample(rng)),
         }
@@ -165,7 +194,6 @@ impl Su3Adjoint {
 
     /// Return the number of data. This number is 8
     /// ```
-    /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// # let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::zeros());
     /// assert_eq!(su3.len(), 8);
@@ -175,18 +203,45 @@ impl Su3Adjoint {
     }
 
     /// Get an iterator over the ellements.
-    pub fn iter(&self) -> impl Iterator<Item = &Real> {
+    ///
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # let adj = Su3Adjoint::default();
+    /// let sum_abs = adj.iter().map(|el| el.abs()).sum::<f64>();
+    /// ```
+    pub fn iter(&self) -> impl Iterator<Item = &Real> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Get an iterator over the mutable ref of ellements.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # let mut adj = Su3Adjoint::default();
+    /// adj.iter_mut().for_each(|el| *el = *el / 2_f64);
+    /// ```
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut Real> + ExactSizeIterator + FusedIterator {
         self.data.iter_mut()
     }
 
     /// Get a mutlable reference over the data.
     pub fn data_mut(&mut self) -> &mut Vector8<Real> {
         &mut self.data
+    }
+}
+
+impl AsRef<Vector8<f64>> for Su3Adjoint {
+    fn as_ref(&self) -> &Vector8<f64> {
+        self.as_vector()
+    }
+}
+
+impl AsMut<Vector8<f64>> for Su3Adjoint {
+    fn as_mut(&mut self) -> &mut Vector8<f64> {
+        self.as_vector_mut()
     }
 }
 
@@ -434,6 +489,12 @@ impl Default for Su3Adjoint {
     }
 }
 
+impl std::fmt::Display for Su3Adjoint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_matrix())
+    }
+}
+
 impl Index<usize> for Su3Adjoint {
     type Output = Real;
 
@@ -506,27 +567,54 @@ impl LinkMatrix {
         &self.data
     }
 
+    /// Get a mutable reference to the data
+    pub fn data_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+        &mut self.data
+    }
+
+    /// Get the link_matrix as a Vec
+    pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
+        self.data()
+    }
+
+    /// Get the link_matrix as a Vec
+    pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+        self.data_mut()
+    }
+
+    /// Get the link_matrix as a Vec
+    pub fn as_slice(&self) -> &[Matrix3<na::Complex<Real>>] {
+        self.data()
+    }
+
+    /// Get the link_matrix as a mut ref to a slice
+    pub fn as_slice_mut(&mut self) -> &mut [Matrix3<na::Complex<Real>>] {
+        &mut self.data
+    }
+
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`].
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
     /// use rand::{rngs::StdRng, SeedableRng};
+    /// # use std::error::Error;
     ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4)?;
     /// assert_eq!(
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
     ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
-    pub fn new_deterministe<const D: usize>(
+    pub fn new_deterministe<Rng: rand::Rng + ?Sized, const D: usize>(
         l: &LatticeCyclique<D>,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
     ) -> Self {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
@@ -541,6 +629,19 @@ impl LinkMatrix {
 
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrix::new_random_threaded(&lattice, 4)?;
+    /// assert!(!links.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     /// Returns [`ThreadError::ThreadNumberIncorect`] if `number_of_thread` is 0.
@@ -568,7 +669,19 @@ impl LinkMatrix {
         Ok(Self { data })
     }
 
-    /// Create a cold configuration ( where the link matrices is set to 1).
+    /// Create a cold configuration ( where the link matrices is set to the indentity).
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrix::new_cold(&lattice);
+    /// assert!(!links.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
         Self {
             data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()],
@@ -643,7 +756,7 @@ impl LinkMatrix {
                     .map(|dir_i| {
                         Direction::positive_directions()
                             .iter()
-                            .filter(|dir_j| dir_i.to_index() < dir_j.to_index())
+                            .filter(|dir_j| dir_i.index() < dir_j.index())
                             .map(|dir_j| {
                                 self.get_pij(&point, dir_i, dir_j, lattice)
                                     .map(|el| el.trace())
@@ -696,7 +809,7 @@ impl LinkMatrix {
     ) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
         for dir in &Direction::<D>::positive_directions() {
-            vec[dir.to_index()] = self.get_magnetic_field(point, dir, lattice)?;
+            vec[dir.index()] = self.get_magnetic_field(point, dir, lattice)?;
         }
         Some(vec)
     }
@@ -716,8 +829,7 @@ impl LinkMatrix {
                     .map(|dir_j| {
                         let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
                         let lc = Complex::from(
-                            levi_civita(&[dir.to_index(), dir_i.to_index(), dir_j.to_index()])
-                                .to_f64(),
+                            levi_civita(&[dir.index(), dir_i.index(), dir_j.index()]).to_f64(),
                         );
                         Some(f_mn * lc)
                     })
@@ -747,6 +859,8 @@ impl LinkMatrix {
     }
 
     /// Correct the numerical drift, reprojecting all the matrices to SU(3).
+    ///
+    /// You can look at the example of [`super::simulation::LatticeStateDefault::normalize_link_matrices`]
     pub fn normalize(&mut self) {
         self.data.par_iter_mut().for_each(|el| {
             su3::orthonormalize_matrix_mut(el);
@@ -754,13 +868,39 @@ impl LinkMatrix {
     }
 
     /// Iter on the data
-    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
+    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Iter mutably on the data
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator {
         self.data.iter_mut()
+    }
+}
+
+impl AsRef<Vec<CMatrix3>> for LinkMatrix {
+    fn as_ref(&self) -> &Vec<CMatrix3> {
+        self.as_vec()
+    }
+}
+
+impl AsMut<Vec<CMatrix3>> for LinkMatrix {
+    fn as_mut(&mut self) -> &mut Vec<CMatrix3> {
+        self.as_vec_mut()
+    }
+}
+
+impl AsRef<[CMatrix3]> for LinkMatrix {
+    fn as_ref(&self) -> &[CMatrix3] {
+        self.as_slice()
+    }
+}
+
+impl AsMut<[CMatrix3]> for LinkMatrix {
+    fn as_mut(&mut self) -> &mut [CMatrix3] {
+        self.as_slice_mut()
     }
 }
 
@@ -796,11 +936,61 @@ impl IndexMut<usize> for LinkMatrix {
     }
 }
 
+impl<A> FromIterator<A> for LinkMatrix
+where
+    Vec<CMatrix3>: FromIterator<A>,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = A>,
+    {
+        Self::new(Vec::from_iter(iter))
+    }
+}
+
+impl<A> FromParallelIterator<A> for LinkMatrix
+where
+    Vec<CMatrix3>: FromParallelIterator<A>,
+    A: Send,
+{
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = A>,
+    {
+        Self::new(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<T> ParallelExtend<T> for LinkMatrix
+where
+    Vec<CMatrix3>: ParallelExtend<T>,
+    T: Send,
+{
+    fn par_extend<I>(&mut self, par_iter: I)
+    where
+        I: IntoParallelIterator<Item = T>,
+    {
+        self.data.par_extend(par_iter);
+    }
+}
+
+impl<A> Extend<A> for LinkMatrix
+where
+    Vec<CMatrix3>: Extend<A>,
+{
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = A>,
+    {
+        self.data.extend(iter);
+    }
+}
+
 /// Represent an electric field.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField<const D: usize> {
-    data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; 4]> instead ?
+    data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; D]> instead ?
 }
 
 impl<const D: usize> EField<D> {
@@ -812,6 +1002,26 @@ impl<const D: usize> EField<D> {
     /// Get the raw data.
     pub const fn data(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         &self.data
+    }
+
+    /// Get a mut ref to the data data.
+    pub fn data_mut(&mut self) -> &mut Vec<SVector<Su3Adjoint, D>> {
+        &mut self.data
+    }
+
+    /// Get the e_field as a Vec of Vector of Su3Adjoint
+    pub const fn as_vec(&self) -> &Vec<SVector<Su3Adjoint, D>> {
+        self.data()
+    }
+
+    /// Get the e_field as a slice of Vector of Su3Adjoint
+    pub fn as_slice(&self) -> &[SVector<Su3Adjoint, D>] {
+        &self.data
+    }
+
+    /// Get the e_field as mut ref to slice of Vector of Su3Adjoint
+    pub fn as_slice_mut(&mut self) -> &mut [SVector<Su3Adjoint, D>] {
+        &mut self.data
     }
 
     /// Return the number of elements.
@@ -838,9 +1048,9 @@ impl<const D: usize> EField<D> {
     ///     EField::new_deterministe(&lattice, &mut rng_2, &distribution)
     /// );
     /// ```
-    pub fn new_deterministe(
+    pub fn new_deterministe<Rng: rand::Rng + ?Sized>(
         l: &LatticeCyclique<D>,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.get_number_of_points());
@@ -854,13 +1064,39 @@ impl<const D: usize> EField<D> {
     }
 
     /// Single thread generation by seeding a new rng number.
-    /// To create a seedable and reproducible set use [`EField::new_deterministe`]..
+    /// To create a seedable and reproducible set use [`EField::new_deterministe`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let e_field = EField::new_random(&lattice, &distribution);
+    /// assert!(!e_field.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_random(l: &LatticeCyclique<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
         let mut rng = rand::thread_rng();
         EField::new_deterministe(l, &mut rng, d)
     }
 
     /// Create a new cold configuration for the electriccal field, i.e. all E ar set to 0.
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let e_field = EField::new_cold(&lattice);
+    /// assert!(!e_field.is_empty());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
         Self {
@@ -887,7 +1123,7 @@ impl<const D: usize> EField<D> {
     ) -> Option<&Su3Adjoint> {
         let value = self.get_e_vec(point, l);
         match value {
-            Some(vec) => vec.get(dir.to_index()),
+            Some(vec) => vec.get(dir.index()),
             None => None,
         }
     }
@@ -947,7 +1183,47 @@ impl<const D: usize> EField<D> {
             .sum::<Option<Real>>()
     }
 
-    /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point)
+    /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point).
+    ///
+    /// It is mainly use internally but can be use to correct numerical drit in simulations.
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::error::ImplementationError;
+    /// use lattice_qcd_rs::integrator::SymplecticEulerRayon;
+    /// use lattice_qcd_rs::simulation::{
+    ///     LatticeState, LatticeStateDefault, LatticeStateWithEField,
+    ///     LatticeStateWithEFieldSyncDefault, SimulationStateSynchrone,
+    /// };
+    /// use rand::SeedableRng;
+    ///
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+    /// let distribution =
+    ///     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
+    /// let mut state = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 6_f64, 4, &mut rng).unwrap(),
+    ///     &mut rng,
+    /// ); // <- here internally when choosing radomly the EField it is projected.
+    ///
+    /// let integrator = SymplecticEulerRayon::default();
+    /// for _ in 0..2 {
+    ///     for _ in 0..10 {
+    ///         state = state.simulate_sync(&integrator, 0.0001_f64)?;
+    ///     }
+    ///     // we correct the numberical drift of the EField.
+    ///     let new_e_field = state
+    ///         .e_field()
+    ///         .project_to_gauss(state.link_matrix(), state.lattice())
+    ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+    ///     state.set_e_field(new_e_field);
+    /// }
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// ```
     #[allow(clippy::as_conversions)] // no try into for f64
     #[inline]
     pub fn project_to_gauss(
@@ -956,7 +1232,6 @@ impl<const D: usize> EField<D> {
         lattice: &LatticeCyclique<D>,
     ) -> Option<Self> {
         // TODO improve
-
         const NUMBER_FOR_LOOP: usize = 4;
 
         if lattice.get_number_of_points() != self.len()
@@ -1018,7 +1293,7 @@ impl<const D: usize> EField<D> {
                             * (su3::GENERATORS[index]
                                 * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
                                     + su3::GENERATORS[index]
-                                        * na::Complex::from(e[dir.to_index()][index])))
+                                        * na::Complex::from(e[dir.index()][index])))
                             .trace()
                             .real()
                     }))
@@ -1026,6 +1301,30 @@ impl<const D: usize> EField<D> {
             })
             .collect();
         Self::new(data)
+    }
+}
+
+impl<const D: usize> AsRef<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
+    fn as_ref(&self) -> &Vec<SVector<Su3Adjoint, D>> {
+        self.as_vec()
+    }
+}
+
+impl<const D: usize> AsMut<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
+    fn as_mut(&mut self) -> &mut Vec<SVector<Su3Adjoint, D>> {
+        self.data_mut()
+    }
+}
+
+impl<const D: usize> AsRef<[SVector<Su3Adjoint, D>]> for EField<D> {
+    fn as_ref(&self) -> &[SVector<Su3Adjoint, D>] {
+        self.as_slice()
+    }
+}
+
+impl<const D: usize> AsMut<[SVector<Su3Adjoint, D>]> for EField<D> {
+    fn as_mut(&mut self) -> &mut [SVector<Su3Adjoint, D>] {
+        self.as_slice_mut()
     }
 }
 
@@ -1058,6 +1357,56 @@ impl<const D: usize> Index<usize> for EField<D> {
 impl<const D: usize> IndexMut<usize> for EField<D> {
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
+    }
+}
+
+impl<A, const D: usize> FromIterator<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: FromIterator<A>,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = A>,
+    {
+        Self::new(Vec::from_iter(iter))
+    }
+}
+
+impl<A, const D: usize> FromParallelIterator<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: FromParallelIterator<A>,
+    A: Send,
+{
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = A>,
+    {
+        Self::new(Vec::from_par_iter(par_iter))
+    }
+}
+
+impl<T, const D: usize> ParallelExtend<T> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: ParallelExtend<T>,
+    T: Send,
+{
+    fn par_extend<I>(&mut self, par_iter: I)
+    where
+        I: IntoParallelIterator<Item = T>,
+    {
+        self.data.par_extend(par_iter);
+    }
+}
+
+impl<A, const D: usize> Extend<A> for EField<D>
+where
+    Vec<SVector<Su3Adjoint, D>>: Extend<A>,
+{
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = A>,
+    {
+        self.data.extend(iter);
     }
 }
 
@@ -1098,10 +1447,12 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::op_ref)]
     fn test_su3_adj() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             assert_abs_diff_eq!(
@@ -1115,12 +1466,37 @@ mod test {
                 EPSILON
             );
             assert_eq_complex!(v.t(), -(m * m).trace() / Complex::from(2_f64), EPSILON);
+
+            // ----
+            let adj_1 = Su3Adjoint::default();
+            let adj_2 = Su3Adjoint::new_from_array([1_f64; 8]);
+            assert_eq!(adj_2, adj_2 + adj_1);
+            assert_eq!(adj_2, &adj_2 + &adj_1);
+            assert_eq!(adj_2, &adj_2 - &adj_1);
+            assert_eq!(adj_1, &adj_2 - &adj_2);
+            assert_eq!(adj_1, &adj_2 - adj_2);
+            assert_eq!(adj_1, adj_2 - &adj_2);
+            assert_eq!(adj_1, -&adj_1);
+            let adj_3 = Su3Adjoint::new_from_array([2_f64; 8]);
+            assert_eq!(adj_3, &adj_2 + &adj_2);
+            assert_eq!(adj_3, &adj_2 * &2_f64);
+            assert_eq!(adj_3, &2_f64 * &adj_2);
+            assert_eq!(adj_3, 2_f64 * adj_2);
+            assert_eq!(adj_3, &2_f64 * adj_2);
+            assert_eq!(adj_3, 2_f64 * &adj_2);
+            assert_eq!(adj_2, &adj_3 / &2_f64);
+            assert_eq!(adj_2, &adj_3 / 2_f64);
+            let mut adj_5 = Su3Adjoint::new_from_array([2_f64; 8]);
+            adj_5 /= &2_f64;
+            assert_eq!(adj_2, adj_5);
+            let adj_4 = Su3Adjoint::new_from_array([-1_f64; 8]);
+            assert_eq!(adj_2, -adj_4);
         }
 
         use crate::su3::su3_exp_r;
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
-        for _ in 0..10 {
+        for _ in 0_u32..10_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             assert_eq!(su3_exp_r(v), v.exp());
         }
@@ -1135,10 +1511,36 @@ mod test {
         }
         let link_s = LinkMatrix::new_random_threaded(&lattice, 2);
         assert!(link_s.is_ok());
-        let link = link_s.unwrap();
+        let mut link = link_s.unwrap();
         assert!(!link.is_empty());
         let l2 = LinkMatrix::new(vec![]);
         assert!(l2.is_empty());
+
+        let _: &[_] = link.as_ref();
+        let _: &Vec<_> = link.as_ref();
+        let _: &mut [_] = link.as_mut();
+        let _: &mut Vec<_> = link.as_mut();
+        let _ = link.iter();
+        let _ = link.iter_mut();
+        let _ = (&link).into_iter();
+        let _ = (&mut link).into_iter();
+    }
+
+    #[test]
+    fn e_field() {
+        let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+        let e_field_s = LinkMatrix::new_random_threaded(&lattice, 2);
+        assert!(e_field_s.is_ok());
+        let mut e_field = e_field_s.unwrap();
+
+        let _: &[_] = e_field.as_ref();
+        let _: &Vec<_> = e_field.as_ref();
+        let _: &mut [_] = e_field.as_mut();
+        let _: &mut Vec<_> = e_field.as_mut();
+        let _ = e_field.iter();
+        let _ = e_field.iter_mut();
+        let _ = (&e_field).into_iter();
+        let _ = (&mut e_field).into_iter();
     }
 
     #[test]

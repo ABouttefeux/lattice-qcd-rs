@@ -101,11 +101,14 @@ pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
 }
 
 /// Get an Uniformly random SU(2) matrix.
-pub fn get_random_su2(rng: &mut impl rand::Rng) -> CMatrix2 {
+pub fn get_random_su2<Rng>(rng: &mut Rng) -> CMatrix2
+where
+    Rng: rand::Rng + ?Sized,
+{
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let mut random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     while !random_vector.norm().is_normal() {
-        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     }
     let vector_normalize = random_vector / Complex::from(random_vector.norm());
     CMatrix2::new(
@@ -152,16 +155,16 @@ mod test {
         );
         let p = project_to_su2(m);
         assert_eq_matrix!(p, CMatrix2::identity(), EPSILON);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
             let p = project_to_su2_unorm(r);
             assert!(p.trace().imaginary().abs() < EPSILON);
             assert!((p * p.adjoint() - CMatrix2::identity() * p.determinant()).norm() < EPSILON);
 
-            assert_matrix_is_su_2!((p / p.determinant().sqrt()), EPSILON);
+            assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
 
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let r = CMatrix2::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
             let p = project_to_su2(r);
             assert_matrix_is_su_2!(p, EPSILON);
@@ -171,15 +174,15 @@ mod test {
     #[test]
     fn random_su2() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng);
             assert_matrix_is_su_2!(m, EPSILON);
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng);
             assert!(is_matrix_su2(&m, EPSILON));
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let m = get_random_su2(&mut rng) * Complex::new(1.5_f64, 0.7_f64);
             assert!(!is_matrix_su2(&m, EPSILON));
         }

@@ -15,18 +15,6 @@
 //!     getter!(const, b, usize);
 //! }
 //! ```
-//! # getter_trait!
-//! getter for trait (without the `pub` ident)
-//! ## Example
-//! ```ignore
-//! pub trait get_b {
-//!     fn b(&self) -> usize
-//! }
-//! struct a {b: usize}
-//! impl get_b for a {
-//!     getter_trait!(b, usize);
-//! }
-//! ```
 //! # getter_copy!
 //! create a getter that copy the value.
 //! ## Examples
@@ -74,103 +62,84 @@
 //! ```
 
 macro_rules! getter {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
+        getter!($(#[$meta])* $v $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $t:ty) => {
+        getter!($(#[$meta])* $v const $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self) -> &$t {
+        $v fn $i(&self) -> &$t {
             &self.$i
         }
     };
-    (const, $(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis const $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self) -> &$t {
-            &self.$i
-        }
-    }
-}
-
-/// Getter in a trait (without the pub )
-macro_rules! getter_trait {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
-        $(#[$meta])*
-        fn $i(&self) -> &$t {
+        $v const fn $i(&self) -> &$t {
             &self.$i
         }
     };
 }
 
 macro_rules! getter_copy {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
+        getter_copy!($(#[$meta])* $v $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $t:ty) => {
+        getter_copy!($(#[$meta])* $v const $i() -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self) -> $t {
+        $v fn $i(&self) -> $t {
             self.$i
         }
     };
-    (const, $(#[$meta:meta])* $i:ident, $t:ty) => {
+    ($(#[$meta:meta])* $v:vis const $i:ident() -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self) -> $t {
+        $v const fn $i(&self) -> $t {
             self.$i
         }
-    }
-}
-
-macro_rules! getter_copy_trait {
-    ($(#[$meta:meta])* $i:ident, $t:ty) => {
-        $(#[$meta])*
-        fn $i(&self) -> $t {
-            self.$i
-        }
-    }
+    };
 }
 
 macro_rules! project {
-    (pub, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project!($(#[$meta])* $v $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project!($(#[$meta])* $v const $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $data:ident.$i:ident($($arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&self $(, $arg : $type_arg)*) -> $t {
+        $v fn $i(&self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
-    (pub const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis const $data:ident.$i:ident($($arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    (const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        const fn $i(&self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    ($(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        fn $i(&self $(, $arg : $type_arg)*) -> $t {
+        $v const fn $i(&self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
 }
 
 macro_rules! project_mut {
-    (pub, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project_mut!($(#[$meta])* $v $data.$i($( $arg: $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $(,)? const, $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+        project_mut!($(#[$meta])* $v const $data.$i($( $arg : $type_arg ),*) -> $t);
+    };
+    ($(#[$meta:meta])* $v:vis $data:ident.$i:ident($( $arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
+        $v fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
-    (pub const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
+    ($(#[$meta:meta])* $v:vis const $data:ident.$i:ident($( $arg:ident : $type_arg:ty ),*) -> $t:ty) => {
         $(#[$meta])*
-        pub const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    (const, $(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
-            self.$data.$i($($arg, )*)
-        }
-    };
-    ($(#[$meta:meta])* $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
-        $(#[$meta])*
-        fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
+        $v const fn $i(&mut self $(, $arg : $type_arg)*) -> $t {
             self.$data.$i($($arg, )*)
         }
     };
@@ -180,10 +149,14 @@ macro_rules! project_mut {
 /// assert if two matrices are approximatively the same
 macro_rules! assert_eq_matrix {
     ($e:expr, $e2:expr, $epsilon:expr) => {
-        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} > {}`", ($e - $e2).norm(), $epsilon)
+        let e = $e;
+        let e2 = $e2;
+        assert!((e - e2).norm() < $epsilon, "assertion failed: norm `{} > {}`", (e - e2).norm(), $epsilon)
     };
     ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
-        assert!(($e - $e2).norm() < $epsilon, "assertion failed: norm `{} > {}` : {}", ($e - $e2).norm(), $epsilon, format_args!($($arg)*))
+        let e = $e;
+        let e2 = $e2;
+        assert!((e - e2).norm() < $epsilon, "assertion failed: norm `{} > {}` : {}", (e - e2).norm(), $epsilon, format_args!($($arg)*))
     };
 }
 
@@ -193,13 +166,17 @@ macro_rules! assert_eq_complex {
     ($e:expr, $e2:expr, $epsilon:expr) => {
         {
             use nalgebra::ComplexField;
-            assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {}", $e, $e2, $epsilon);
+            let e = $e;
+            let e2 = $e2;
+            assert!((e - e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {}", e, e2, $epsilon);
         }
     };
     ($e:expr, $e2:expr, $epsilon:expr, $($arg:tt)+) => {
         {
             use nalgebra::ComplexField;
-            assert!(($e - $e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {} : {}", $e, $e2, $epsilon, format_args!($($arg)*));
+            let e = $e;
+            let e2 = $e2;
+            assert!((e - e2).modulus() < $epsilon, "assertion failed: `({} - {}).modulus() > {} : {}", e, e2, $epsilon, format_args!($($arg)*));
         }
     };
 }
@@ -209,14 +186,15 @@ macro_rules! assert_eq_complex {
 macro_rules! assert_matrix_is_unitary_2 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
+        let m = $m;
         assert!(
-            ($m.determinant().modulus() - 1_f64).abs() < $epsilon,
-            "determinant {} of {:?} is not of norm 1",
-            $m.determinant().modulus(),
-            $m
+            (m.determinant().modulus() - 1_f64).abs() < $epsilon,
+            "determinant {} of {} is not of norm 1",
+            m.determinant().modulus(),
+            m
         );
         assert!(
-            ($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
+            (m * m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
             "The matrix is not unitary"
         );
     }};
@@ -227,16 +205,17 @@ macro_rules! assert_matrix_is_unitary_2 {
 macro_rules! assert_matrix_is_unitary_3 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
+        let m = $m;
         assert!(
-            ($m.determinant().modulus() - 1_f64).abs() < $epsilon,
+            (m.determinant().modulus() - 1_f64).abs() < $epsilon,
             "determinant {} of {} is not of norm 1",
-            $m.determinant().modulus(),
-            $m
+            m.determinant().modulus(),
+            m
         );
         assert!(
-            ($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
+            (m * m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
             "The matrix {} is not unitary",
-            $m
+            m
         );
     }};
 }
@@ -246,16 +225,17 @@ macro_rules! assert_matrix_is_unitary_3 {
 macro_rules! assert_matrix_is_su_2 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
+        let m = $m;
         assert!(
-            ($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
+            (m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
             "determinant {} of {} is not of norm 1",
-            $m.determinant().modulus(),
-            $m
+            m.determinant().modulus(),
+            m
         );
         assert!(
-            ($m * $m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
+            (m * m.adjoint() - nalgebra::Matrix2::identity()).norm() < $epsilon,
             "The matrix {} is not unitary",
-            $m
+            m
         );
     }};
 }
@@ -265,16 +245,17 @@ macro_rules! assert_matrix_is_su_2 {
 macro_rules! assert_matrix_is_su_3 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
+        let m = $m;
         assert!(
-            ($m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
+            (m.determinant() - nalgebra::Complex::from(1_f64)).modulus() < $epsilon,
             "determinant {} of {} is not of norm 1",
-            $m.determinant().modulus(),
-            $m
+            m.determinant().modulus(),
+            m
         );
         assert!(
-            ($m * $m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
+            (m * m.adjoint() - nalgebra::Matrix3::identity()).norm() < $epsilon,
             "The matrix is not unitary {}",
-            $m
+            m
         );
     }};
 }

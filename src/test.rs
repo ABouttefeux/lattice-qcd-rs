@@ -15,7 +15,7 @@ use super::{
 mod integrator;
 
 /// Defines a small value to compare f64.
-const EPSILON: f64 = 0.000000001_f64;
+const EPSILON: f64 = 0.000_000_001_f64;
 
 const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
@@ -158,7 +158,7 @@ fn equivalece_exp_i() {
         let exp_l = (v.to_matrix() * Complex::new(0_f64, 1_f64)).exp();
         assert_eq_matrix!(exp_r, exp_l, EPSILON);
     }
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         let v = Su3Adjoint::random(&mut rng, &d);
         let exp_r = su3_exp_i(v);
         let exp_l = (v.to_matrix() * Complex::new(0_f64, 1_f64)).exp();
@@ -179,7 +179,7 @@ fn equivalece_exp_r() {
         let exp_l = (v.to_matrix() * Complex::new(1_f64, 0_f64)).exp();
         assert_eq_matrix!(exp_r, exp_l, EPSILON);
     }
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         let v = Su3Adjoint::random(&mut rng, &d);
         let exp_r = su3_exp_r(v);
         let exp_l = (v.to_matrix() * Complex::new(1_f64, 0_f64)).exp();
@@ -219,16 +219,17 @@ fn creat_sim_threaded() {
 }
 
 /// return 1 if i==j 0 otherwise
-fn delta(i: usize, j: usize) -> f64 {
+const fn delta(i: usize, j: usize) -> f64 {
     if i == j {
-        return 1_f64;
+        1_f64
     }
     else {
-        return 0_f64;
+        0_f64
     }
 }
 
 #[test]
+#[allow(clippy::needless_range_loop)]
 /// Test the properties of generators
 fn test_generators() {
     for i in 0..7 {
@@ -253,7 +254,7 @@ fn test_generators() {
 fn su3_property() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         let m = Su3Adjoint::random(&mut rng, &distribution).to_su3();
         test_matrix_is_su3(&m);
     }
@@ -266,8 +267,8 @@ fn test_matrix_is_su3(m: &CMatrix3) {
 #[test]
 /// test [`run_pool_parallel`]
 fn test_thread() {
-    let c = 5;
-    let iter = 1..10000;
+    let c = 5_i32;
+    let iter = 1_i32..10000_i32;
     for number_of_thread in &[1, 2, 4] {
         let result = run_pool_parallel(
             iter.clone(),
@@ -285,7 +286,7 @@ fn test_thread() {
 
 #[test]
 fn test_thread_error_zero_thread() {
-    let iter = 1..10000;
+    let iter = 1_i32..10000_i32;
     let result = run_pool_parallel(iter.clone(), &(), &|i, _| i * i, 0, 10000);
     assert!(result.is_err());
 }
@@ -337,7 +338,7 @@ fn test_sim_hamiltonian() {
         .unwrap();
     let h = simulation.get_hamiltonian_total();
     let sim2 = simulation
-        .simulate_sync(&SymplecticEuler::new(8), 0.0001)
+        .simulate_sync(&SymplecticEuler::new(8), 0.000_1_f64)
         .unwrap();
     let h2 = sim2.get_hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
@@ -359,7 +360,7 @@ fn test_gauss_law() {
         )
         .unwrap();
     let sim2 = simulation
-        .simulate_sync(&SymplecticEuler::new(8), 0.000001)
+        .simulate_sync(&SymplecticEuler::new(8), 0.000_001_f64)
         .unwrap();
     let iter_g_1 = simulation
         .lattice()
@@ -371,7 +372,7 @@ fn test_gauss_law() {
         .map(|el| sim2.get_gauss(&el).unwrap());
     for g1 in iter_g_1 {
         let g2 = iter_g_2.next().unwrap();
-        assert_eq_matrix!(g1, g2, 0.001);
+        assert_eq_matrix!(g1, g2, 0.001_f64);
     }
 }
 
@@ -391,7 +392,7 @@ fn test_sim_hamiltonian_rayon() {
         .unwrap();
     let h = simulation.get_hamiltonian_total();
     let sim2 = simulation
-        .simulate_sync(&SymplecticEulerRayon::new(), 0.0001)
+        .simulate_sync(&SymplecticEulerRayon::new(), 0.000_1_f64)
         .unwrap();
     let h2 = sim2.get_hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
@@ -413,7 +414,7 @@ fn test_gauss_law_rayon() {
         )
         .unwrap();
     let sim2 = simulation
-        .simulate_sync(&SymplecticEulerRayon::new(), 0.000001)
+        .simulate_sync(&SymplecticEulerRayon::new(), 0.000_001_f64)
         .unwrap();
     let iter_g_1 = simulation
         .lattice()
@@ -425,7 +426,7 @@ fn test_gauss_law_rayon() {
         .map(|el| sim2.get_gauss(&el).unwrap());
     for g1 in iter_g_1 {
         let g2 = iter_g_2.next().unwrap();
-        assert_eq_matrix!(g1, g2, 0.001);
+        assert_eq_matrix!(g1, g2, 0.001_f64);
     }
 }
 
@@ -442,17 +443,17 @@ fn test_sim_cold() {
     )
     .unwrap();
     let sim2 = sim1
-        .simulate_to_leapfrog(&SymplecticEulerRayon::new(), 0.1)
+        .simulate_to_leapfrog(&SymplecticEulerRayon::new(), 0.1_f64)
         .unwrap();
     assert_eq!(sim1.e_field(), sim2.e_field());
     assert_eq!(sim1.link_matrix(), sim2.link_matrix());
     let sim3 = sim2
-        .simulate_leap(&SymplecticEulerRayon::new(), 0.1)
+        .simulate_leap(&SymplecticEulerRayon::new(), 0.1_f64)
         .unwrap();
     assert_eq!(sim2.e_field(), sim3.e_field());
     assert_eq!(sim2.link_matrix(), sim3.link_matrix());
     let sim4 = sim3
-        .simulate_to_synchrone(&SymplecticEulerRayon::new(), 0.1)
+        .simulate_to_synchrone(&SymplecticEulerRayon::new(), 0.1_f64)
         .unwrap();
     assert_eq!(sim3.e_field(), sim4.e_field());
     assert_eq!(sim3.link_matrix(), sim4.link_matrix());
@@ -574,7 +575,7 @@ fn othonomralization() {
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-10_f64..10_f64);
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         let m = CMatrix3::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
         println!("{} , {}", m, orthonormalize_matrix(&m));
         if m.determinant() != Complex::from(0_f64) {
@@ -588,7 +589,7 @@ fn othonomralization() {
         }
     }
 
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         let mut m = CMatrix3::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
         if m.determinant() != Complex::from(0_f64) {
             orthonormalize_matrix_mut(&mut m);
@@ -600,7 +601,7 @@ fn othonomralization() {
 #[test]
 fn random_su3() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-    for _ in 0..100 {
+    for _ in 0_u32..100_u32 {
         test_matrix_is_su3(&get_random_su3(&mut rng));
     }
 }
@@ -643,6 +644,31 @@ fn lattice_init_error() {
 }
 
 #[test]
+fn state_init_error() {
+    let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
+
+    assert_eq!(
+        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+            0_f64, 1_f64, 4, &d, 2,
+        ),
+        Err(ThreadedStateInitializationError::StateInitializationError(
+            StateInitializationError::LatticeInitializationError(
+                LatticeInitializationError::NonPositiveSize
+            )
+        ))
+    );
+
+    assert_eq!(
+        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+            1_f64, 1_f64, 4, &d, 0,
+        ),
+        Err(ThreadedStateInitializationError::ThreadingError(
+            ThreadError::ThreadNumberIncorect
+        ))
+    );
+}
+
+#[test]
 fn test_length_compatible() {
     let l1 = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
     let l2 = LatticeCyclique::<2>::new(1_f64, 3).unwrap();
@@ -658,7 +684,7 @@ fn test_length_compatible() {
 
 #[test]
 fn test_leap_frog() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0);
     let size = 1000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;
@@ -671,11 +697,11 @@ fn test_leap_frog() {
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc
-        .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01, 1)
+        .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01_f64, 1)
         .unwrap();
     let h2 = state_hmc_2.get_hamiltonian_total();
     println!("h_t {}", h2);
     println!("{}", (h1 - h2).exp());
 
-    assert!((h1 - h2).abs() < 0.000_01);
+    assert!((h1 - h2).abs() < 0.000_01_f64);
 }

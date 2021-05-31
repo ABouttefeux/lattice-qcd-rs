@@ -3,7 +3,7 @@
 //! module to represent numbers.
 
 /// Fix point number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FixedPointNumber<I, D>
 where
     I: num_traits::sign::Signed + std::cmp::Ord + Copy,

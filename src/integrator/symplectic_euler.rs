@@ -1,6 +1,6 @@
-//! Basic symplectic Euler integrator
+//! Basic symplectic Euler integrator.
 //!
-//! See [`SymplecticEuler`]
+//! For an example see the module level documentation [`super`].
 
 use std::vec::Vec;
 
@@ -23,7 +23,8 @@ use super::{
 };
 
 /// Error for [`SymplecticEuler`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),
@@ -41,7 +42,7 @@ impl<Error: core::fmt::Display> core::fmt::Display for SymplecticEulerError<Erro
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) => write!(f, "{}", error),
+            Self::StateInitializationError(error) => write!(f, "initialization error: {}", error),
         }
     }
 }
@@ -59,6 +60,8 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 ///
 /// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
 /// but use less memory
+///
+/// For an example see the module level documentation [`super`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEuler {
@@ -67,8 +70,8 @@ pub struct SymplecticEuler {
 
 impl SymplecticEuler {
     getter_copy!(
-        const,
         /// getter on the number of thread the integrator use.
+        pub const,
         number_of_thread,
         usize
     );
@@ -99,6 +102,7 @@ impl SymplecticEuler {
             lattice,
             &CMatrix3::zeros(),
         )
+        .map_err(|err| err.into())
     }
 
     fn get_e_field_integrate<State, const D: usize>(
@@ -122,6 +126,7 @@ impl SymplecticEuler {
             lattice,
             &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
+        .map_err(|err| err.into())
     }
 }
 
@@ -129,7 +134,17 @@ impl Default for SymplecticEuler {
     /// Default value using the number of threads rayon would use,
     /// see [`rayon::current_num_threads()`].
     fn default() -> Self {
-        Self::new(rayon::current_num_threads())
+        Self::new(rayon::current_num_threads().min(1))
+    }
+}
+
+impl std::fmt::Display for SymplecticEuler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Euler integrator with {} thread",
+            self.number_of_thread()
+        )
     }
 }
 

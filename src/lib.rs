@@ -58,7 +58,7 @@
 //!
 //! for _ in 0..100 {
 //!     for _ in 0..1_000 {
-//!         simulation = simulation.monte_carlo_step(mc).unwrap();
+//!         simulation = simulation.monte_carlo_step(&mut mc).unwrap();
 //!     }
 //!     // the more we advance te more the link matrices
 //!     // will deviate form SU(3), so we reprojet to SU(3)
@@ -210,7 +210,7 @@
 #![warn(clippy::cast_possible_wrap)]
 #![warn(clippy::clone_on_ref_ptr)]
 #![warn(clippy::cognitive_complexity)]
-//#![warn(clippy::default_numeric_fallback)]
+#![warn(clippy::default_numeric_fallback)]
 #![warn(clippy::float_cmp_const)]
 #![warn(clippy::implicit_hasher)]
 #![warn(clippy::implicit_saturating_sub)]
@@ -221,11 +221,11 @@
 #![warn(clippy::missing_const_for_fn)]
 #![warn(clippy::needless_pass_by_value)]
 #![warn(clippy::non_ascii_literal)]
-//#![warn(clippy::semicolon_if_nothing_returned)]
+#![warn(clippy::semicolon_if_nothing_returned)]
 #![warn(clippy::suboptimal_flops)]
 #![warn(clippy::todo)]
 #![warn(clippy::trivially_copy_pass_by_ref)]
-//#![warn(clippy::type_repetition_in_bounds)]
+#![warn(clippy::type_repetition_in_bounds)]
 #![warn(clippy::unreadable_literal)]
 #![warn(clippy::unseparated_literal_suffix)]
 #![warn(clippy::unused_self)]
@@ -233,6 +233,7 @@
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
+#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs/0.2.0")]
 
 extern crate approx;
 extern crate crossbeam;

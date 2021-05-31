@@ -15,7 +15,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng)
         .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
 
-    for _ in 0..10 {
+    for _ in 0_u32..10_u32 {
         state = state.monte_carlo_step(&mut mh)?;
     }
 
