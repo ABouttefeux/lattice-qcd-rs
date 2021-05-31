@@ -10,6 +10,7 @@
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut, Neg};
 
 use lattice_qcd_rs_procedural_macro::{implement_direction_from, implement_direction_list};
@@ -339,9 +340,9 @@ impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D> {
     }
 }
 
-impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticeLinkCanonical<'a, D> {}
+impl<'a, const D: usize> FusedIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
-impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D> {}
+impl<'a, const D: usize> ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
 /// Enum for internal use of interator. It store the previous element returned by `next`
 #[derive(Clone, Debug, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -492,12 +493,12 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator
     }
 }
 
-impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::FusedIterator
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> FusedIterator
     for IteratorDirection<D, IS_POSITIVE_DIRECTION>
 {
 }
 
-impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> std::iter::ExactSizeIterator
+impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> ExactSizeIterator
     for IteratorDirection<D, IS_POSITIVE_DIRECTION>
 {
 }
@@ -563,9 +564,9 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
     }
 }
 
-impl<'a, const D: usize> std::iter::FusedIterator for IteratorLatticePoint<'a, D> {}
+impl<'a, const D: usize> FusedIterator for IteratorLatticePoint<'a, D> {}
 
-impl<'a, const D: usize> std::iter::ExactSizeIterator for IteratorLatticePoint<'a, D> {}
+impl<'a, const D: usize> ExactSizeIterator for IteratorLatticePoint<'a, D> {}
 
 /// Represents point on a (any) lattice.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
@@ -614,12 +615,14 @@ impl<const D: usize> LatticePoint<D> {
     }
 
     /// Get an iterator on the data.
-    pub fn iter(&self) -> impl Iterator<Item = &usize> {
+    pub fn iter(&self) -> impl Iterator<Item = &usize> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Get an iterator on the data as mutable.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut usize> {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut usize> + ExactSizeIterator + FusedIterator {
         self.data.iter_mut()
     }
 
@@ -1703,6 +1706,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::cognitive_complexity)]
     fn dir() {
         assert!(Direction::<4>::new(4, true).is_none());
         assert!(Direction::<4>::new(32, true).is_none());

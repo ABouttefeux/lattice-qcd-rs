@@ -9,7 +9,18 @@ pub mod distribution;
 
 pub use distribution::*;
 
-/// Compute the mean from a [rayon::iter::IndexedParallelIterator].
+/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. It uses the power of the parallel iterator to do the computation
+/// and might give better performance than [`mean`].
+///
+/// Alternatively there is [`mean_par_iter_val`] for parallel iterator with non reference values.
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::mean_par_iter;
+/// use rayon::prelude::*;
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64 /* ... */];
+/// let mean = mean_par_iter(vec.par_iter());
+/// ```
 pub fn mean_par_iter<'a, It, T>(data: It) -> T
 where
     T: Clone
@@ -24,7 +35,21 @@ where
     mean_par_iter_val(data.cloned())
 }
 
-/// Compute the mean from a [rayon::iter::IndexedParallelIterator] by value.
+/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. If you want to use reference use [`mean_par_iter`].
+/// It uses the power of the parallel iterator to do the computation and is particullary usefull in combination of a map.
+///
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::mean_par_iter_val;
+/// use rayon::prelude::*;
+///
+/// fn expensive_computation(input: &f64) -> f64 {
+///     input + 1_f64
+/// }
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let mean = mean_par_iter_val(vec.par_iter().map(|input| expensive_computation(input)));
+/// ```
 pub fn mean_par_iter_val<It, T>(data: It) -> T
 where
     T: Clone + Div<f64, Output = T> + std::iter::Sum<T> + std::iter::Sum<It::Item> + Send,
@@ -35,7 +60,17 @@ where
     mean / len as f64
 }
 
-/// Compute the variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator].
+/// Compute the variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`].
+///
+/// The alternative for iterator that yield non reference is [`variance_par_iter_val`].
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::variance_par_iter;
+/// use rayon::prelude::*;
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64 /* ... */];
+/// let variance = variance_par_iter(vec.par_iter());
+/// ```
 pub fn variance_par_iter<'a, It, T>(data: It) -> T
 where
     T: Clone
@@ -53,7 +88,21 @@ where
     variance_par_iter_val(data.cloned())
 }
 
-/// Compute the variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator] by value.
+/// Compute the variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`] by value.
+///
+/// The alternative for the variance from a iterator that yields reference is [`variance_par_iter`].
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::variance_par_iter_val;
+/// use rayon::prelude::*;
+///
+/// fn expensive_computation(input: &f64) -> f64 {
+///     input * 2_f64
+/// }
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let mean = variance_par_iter_val(vec.par_iter().map(|input| expensive_computation(input)));
+/// ```
 pub fn variance_par_iter_val<It, T>(data: It) -> T
 where
     T: Clone
@@ -70,7 +119,12 @@ where
     variance
 }
 
-/// Compute the mean and variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator].
+/// Compute the mean and variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`].
+/// Provides better performance than computing the mean and variation separately as this methode comsume the iterator only once.
+///
+/// The alternative for iterators returning non-references is [`mean_and_variance_par_iter_val`]
+/// # Examples
+/// see the example of [`mean_par_iter`] and [`variance_par_iter`].
 pub fn mean_and_variance_par_iter<'a, It, T>(data: It) -> [T; 2]
 where
     T: Clone
@@ -88,7 +142,12 @@ where
     mean_and_variance_par_iter_val(data.cloned())
 }
 
-/// Compute the mean and variance (squared of standard deviation) from a [rayon::iter::IndexedParallelIterator] by value.
+/// Compute the mean and variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`] by value.
+/// Provides better performance than computing the mean and variation separately as this methode comsume the iterator only once.
+///
+/// The alternative for iterators returning references is [`mean_and_variance_par_iter`].
+/// # Example
+/// see the example of [`mean_par_iter_val`] and [`variance_par_iter_val`].
 pub fn mean_and_variance_par_iter_val<It, T>(data: It) -> [T; 2]
 where
     T: Clone
@@ -109,14 +168,22 @@ where
     [mean / len as f64, var]
 }
 
-/// compute the mean the statistocal error on this value a [rayon::iter::IndexedParallelIterator].
+/// Computes the mean the statistical error on this value a [`rayon::iter::IndexedParallelIterator`].
+///
+/// The statistical error is defined by `sqrt(variance / len)`.
+///
+/// The alternative for iterators returning non-references is [`mean_with_error_par_iter_val`].
 pub fn mean_with_error_par_iter<'a, It: IndexedParallelIterator<Item = &'a f64> + Clone>(
     data: It,
 ) -> [f64; 2] {
     mean_with_error_par_iter_val(data.cloned())
 }
 
-/// compute the mean the statistocal error on this value a [rayon::iter::IndexedParallelIterator] by value.
+/// Computes the mean the statistical error on this value a [`rayon::iter::IndexedParallelIterator`] by value.
+///
+/// The statistical error is defined by `sqrt(variance / len)`.
+///
+/// The alternative for iterators returning references is [`mean_with_error_par_iter`]
 pub fn mean_with_error_par_iter_val<It: IndexedParallelIterator<Item = f64> + Clone>(
     data: It,
 ) -> [f64; 2] {
@@ -125,8 +192,27 @@ pub fn mean_with_error_par_iter_val<It: IndexedParallelIterator<Item = f64> + Cl
     [mean, (variance / len as f64).sqrt()]
 }
 
-/// compute the covariance between two [rayon::iter::IndexedParallelIterator].
-/// Return `None` if the par iters are not of the same length
+/// Computes the covariance between two [`rayon::iter::IndexedParallelIterator`].
+/// Returns [`None`] if the par iters are not of the same length.
+///
+/// The alternative for iterators returning references is [`covariance_par_iter_val`].
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::covariance_par_iter;
+/// use rayon::prelude::*;
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let vec_2 = vec![1_f64, 2_f64, 3_f64];
+///
+/// let cov = covariance_par_iter(vec.par_iter(), vec_2.par_iter());
+/// assert!(cov.is_none());
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let vec_2 = vec![1_f64, 2_f64, 3_f64, 4_f64];
+///
+/// let cov = covariance_par_iter(vec.par_iter(), vec_2.par_iter());
+/// assert_eq!(cov, Some(1.25_f64));
+/// ```
 pub fn covariance_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
 where
     T: 'a
@@ -145,8 +231,37 @@ where
     covariance_par_iter_val(data_1.cloned(), data_2.cloned())
 }
 
-/// compute the covariance between two [rayon::iter::IndexedParallelIterator] by value,
-/// Return `None` if the par iters are not of the same length
+/// Computes the covariance between two [rayon::iter::IndexedParallelIterator] by value.
+/// Returns `None` if the par iters are not of the same length.
+///
+/// The alternative for iterators returning references is [`covariance_par_iter`].
+/// # Example
+/// ```
+/// use lattice_qcd_rs::statistics::covariance_par_iter_val;
+/// use rayon::prelude::*;
+///
+/// fn expensive_computation(input: &f64) -> f64 {
+///     input + 1_f64
+/// }
+///
+/// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
+/// let vec_2 = vec![1_f64, 2_f64, 3_f64];
+///
+/// let cov = covariance_par_iter_val(
+///     vec.par_iter().map(|input| expensive_computation(input)),
+///     vec_2.par_iter().map(|input| expensive_computation(input)),
+/// );
+/// assert!(cov.is_none());
+///
+/// let vec = vec![1_f64, 1_f64, 1_f64, 1_f64];
+/// let vec_2 = vec![1_f64, 1_f64, 1_f64, 1_f64];
+///
+/// let cov = covariance_par_iter_val(
+///     vec.par_iter().map(|input| expensive_computation(input)),
+///     vec_2.par_iter().map(|input| expensive_computation(input)),
+/// );
+/// assert_eq!(cov, Some(0_f64));
+/// ```
 pub fn covariance_par_iter_val<It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
 where
     T: Clone
@@ -228,7 +343,7 @@ where
     variance
 }
 
-/// compute the mean and variance (squared of standard deviation) from a collection
+/// Compute the mean and variance (squared of standard deviation) from a collection.
 /// # Example
 /// ```
 /// use lattice_qcd_rs::statistics::mean_and_variance;
@@ -263,7 +378,9 @@ where
     [mean, variance]
 }
 
-/// compute the mean the statistocal error on this value a slice
+/// compute the mean the statistocal error on this value a slice.
+///
+/// The statistical error is defined by `sqrt(variance / len)`.
 pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
     let len = data.len();
     let [mean, variance] = mean_and_variance(data);
@@ -279,11 +396,13 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
 ///
 /// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
 /// let array = [1_f64, 2_f64, 3_f64, 4_f64];
-/// covariance(&array, &vec);
+/// let cov = covariance(&array, &vec);
+/// assert!(cov.is_some());
 ///
 /// let array_complex = [Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
-/// covariance(&vec_complex, &array_complex);
+/// let cov = covariance(&vec_complex, &array_complex);
+/// assert!(cov.is_some());
 ///
 /// assert!(covariance(&[], &[1_f64]).is_none());
 /// ```
@@ -327,6 +446,7 @@ mod test {
     use rand_distr::Distribution;
 
     use super::*;
+
     #[test]
     fn mean_var() {
         let a = [1_f64; 100];

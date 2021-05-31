@@ -1,6 +1,10 @@
 //! Module for SU(3) matrices and su(3) (that is the generators of SU(3) )
 //!
-//! The module defines the SU(3) generator we use the same matrices as on [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices) **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+//! The module defines the SU(3) generator we use the same matrices as on
+//! [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices)
+//! **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+
+use std::iter::FusedIterator;
 
 use na::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
 use rand_distr::Distribution;
@@ -571,7 +575,9 @@ impl FactorialStorageStatic {
     }
 
     /// Get an iterator over the factorial number form `0!` up to `34!`.
-    pub fn iter(&self) -> impl Iterator<Item = &FactorialNumber> {
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = &FactorialNumber> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 

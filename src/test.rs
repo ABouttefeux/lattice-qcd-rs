@@ -697,11 +697,11 @@ fn test_leap_frog() {
     let h1 = state_hmc.get_hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc
-        .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01, 1)
+        .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01_f64, 1)
         .unwrap();
     let h2 = state_hmc_2.get_hamiltonian_total();
     println!("h_t {}", h2);
     println!("{}", (h1 - h2).exp());
 
-    assert!((h1 - h2).abs() < 0.000_01);
+    assert!((h1 - h2).abs() < 0.000_01_f64);
 }

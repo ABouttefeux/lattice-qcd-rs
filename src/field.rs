@@ -1,6 +1,6 @@
 //! Represent the fields on the lattice.
 
-use std::iter::FromIterator;
+use std::iter::{FromIterator, FusedIterator};
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
     vec::Vec,
@@ -210,7 +210,7 @@ impl Su3Adjoint {
     /// # let adj = Su3Adjoint::default();
     /// let sum_abs = adj.iter().map(|el| el.abs()).sum::<f64>();
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item = &Real> {
+    pub fn iter(&self) -> impl Iterator<Item = &Real> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
@@ -221,7 +221,9 @@ impl Su3Adjoint {
     /// # let mut adj = Su3Adjoint::default();
     /// adj.iter_mut().for_each(|el| *el = *el / 2_f64);
     /// ```
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Real> {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut Real> + ExactSizeIterator + FusedIterator {
         self.data.iter_mut()
     }
 
@@ -866,12 +868,14 @@ impl LinkMatrix {
     }
 
     /// Iter on the data
-    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> {
+    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Iter mutably on the data
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut CMatrix3> {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator {
         self.data.iter_mut()
     }
 }
