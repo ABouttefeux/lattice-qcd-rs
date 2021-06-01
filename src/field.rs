@@ -21,6 +21,9 @@ use super::{
     CMatrix3, Complex, Real, Vector8, I,
 };
 
+mod link_matrix_builder;
+pub use link_matrix_builder::*;
+
 /// Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 /// See [`su3::GENERATORS`] to view the order of generators.
 /// Note that the generators are normalize such that `Tr[T^a T^b] = \delta^{ab} / 2`
