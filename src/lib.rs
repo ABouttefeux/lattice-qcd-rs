@@ -252,6 +252,7 @@ pub use rand_distr::Distribution;
 
 #[macro_use]
 mod macro_def;
+pub(crate) mod builder;
 pub mod dim;
 pub mod error;
 pub mod field;

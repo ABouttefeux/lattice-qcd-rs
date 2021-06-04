@@ -1,9 +1,10 @@
 use std::num::NonZeroUsize;
 
 #[cfg(feature = "serde-serialize")]
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use super::LinkMatrix;
+use crate::builder::GenType;
 use crate::lattice::LatticeCyclique;
 use crate::CMatrix3;
 
@@ -15,22 +16,6 @@ enum LinkMatrixBuilderType<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> 
     Generated(&'lat LatticeCyclique<D>, GenType<'rng, Rng>),
     /// Data already existing
     Data(Vec<CMatrix3>),
-}
-
-/// Type of generation
-#[non_exhaustive]
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-enum GenType<'rng, Rng: rand::Rng + ?Sized> {
-    /// Cold generation all ellements are set to the default
-    Cold,
-    /// Random deterministe
-    #[cfg_attr(feature = "serde-serialize", serde(skip_deserializing))]
-    HotDeterministe(&'rng mut Rng),
-    /// Random deterministe but own the RNG (for instance the result of `clone`)
-    HotDeterministeOwned(Box<Rng>),
-    /// Random threaded (non deterministe)
-    HotThreaded(NonZeroUsize),
 }
 
 impl<'rng, Rng: rand::Rng + Clone + ?Sized> Clone for GenType<'rng, Rng> {
@@ -67,6 +52,19 @@ impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize>
     }
 }
 
+/// Consuming [`LinkMatrix`] builder.
+/// There is two way to startt the builder, [`LinkMatrixBuilder::new_from_data`]
+/// [`LinkMatrixBuilder::new_generated`].
+///
+/// The first one juste move the data given in the
+/// [`LinkMatrix`] and does not require another configuration.
+///
+/// The seconde one will build a [`LinkMatrix`] procedurally and accept three configurations.
+/// [`LinkMatrixBuilder::set_cold`] that generate a configuration with only indentity matrices.
+/// [`LinkMatrixBuilder::set_hot_deterministe`] choose randomly every link matrices with a SU(3)
+/// matrix unfiformly distributed in a reproductible way
+/// [`LinkMatrixBuilder::set_hot_threaded`] also chooses random matrices as above but does it
+/// with multiple thread and is not deterministe.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize))]
 pub struct LinkMatrixBuilder<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> {
