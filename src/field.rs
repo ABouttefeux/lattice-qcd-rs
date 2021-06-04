@@ -23,6 +23,8 @@ use super::{
 
 mod link_matrix_builder;
 pub use link_matrix_builder::*;
+mod e_field_builder;
+pub use e_field_builder::*;
 
 /// Adjoint representation of SU(3), it is su(3) (i.e. the lie algebra).
 /// See [`su3::GENERATORS`] to view the order of generators.

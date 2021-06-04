@@ -1,9 +1,10 @@
 use std::num::NonZeroUsize;
 
 #[cfg(feature = "serde-serialize")]
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use super::LinkMatrix;
+use crate::builder::GenType;
 use crate::lattice::LatticeCyclique;
 use crate::CMatrix3;
 
@@ -15,22 +16,6 @@ enum LinkMatrixBuilderType<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> 
     Generated(&'lat LatticeCyclique<D>, GenType<'rng, Rng>),
     /// Data already existing
     Data(Vec<CMatrix3>),
-}
-
-/// Type of generation
-#[non_exhaustive]
-#[derive(Debug, PartialEq)]
-#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-enum GenType<'rng, Rng: rand::Rng + ?Sized> {
-    /// Cold generation all ellements are set to the default
-    Cold,
-    /// Random deterministe
-    #[cfg_attr(feature = "serde-serialize", serde(skip_deserializing))]
-    HotDeterministe(&'rng mut Rng),
-    /// Random deterministe but own the RNG (for instance the result of `clone`)
-    HotDeterministeOwned(Box<Rng>),
-    /// Random threaded (non deterministe)
-    HotThreaded(NonZeroUsize),
 }
 
 impl<'rng, Rng: rand::Rng + Clone + ?Sized> Clone for GenType<'rng, Rng> {
@@ -67,6 +52,19 @@ impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize>
     }
 }
 
+/// Consuming [`LinkMatrix`] builder.
+/// There is two way to startt the builder, [`LinkMatrixBuilder::new_from_data`]
+/// [`LinkMatrixBuilder::new_procedural`].
+///
+/// The first one juste move the data given in the
+/// [`LinkMatrix`] and does not require another configuration.
+///
+/// The seconde one will build a [`LinkMatrix`] procedurally and accept three configurations.
+/// [`LinkMatrixBuilder::set_cold`] that generate a configuration with only indentity matrices.
+/// [`LinkMatrixBuilder::set_hot_deterministe`] choose randomly every link matrices with a SU(3)
+/// matrix unfiformly distributed in a reproductible way
+/// [`LinkMatrixBuilder::set_hot_threaded`] also chooses random matrices as above but does it
+/// with multiple thread and is not deterministe.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize))]
 pub struct LinkMatrixBuilder<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> {
@@ -74,18 +72,73 @@ pub struct LinkMatrixBuilder<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize
 }
 
 impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> LinkMatrixBuilder<'rng, 'lat, Rng, D> {
+    /// This method take an array of data as the base contruction of [`LinkMatrix`].
+    ///
+    /// Using this methode has no other configuration and can be direcly build.
+    /// It is equivalent to [`LinkMatrix::new`]
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::field::LinkMatrixBuilder;
+    /// use lattice_qcd_rs::CMatrix3;
+    /// use rand::rngs::ThreadRng;
+    ///
+    /// let vec = vec![CMatrix3::identity(); 16];
+    /// let links = LinkMatrixBuilder::<'_, '_, ThreadRng, 4>::new_from_data(vec.clone()).build();
+    /// assert_eq!(&vec, links.as_vec());
+    /// ```
     pub fn new_from_data(data: Vec<CMatrix3>) -> Self {
         Self {
             builder_type: LinkMatrixBuilderType::Data(data),
         }
     }
 
-    pub fn new_generated(l: &'lat LatticeCyclique<D>) -> Self {
+    /// Initialize the builder to use procedural generation.
+    ///
+    /// By default the generation type is set to cold.
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::field::LinkMatrixBuilder;
+    /// use lattice_qcd_rs::lattice::LatticeCyclique;
+    /// use lattice_qcd_rs::CMatrix3;
+    /// use rand::rngs::ThreadRng;
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lat = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrixBuilder::<'_, '_, ThreadRng, 3>::new_procedural(&lat).build();
+    /// assert!(lat.has_compatible_lenght_links(&links));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn new_procedural(l: &'lat LatticeCyclique<D>) -> Self {
         Self {
             builder_type: LinkMatrixBuilderType::Generated(l, GenType::Cold),
         }
     }
 
+    /// Change the methode to a cold generation, i.e. all links are set to the identity.
+    /// Does not affect generactor build with [`LinkMatrixBuilder::new_from_data`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::field::LinkMatrixBuilder;
+    /// use lattice_qcd_rs::lattice::LatticeCyclique;
+    /// use lattice_qcd_rs::CMatrix3;
+    /// use rand::rngs::ThreadRng;
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lat = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrixBuilder::<'_, '_, ThreadRng, 3>::new_procedural(&lat)
+    ///     .set_cold()
+    ///     .build();
+    /// for m in &links {
+    ///     assert_eq!(m, &CMatrix3::identity());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_cold(mut self) -> Self {
         match self.builder_type {
             LinkMatrixBuilderType::Data(_) => {}
@@ -96,6 +149,32 @@ impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> LinkMatrixBuilder<'rng
         self
     }
 
+    /// Change the methode to a hot determinist generation, i.e. all links generated randomly in a single thread.
+    /// Does not affect generactor build with [`LinkMatrixBuilder::new_from_data`].
+    ///
+    /// # Example
+    /// ```
+    /// use lattice_qcd_rs::field::LinkMatrixBuilder;
+    /// use lattice_qcd_rs::lattice::LatticeCyclique;
+    /// use lattice_qcd_rs::CMatrix3;
+    /// use rand::rngs::StdRng;
+    /// use rand::SeedableRng;
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let mut rng = StdRng::seed_from_u64(0); // change the seed
+    /// let lat = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let links = LinkMatrixBuilder::<'_, '_, StdRng, 3>::new_procedural(&lat)
+    ///     .set_hot_deterministe(&mut rng)
+    ///     .build();
+    /// let mut rng_2 = StdRng::seed_from_u64(0); // same seed as before
+    /// let links_2 = LinkMatrixBuilder::<'_, '_, StdRng, 3>::new_procedural(&lat)
+    ///     .set_hot_deterministe(&mut rng_2)
+    ///     .build();
+    /// assert_eq!(links, links_2);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_hot_deterministe(mut self, rng: &'rng mut Rng) -> Self {
         match self.builder_type {
             LinkMatrixBuilderType::Data(_) => {}
@@ -107,6 +186,30 @@ impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> LinkMatrixBuilder<'rng
         self
     }
 
+    /// Change the methode to a hot determinist generation, i.e. all links generated randomly using multiple threads.
+    /// Does not affect generactor build with [`LinkMatrixBuilder::new_from_data`].
+    ///
+    /// # Example
+    /// ```
+    /// use std::num::NonZeroUsize;
+    ///
+    /// use lattice_qcd_rs::error::ImplementationError;
+    /// use lattice_qcd_rs::field::LinkMatrixBuilder;
+    /// use lattice_qcd_rs::lattice::LatticeCyclique;
+    /// use lattice_qcd_rs::CMatrix3;
+    /// use rand::rngs::ThreadRng;
+    /// # use std::error::Error;
+    ///
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let lat = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let number_of_threads =
+    ///     NonZeroUsize::new(4).ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+    /// let links = LinkMatrixBuilder::<'_, '_, ThreadRng, 3>::new_procedural(&lat)
+    ///     .set_hot_threaded(number_of_threads)
+    ///     .build();
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn set_hot_threaded(mut self, number_of_threads: NonZeroUsize) -> Self {
         match self.builder_type {
             LinkMatrixBuilderType::Data(_) => {}
@@ -118,6 +221,7 @@ impl<'rng, 'lat, Rng: rand::Rng + ?Sized, const D: usize> LinkMatrixBuilder<'rng
         self
     }
 
+    /// Therminal methode to build the [`LinkMatrix`]
     pub fn build(self) -> LinkMatrix {
         self.builder_type.into_link_matrix()
     }
@@ -155,17 +259,17 @@ mod test {
     #[test]
     fn builder() -> Result<(), LatticeInitializationError> {
         let lattice = LatticeCyclique::<3>::new(1_f64, 10)?;
-        let m = LinkMatrixBuilder::<'_, '_, rand::rngs::ThreadRng, 3>::new_generated(&lattice)
+        let m = LinkMatrixBuilder::<'_, '_, rand::rngs::ThreadRng, 3>::new_procedural(&lattice)
             .set_cold()
             .build();
         assert_eq!(m, LinkMatrix::new_cold(&lattice));
 
         let mut rng = StdRng::seed_from_u64(SEED_RNG);
-        let builder = LinkMatrixBuilder::<'_, '_, _, 3>::new_generated(&lattice)
+        let builder = LinkMatrixBuilder::<'_, '_, _, 3>::new_procedural(&lattice)
             .set_hot_deterministe(&mut rng);
         let m = builder.clone().build();
         assert_eq!(m, builder.build());
-        let _ = LinkMatrixBuilder::<'_, '_, rand::rngs::ThreadRng, 3>::new_generated(&lattice)
+        let _ = LinkMatrixBuilder::<'_, '_, rand::rngs::ThreadRng, 3>::new_procedural(&lattice)
             .set_hot_threaded(NonZeroUsize::new(rayon::current_num_threads().min(1)).unwrap())
             .build();
         assert!(LinkMatrixBuilder::<'_, '_, _, 3>::new_from_data(vec![])
