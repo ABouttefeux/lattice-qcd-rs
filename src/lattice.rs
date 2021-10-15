@@ -133,13 +133,13 @@ impl<const D: usize> LatticeCyclique<D> {
 
     /// Get an Iterator over all points of the lattice.
     pub fn get_points(&self) -> IteratorLatticePoint<'_, D> {
-        IteratorLatticePoint::new(&self, LatticePoint::new_zero())
+        IteratorLatticePoint::new(self, LatticePoint::new_zero())
     }
 
     /// Get an Iterator over all canonical link of the lattice.
     pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
         return IteratorLatticeLinkCanonical::new(
-            &self,
+            self,
             self.get_link_canonical(
                 LatticePoint::new_zero(),
                 *Direction::positive_directions().first().unwrap(),

@@ -163,7 +163,7 @@ impl Sign {
     ///
     /// If the value is very close to zero but not quite the sing will nonetheless be [`Sign::Zero`].
     /// If f is NaN the sing will be [`Sign::Zero`].
-    pub fn sign(f: f64) -> Self {
+    pub fn sign_f64(f: f64) -> Self {
         // TODO manage NaN
         if abs_diff_eq!(f, 0_f64) || f.is_nan() {
             Sign::Zero
@@ -238,7 +238,7 @@ impl From<Sign> for f64 {
 
 impl From<f64> for Sign {
     fn from(f: f64) -> Sign {
-        Sign::sign(f)
+        Sign::sign_f64(f)
     }
 }
 
@@ -387,13 +387,13 @@ mod test {
     #[allow(clippy::cognitive_complexity)]
     #[test]
     fn sign() {
-        assert_eq!(Sign::sign(0_f64).to_f64(), 0_f64);
-        assert_eq!(Sign::sign(1_f64).to_f64(), 1_f64);
-        assert_eq!(Sign::sign(-1_f64).to_f64(), -1_f64);
-        assert_eq!(Sign::sign(34_f64), Sign::Positive);
-        assert_eq!(Sign::sign(-34_f64), Sign::Negative);
+        assert_eq!(Sign::sign_f64(0_f64).to_f64(), 0_f64);
+        assert_eq!(Sign::sign_f64(1_f64).to_f64(), 1_f64);
+        assert_eq!(Sign::sign_f64(-1_f64).to_f64(), -1_f64);
+        assert_eq!(Sign::sign_f64(34_f64), Sign::Positive);
+        assert_eq!(Sign::sign_f64(-34_f64), Sign::Negative);
         assert_eq!(Sign::from(-34_f64), Sign::Negative);
-        assert_eq!(f64::from(Sign::sign(-1_f64)), -1_f64);
+        assert_eq!(f64::from(Sign::sign_f64(-1_f64)), -1_f64);
         assert_eq!(-Sign::Negative, Sign::Positive);
         assert_eq!(-Sign::Positive, Sign::Negative);
         assert_eq!(-Sign::Zero, Sign::Zero);

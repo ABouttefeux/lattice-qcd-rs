@@ -1,6 +1,6 @@
 //! Module for testes
 
-use std::{f64, vec::Vec};
+use std::f64;
 
 use approx::*;
 use na::ComplexField;
@@ -22,15 +22,15 @@ const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 /// test the size of iterators
 fn test_itrerator(points: usize) {
     let l = LatticeCyclique::<4>::new(1_f64, points).unwrap();
-    let array: Vec<LatticeLinkCanonical<4>> = l.get_links().collect();
-    assert_eq!(array.len(), 4 * points * points * points * points);
+    let link_count = l.get_links().count();
+    assert_eq!(link_count, 4 * points * points * points * points);
     assert_eq!(
         4 * points * points * points * points,
         l.get_number_of_canonical_links_space()
     );
-    let array: Vec<LatticePoint<4>> = l.get_points().collect();
-    assert_eq!(array.len(), points * points * points * points);
-    assert_eq!(array.len(), l.get_number_of_points());
+    let pt_count = l.get_points().count();
+    assert_eq!(pt_count, points * points * points * points);
+    assert_eq!(pt_count, l.get_number_of_points());
 }
 
 #[test]

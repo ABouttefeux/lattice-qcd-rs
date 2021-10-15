@@ -564,7 +564,7 @@ where
                     &mut vec,
                     i.clone().to_index(l),
                     closure(&mut init_data, &i, common_data),
-                    &default_data,
+                    default_data,
                 );
             }))
             .map_err(|err| ThreadAnyError::Panic(vec![err]))?;
@@ -601,7 +601,7 @@ where
             let mut vec = Vec::<Data>::with_capacity(capacity);
             for message in result_rx {
                 let (key, data) = message;
-                insert_in_vec(&mut vec, key.to_index(l), data, &default_data);
+                insert_in_vec(&mut vec, key.to_index(l), data, default_data);
             }
 
             let panics = threads

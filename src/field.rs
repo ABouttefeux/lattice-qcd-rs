@@ -787,8 +787,9 @@ impl LinkMatrix {
         )
     }
 
-    /// Get the `F^{ij}` tensor using the clover appropriation. The direction are set to positive
+    /// Get the `F^{ij}` tensor using the clover appropriation. The direction should be set to positive
     /// See arXive:1512.02374.
+    // TODO negative directions
     pub fn get_f_mu_nu<const D: usize>(
         &self,
         point: &LatticePoint<D>,
@@ -1274,13 +1275,13 @@ impl<const D: usize> EField<D> {
             .collect::<Vec<LatticePoint<D>>>()
             .par_iter()
             .map(|point| {
-                let e = self.get_e_vec(&point, lattice).unwrap();
+                let e = self.get_e_vec(point, lattice).unwrap();
                 SVector::<_, D>::from_fn(|index_dir, _| {
                     let dir = Direction::<D>::positive_directions()[index_dir];
                     let u = link_matrix
                         .get_matrix(&LatticeLink::new(*point, dir), lattice)
                         .unwrap();
-                    let gauss = self.get_gauss(link_matrix, &point, lattice).unwrap();
+                    let gauss = self.get_gauss(link_matrix, point, lattice).unwrap();
                     let gauss_p = self
                         .get_gauss(
                             link_matrix,

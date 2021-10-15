@@ -363,12 +363,11 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         if d.sample(&mut self.rng) {
             self.has_replace_last = true;
             *state.get_link_mut(&link).unwrap() = matrix;
-            state
         }
         else {
             self.has_replace_last = false;
-            state
         }
+        state
     }
 }
 

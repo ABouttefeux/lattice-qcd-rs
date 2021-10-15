@@ -313,7 +313,7 @@ fn get_staple<const D: usize>(
         .filter(|dir_i| *dir_i != dir_j)
         .map(|dir_i| {
             let el_1 = link_matrix
-                .get_sij(link.pos(), dir_j, &dir_i, lattice)
+                .get_sij(link.pos(), dir_j, dir_i, lattice)
                 .unwrap()
                 .adjoint();
             let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), -dir_i);

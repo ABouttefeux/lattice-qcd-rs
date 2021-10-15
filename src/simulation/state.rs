@@ -137,7 +137,7 @@ where
         Rng: rand::Rng + ?Sized,
     {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / self.beta())?;
-        let new_e_field = EField::new_deterministe(&self.lattice(), rng, &d);
+        let new_e_field = EField::new_deterministe(self.lattice(), rng, &d);
         if !self.lattice().has_compatible_lenght_e_field(&new_e_field) {
             return Err(StateInitializationError::IncompatibleSize);
         }
@@ -260,7 +260,7 @@ where
         State: SimulationStateLeapFrog<D>,
         I: SymplecticIntegrator<Self, State, D> + ?Sized,
     {
-        integrator.integrate_sync_leap(&self, delta_t)
+        integrator.integrate_sync_leap(self, delta_t)
     }
 
     /// Does `number_of_steps` with `delta_t` at each step using a leap_frog algorithm by fist
@@ -334,7 +334,7 @@ where
         I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
-        integrator.integrate_sync_sync(&self, delta_t)
+        integrator.integrate_sync_sync(self, delta_t)
     }
 
     /// Does `numbers_of_times` of step of size `delta_t` using the sync algorithm
@@ -375,7 +375,7 @@ where
         I: SymplecticIntegrator<Self, T, D> + ?Sized,
         T: SimulationStateLeapFrog<D>,
     {
-        integrator.integrate_symplectic(&self, delta_t)
+        integrator.integrate_symplectic(self, delta_t)
     }
 
     /// Does `numbers_of_times` of step of size `delta_t` using the symplectic algorithm
@@ -447,7 +447,7 @@ where
         State: SimulationStateSynchrone<D> + ?Sized,
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
     {
-        integrator.integrate_leap_sync(&self, delta_t)
+        integrator.integrate_leap_sync(self, delta_t)
     }
 
     /// Does one simulation step using the leap frog algorithm.
@@ -460,7 +460,7 @@ where
         I: SymplecticIntegrator<T, Self, D> + ?Sized,
         T: SimulationStateSynchrone<D> + ?Sized,
     {
-        integrator.integrate_leap_leap(&self, delta_t)
+        integrator.integrate_leap_leap(self, delta_t)
     }
 
     /// does `numbers_of_times` simulation set of size `delta_t` using the leap frog algorithm.
@@ -940,7 +940,7 @@ where
     {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / lattice_state.beta())
             .expect("Distribution not valide, check Beta.");
-        let e_field = EField::new_deterministe(&lattice_state.lattice(), rng, &d)
+        let e_field = EField::new_deterministe(lattice_state.lattice(), rng, &d)
             .project_to_gauss(lattice_state.link_matrix(), lattice_state.lattice())
             .unwrap();
         Self {
@@ -955,7 +955,7 @@ where
     where
         State: Sized,
     {
-        let e_field = EField::new_cold(&lattice_state.lattice());
+        let e_field = EField::new_cold(lattice_state.lattice());
         Self {
             lattice_state,
             e_field,

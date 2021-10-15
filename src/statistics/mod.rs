@@ -303,6 +303,7 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// mean(&vec_complex);
 /// ```
+#[allow(clippy::type_repetition_in_bounds)] // false positive
 pub fn mean<'a, T, IntoIter>(data: IntoIter) -> T
 where
     T: Div<f64, Output = T> + std::iter::Sum<&'a T> + 'a,
@@ -327,6 +328,7 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// variance(&vec_complex);
 /// ```
+#[allow(clippy::type_repetition_in_bounds)] // false positive
 pub fn variance<'a, T, IntoIter>(data: IntoIter) -> T
 where
     T: 'a
@@ -355,6 +357,7 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// mean_and_variance(&vec_complex);
 /// ```
+#[allow(clippy::type_repetition_in_bounds)] // false positive
 pub fn mean_and_variance<'a, T, IntoIter>(data: IntoIter) -> [T; 2]
 where
     T: 'a
@@ -406,6 +409,7 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
 ///
 /// assert!(covariance(&[], &[1_f64]).is_none());
 /// ```
+#[allow(clippy::type_repetition_in_bounds)] // false positive
 pub fn covariance<'a, 'b, T, IntoIter1, IntoIter2>(
     data_1: IntoIter1,
     data_2: IntoIter2,
