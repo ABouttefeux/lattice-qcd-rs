@@ -112,7 +112,7 @@
 //! The choice of RNG is up to the user of the library. However there is a few trade offs to consider.
 //!
 //! Let us break the different generator into categories.
-//! For more details see (https://rust-random.github.io/book/guide-gen.html)
+//! For more details see <https://rust-random.github.io/book/guide-gen.html>.
 //!
 //! Some of the possible choice :
 //! - **Recomanded** [`rand_xoshiro::Xoshiro256PlusPlus`](https://docs.rs/rand_xoshiro/0.6.0/rand_xoshiro/struct.Xoshiro256PlusPlus.html)
