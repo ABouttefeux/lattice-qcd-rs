@@ -1267,7 +1267,7 @@ impl<const D: usize> EField<D> {
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
     ) -> Self {
-        /// see https://arxiv.org/pdf/1512.02374.pdf
+        /// see <https://arxiv.org/pdf/1512.02374.pdf>
         // TODO verify
         const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
         let data = lattice

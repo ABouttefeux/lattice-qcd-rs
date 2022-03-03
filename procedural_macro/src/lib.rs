@@ -46,10 +46,12 @@ const MAX_DIM: usize = 127;
 /// Using const generics might render this unecessary.
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
-    let mut implem = vec![];
+    let mut implem = Vec::with_capacity(127);
+
+    // creation of the vec containing the directions.
     for i in 1_usize..=MAX_DIM {
-        let mut array_direction = vec![];
-        let mut array_direction_positives = vec![];
+        let mut array_direction = Vec::with_capacity(127);
+        let mut array_direction_positives = Vec::with_capacity(127);
         for j in 0..i {
             array_direction.push(quote! {
                 Direction{index_dir: #j, is_positive: true},
@@ -63,6 +65,7 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let u_dir_ident = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
         let u_dir_pos_ident =
             syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
+        // we store the vallues in array so we can access them as fast as possible.
         let s = quote! {
             const #u_dir_ident: [Direction<#i>; #i * 2] = [ #(#array_direction),* ];
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
@@ -79,6 +82,7 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         };
         implem.push(s);
     }
+    // We need to concat the final implems trogethers.
     let final_stream = quote! {
         #(#implem)*
     };
@@ -94,18 +98,20 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     let mut implem = vec![quote! {
         use std::convert::TryFrom;
 
-        /// Error return by try from for Directions
+        /// Error return by [`TryFrom`] for Directions.
         #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
         #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
         #[non_exhaustive]
         pub enum DirectionConversionError {
-            /// the index is out of bound
+            /// The index is out of bound.
             IndexOutOfBound,
         }
 
-        impl core::fmt::Display for DirectionConversionError{
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "the index is out of bound")
+        impl std::fmt::Display for DirectionConversionError{
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    Self::IndexOutOfBound => write!(f, "the index is out of bound"),
+                }
             }
         }
 
@@ -119,12 +125,14 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
             implem.push(quote! {
                 impl From<Direction<#i>> for Direction<#j> {
                     fn from(from: Direction<#i>) -> Self {
+                        // i > j so so it is alweays Some.
                         Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
 
                 impl From<&Direction<#i>> for Direction<#j> {
                     fn from(from: &Direction<#i>) -> Self {
+                        // i > j so so it is alweays Some.
                         Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
@@ -151,5 +159,6 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     let final_stream = quote! {
         #(#implem)*
     };
+    // We need to concat the final implems trogethers.
     final_stream.into()
 }
