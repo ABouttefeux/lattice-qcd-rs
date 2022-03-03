@@ -924,6 +924,7 @@ mod test {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn exp_matrix() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);

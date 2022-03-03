@@ -1,8 +1,5 @@
-//! Procedural macro for lattice_qcd_rs
-//!
-//! For internal use only. Mainly it has macro for implementation of
-//! `lattice_qcd_rs::lattice::Direction`
-
+#![doc = include_str!("../README.md")]
+//
 #![allow(clippy::needless_return)]
 #![warn(clippy::cast_sign_loss)]
 #![warn(clippy::cast_possible_truncation)]
@@ -31,27 +28,31 @@
 #![warn(clippy::unnecessary_wraps)]
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
+#![forbid(unsafe_code)]
+#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs-procedural_macro/0.2.0")]
 
-extern crate proc_macro;
-extern crate proc_macro2;
-extern crate quote;
-extern crate syn;
+/// Only contains the version test.
+#[cfg(test)]
+mod test;
 
 use proc_macro::TokenStream;
 use quote::quote;
 
+/// Maximum dimention to impl [`Direction`] for.
 const MAX_DIM: usize = 127;
 
-/// Implement `DirectionList` for `Direction` of `U1` to `U127`.
-/// Using const generics might render this unecessary.
+/// Implement [`DirectionList`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/trait.DirectionList.html)
+/// for [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html) of `1` to `127` the value of [`MAX_DIM`].
+///
+/// Using const generics might render this unecessary. Waiting for stabilisation of feature(generic_const_exprs).
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
-    let mut implem = Vec::with_capacity(127);
+    let mut implem = Vec::with_capacity(MAX_DIM);
 
     // creation of the vec containing the directions.
     for i in 1_usize..=MAX_DIM {
-        let mut array_direction = Vec::with_capacity(127);
-        let mut array_direction_positives = Vec::with_capacity(127);
+        let mut array_direction = Vec::with_capacity(MAX_DIM);
+        let mut array_direction_positives = Vec::with_capacity(MAX_DIM);
         for j in 0..i {
             array_direction.push(quote! {
                 Direction{index_dir: #j, is_positive: true},
@@ -82,13 +83,17 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         };
         implem.push(s);
     }
-    // We need to concat the final implems trogethers.
+    // We need to concat the final implems togethers.
     let final_stream = quote! {
         #(#implem)*
     };
     final_stream.into()
 }
 
+/// The max dimention to imply the [`From`] and [`std::convert::TryFrom`] and for
+/// [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html).
+///
+/// It takes just way to long for 127.
 const MAX_DIM_FROM_IMPLEM: usize = 10;
 
 /// Implement trait [`From`] and [`std::convert::TryFrom`] and for directions
@@ -103,14 +108,14 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
         #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
         #[non_exhaustive]
         pub enum DirectionConversionError {
-            /// The index is out of bound.
+            /// The index is out of bound, i.e. the directtion axis does not exist in the lower space dimention.
             IndexOutOfBound,
         }
 
         impl std::fmt::Display for DirectionConversionError{
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    Self::IndexOutOfBound => write!(f, "the index is out of bound"),
+                    Self::IndexOutOfBound => write!(f, "the index is out of bound, the direction axis does not exist in the lower space dimention"),
                 }
             }
         }
@@ -125,14 +130,14 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
             implem.push(quote! {
                 impl From<Direction<#i>> for Direction<#j> {
                     fn from(from: Direction<#i>) -> Self {
-                        // i > j so so it is alweays Some.
+                        // i > j so so it is always Some.
                         Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
 
                 impl From<&Direction<#i>> for Direction<#j> {
                     fn from(from: &Direction<#i>) -> Self {
-                        // i > j so so it is alweays Some.
+                        // i > j so so it is always Some.
                         Self::new(from.index(), from.is_positive()).unwrap()
                     }
                 }
@@ -159,6 +164,6 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     let final_stream = quote! {
         #(#implem)*
     };
-    // We need to concat the final implems trogethers.
+    // We need to concat the final implems togethers.
     final_stream.into()
 }

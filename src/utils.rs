@@ -1,4 +1,4 @@
-//! Utils function and structure
+//! Utils functions and structures.
 //!
 //! Mainly things that I do not know where to put.
 
@@ -302,6 +302,7 @@ impl Ord for Sign {
 /// # use lattice_qcd_rs::utils::{Sign, levi_civita};
 /// assert_eq!(Sign::Positive, levi_civita(&[1, 2, 3]));
 /// assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
+/// assert_eq!(Sign::Zero, levi_civita(&[2, 2, 3]));
 /// ```
 pub const fn levi_civita(index: &[usize]) -> Sign {
     let mut prod = 1_i8;

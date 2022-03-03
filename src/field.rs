@@ -75,11 +75,18 @@ impl Su3Adjoint {
     /// get the su3 adjoint as mut ref to a [`Vector8`]
     /// # Example
     /// ```
-    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// # use lattice_qcd_rs::{field::Su3Adjoint, Vector8};
     /// #
-    /// # let mut adj = Su3Adjoint::default();
-    /// adj.as_vector_mut().apply(|el| el + 1_f64);
+    /// let mut adj = Su3Adjoint::default(); // filled with 0.
+    /// adj.as_vector_mut().apply(|el| *el += 1_f64);
+    /// assert_eq!(adj.as_vector(), &Vector8::from_element(1_f64));
+    ///
     /// adj.as_mut().set_magnitude(1_f64);
+    ///
+    /// let mut v = Vector8::from_element(1_f64);
+    /// v.set_magnitude(1_f64);
+    ///
+    /// assert_eq!(adj.as_vector(), &v);
     /// ```
     pub fn as_vector_mut(&mut self) -> &mut Vector8<Real> {
         self.data_mut()

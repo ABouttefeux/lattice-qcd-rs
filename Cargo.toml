@@ -2,13 +2,15 @@
 name = "lattice-qcd-rs"
 version = "0.2.0"
 authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
 categories = ["Science", "Simulation"]
 description = "Lattice QCD simulation"
 keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
-publish = false
+publish = true
+license = "MIT OR Apache-2.0"
+include = ["logo.svg"]
 
 [features]
 serde-serialize = ["serde", "nalgebra/serde-serialize"]

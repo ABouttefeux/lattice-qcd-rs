@@ -3,6 +3,8 @@
 use std::{
     any::Any,
     collections::HashMap,
+    error::Error,
+    fmt::{self, Display, Formatter},
     hash::Hash,
     iter::Iterator,
     sync::{mpsc, Arc, Mutex},
@@ -31,8 +33,8 @@ pub enum ThreadAnyError {
     Panic(Vec<Box<dyn Any + Send + 'static>>),
 }
 
-impl core::fmt::Display for ThreadAnyError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Display for ThreadAnyError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::ThreadNumberIncorect => write!(f, "number of thread is incorrect"),
             Self::Panic(any) => {
@@ -72,7 +74,7 @@ impl core::fmt::Display for ThreadAnyError {
     }
 }
 
-impl std::error::Error for ThreadAnyError {}
+impl Error for ThreadAnyError {}
 
 /// Multithreading error with a string panic message.
 ///
@@ -89,8 +91,8 @@ pub enum ThreadError {
     Panic(Vec<Option<String>>),
 }
 
-impl core::fmt::Display for ThreadError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Display for ThreadError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::ThreadNumberIncorect => write!(f, "number of thread is incorrect"),
             Self::Panic(strings) => {
@@ -128,7 +130,7 @@ impl core::fmt::Display for ThreadError {
     }
 }
 
-impl std::error::Error for ThreadError {}
+impl Error for ThreadError {}
 
 impl From<ThreadAnyError> for ThreadError {
     #[allow(clippy::manual_map)] // clarity / false positive ?

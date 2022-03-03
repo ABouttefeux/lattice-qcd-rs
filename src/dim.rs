@@ -1,4 +1,7 @@
 //! Depreciated, module for dimension reexport.
+//!
+//! The library use now const generic and not this sytem anymore. It can be safely ignored.
+//! It a sytem used before const generic was introduced.
 
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {

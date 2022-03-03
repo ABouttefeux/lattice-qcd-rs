@@ -1,12 +1,12 @@
-//! defines different error types.
+//! Defines different error types.
 
-use core::fmt::{Debug, Display};
 use std::error::Error;
+use std::fmt::{self, Debug, Display, Formatter};
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::thread::ThreadError;
+use crate::thread::ThreadError;
 
 /// Type that can never be (safly) initialized.
 /// This is temporary, until [`never`](https://doc.rust-lang.org/std/primitive.never.html) is accepted into stable rust.
@@ -14,8 +14,8 @@ use super::thread::ThreadError;
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Never {}
 
-impl core::fmt::Display for Never {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Display for Never {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
@@ -37,7 +37,7 @@ pub enum ImplementationError {
 }
 
 impl Display for ImplementationError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ImplementationError::Unreachable => {
                 write!(f, "internal error: entered unreachable code")
@@ -63,7 +63,7 @@ pub enum MultiIntegrationError<Error> {
 }
 
 impl<Error: Display> Display for MultiIntegrationError<Error> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             MultiIntegrationError::ZeroIntegration => write!(f, "error: no integration steps"),
             MultiIntegrationError::IntegrationError(index, error) => {
@@ -107,7 +107,7 @@ impl From<LatticeInitializationError> for StateInitializationError {
 }
 
 impl Display for StateInitializationError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalideParameterNormalDistribution(error) => {
                 write!(f, "normal distribution error: {}", error)
@@ -153,7 +153,7 @@ impl From<StateInitializationError> for ThreadedStateInitializationError {
 }
 
 impl Display for ThreadedStateInitializationError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
             Self::StateInitializationError(error) => write!(f, "{}", error),
@@ -184,7 +184,7 @@ pub enum LatticeInitializationError {
 }
 
 impl Display for LatticeInitializationError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::NonPositiveSize => write!(
                 f,
@@ -242,7 +242,7 @@ impl<Error, State> From<(Error, State)> for ErrorWithOnwnedValue<Error, State> {
 }
 
 impl<Error: Display, State: Display> Display for ErrorWithOnwnedValue<Error, State> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "error {} with data {}", self.error, self.owned)
     }
 }

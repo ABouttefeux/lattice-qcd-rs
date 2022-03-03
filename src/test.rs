@@ -41,6 +41,7 @@ fn test_itrerator_length() {
     test_itrerator(26);
 }
 
+#[allow(deprecated)]
 /// test the exponential of matrix
 fn test_exp(factor: Complex) {
     let m_g1_exp = CMatrix3::new(
@@ -146,6 +147,7 @@ fn test_exp_basic() {
 }
 
 #[test]
+#[allow(deprecated)]
 /// test equivalence of [`su3_exp_i`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_i() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
@@ -167,6 +169,7 @@ fn equivalece_exp_i() {
 }
 
 #[test]
+#[allow(deprecated)]
 /// test equivalence of [`su3_exp_r`] and [`MatrixExp`] trait implementation
 fn equivalece_exp_r() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
