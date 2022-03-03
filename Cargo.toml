@@ -19,8 +19,8 @@ no-overflow-test= []
 members = ["procedural_macro"]
 
 [dependencies]
-nalgebra = { version = "0.26.2" }
-approx = "0.4.0"
+nalgebra = { version = "0.30", features = ["serde-serialize"] }
+approx = "0.5.1"
 num-traits = "0.2.14"
 rand = "0.8.3"
 rand_distr = "0.4.0"

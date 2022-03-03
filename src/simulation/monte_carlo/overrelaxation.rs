@@ -48,7 +48,7 @@ use super::{
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// The algorrtihm is described (https://arxiv.org/abs/hep-lat/0503041) in section 2.1 up to step 2 using `\hat X_{NN}`
+/// The algorrtihm is described <https://arxiv.org/abs/hep-lat/0503041> in section 2.1 up to step 2 using `\hat X_{NN}`.
 ///
 /// # Example
 /// ```
@@ -140,7 +140,7 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// The algorrtihm is described in (https://doi.org/10.1016/0370-2693(90)90032-2).
+/// The algorrtihm is described in <https://doi.org/10.1016/0370-2693(90)90032-2>.
 ///
 /// # Example
 /// see level module documentation [`super::overrelaxation`]
