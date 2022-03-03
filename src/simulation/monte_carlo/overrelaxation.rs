@@ -20,7 +20,7 @@ use super::{
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// see (https://arxiv.org/abs/hep-lat/0503041) using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
+/// see <https://arxiv.org/abs/hep-lat/0503041> using algorithm in section 2.1 up to step 2 using `\hat X_{NN}`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct OverrelaxationSweepRotation;
@@ -83,7 +83,7 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
 /// You need to use other methode with this one.
 /// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
 ///
-/// see (https://doi.org/10.1016/0370-2693(90)90032-2)
+/// see <https://doi.org/10.1016/0370-2693(90)90032-2>
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct OverrelaxationSweepReverse;
