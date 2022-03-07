@@ -56,7 +56,7 @@ pub use overrelaxation::*;
 ///
 /// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
 /// for _ in 0..10 {
-///     state = mh.get_next_element(state)?;
+///     state = mh.next_element(state)?;
 ///     // or state.monte_carlo_step(&mut hmc)?;
 ///     // operation to track the progress or the evolution
 /// }
@@ -75,7 +75,7 @@ where
     ///
     /// # Errors
     /// Return an error if the simulation failed
-    fn get_next_element(&mut self, state: State) -> Result<State, Self::Error>;
+    fn next_element(&mut self, state: State) -> Result<State, Self::Error>;
 }
 
 /// Some times is is esayer to just implement a potential next element, the rest is done automatically.
@@ -92,7 +92,7 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_potential_next_element<Rng>(
+    fn potential_next_element<Rng>(
         &mut self,
         state: &State,
         rng: &mut Rng,
@@ -103,8 +103,8 @@ where
     /// probability of the next element to replace the current one.
     ///
     /// by default it is Exp(-H_old) / Exp(-H_new).
-    fn get_probability_of_replacement(old_state: &State, new_state: &State) -> Real {
-        (old_state.get_hamiltonian_links() - new_state.get_hamiltonian_links())
+    fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
+        (old_state.hamiltonian_links() - new_state.hamiltonian_links())
             .exp()
             .min(1_f64)
             .max(0_f64)
@@ -114,7 +114,7 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next ellement cannot be generated.
-    fn get_next_element_default<Rng>(
+    fn next_element_default<Rng>(
         &mut self,
         state: State,
         rng: &mut Rng,
@@ -122,8 +122,8 @@ where
     where
         Rng: rand::Rng + ?Sized,
     {
-        let potential_next = self.get_potential_next_element(&state, rng)?;
-        let proba = Self::get_probability_of_replacement(&state, &potential_next)
+        let potential_next = self.potential_next_element(&state, rng)?;
+        let proba = Self::probability_of_replacement(&state, &potential_next)
             .min(1_f64)
             .max(0_f64);
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
@@ -253,8 +253,8 @@ where
 {
     type Error = T::Error;
 
-    fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        self.mcd.get_next_element_default(state, &mut self.rng)
+    fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
+        self.mcd.next_element_default(state, &mut self.rng)
     }
 }
 
@@ -287,7 +287,7 @@ where
 
 /// Get the delta of energy by changing a link.
 #[inline]
-fn get_delta_s_old_new_cmp<const D: usize>(
+fn delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
@@ -295,14 +295,14 @@ fn get_delta_s_old_new_cmp<const D: usize>(
     beta: Real,
     old_matrix: &na::Matrix3<Complex>,
 ) -> Real {
-    let a = get_staple(link_matrix, lattice, link);
+    let a = staple(link_matrix, lattice, link);
     -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::<D>::CA
 }
 
 // TODO move in state
 /// return the staple
 #[inline]
-fn get_staple<const D: usize>(
+fn staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclique<D>,
     link: &LatticeLinkCanonical<D>,
@@ -313,15 +313,15 @@ fn get_staple<const D: usize>(
         .filter(|dir_i| *dir_i != dir_j)
         .map(|dir_i| {
             let el_1 = link_matrix
-                .get_sij(link.pos(), dir_j, dir_i, lattice)
+                .sij(link.pos(), dir_j, dir_i, lattice)
                 .unwrap()
                 .adjoint();
             let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), -dir_i);
-            let u1 = link_matrix.get_matrix(&l_1, lattice).unwrap();
+            let u1 = link_matrix.matrix(&l_1, lattice).unwrap();
             let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &-dir_i), *dir_j);
-            let u2 = link_matrix.get_matrix(&l_2, lattice).unwrap().adjoint();
+            let u2 = link_matrix.matrix(&l_2, lattice).unwrap().adjoint();
             let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &-dir_i), *dir_i);
-            let u3 = link_matrix.get_matrix(&l_3, lattice).unwrap();
+            let u3 = link_matrix.matrix(&l_3, lattice).unwrap();
             el_1 + u1 * u2 * u3
         })
         .sum()

@@ -52,7 +52,7 @@ pub const PAULI_MATRICES: [&CMatrix2; 3] = [&PAULI_1, &PAULI_2, &PAULI_3];
 /// Note that it diverges from SU(2) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this bound it will not panic but can have unexpected results.
-pub fn get_random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix2
+pub fn random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix2
 where
     R: rand::Rng + ?Sized,
 {
@@ -70,11 +70,11 @@ where
         -x0_unsigned
     };
 
-    get_complex_matrix_from_vec(x0, x)
+    complex_matrix_from_vec(x0, x)
 }
 
 /// Return `x0 1 + i x_i * \sigma_i`.
-pub fn get_complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
+pub fn complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0)
         + x.iter()
             .enumerate()
@@ -101,7 +101,7 @@ pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
 }
 
 /// Get an Uniformly random SU(2) matrix.
-pub fn get_random_su2<Rng>(rng: &mut Rng) -> CMatrix2
+pub fn random_su2<Rng>(rng: &mut Rng) -> CMatrix2
 where
     Rng: rand::Rng + ?Sized,
 {
@@ -172,18 +172,18 @@ mod test {
     }
 
     #[test]
-    fn random_su2() {
+    fn random_su2_t() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         for _ in 0_u32..100_u32 {
-            let m = get_random_su2(&mut rng);
+            let m = random_su2(&mut rng);
             assert_matrix_is_su_2!(m, EPSILON);
         }
         for _ in 0_u32..100_u32 {
-            let m = get_random_su2(&mut rng);
+            let m = random_su2(&mut rng);
             assert!(is_matrix_su2(&m, EPSILON));
         }
         for _ in 0_u32..100_u32 {
-            let m = get_random_su2(&mut rng) * Complex::new(1.5_f64, 0.7_f64);
+            let m = random_su2(&mut rng) * Complex::new(1.5_f64, 0.7_f64);
             assert!(!is_matrix_su2(&m, EPSILON));
         }
     }

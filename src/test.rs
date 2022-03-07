@@ -26,11 +26,11 @@ fn test_itrerator(points: usize) {
     assert_eq!(link_count, 4 * points * points * points * points);
     assert_eq!(
         4 * points * points * points * points,
-        l.get_number_of_canonical_links_space()
+        l.number_of_canonical_links_space()
     );
     let pt_count = l.get_points().count();
     assert_eq!(pt_count, points * points * points * points);
-    assert_eq!(pt_count, l.get_number_of_points());
+    assert_eq!(pt_count, l.number_of_points());
 }
 
 #[test]
@@ -339,11 +339,11 @@ fn test_sim_hamiltonian() {
             &distribution,
         )
         .unwrap();
-    let h = simulation.get_hamiltonian_total();
+    let h = simulation.hamiltonian_total();
     let sim2 = simulation
         .simulate_sync(&SymplecticEuler::new(8), 0.000_1_f64)
         .unwrap();
-    let h2 = sim2.get_hamiltonian_total();
+    let h2 = sim2.hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64);
 }
@@ -368,11 +368,11 @@ fn test_gauss_law() {
     let iter_g_1 = simulation
         .lattice()
         .get_points()
-        .map(|el| simulation.get_gauss(&el).unwrap());
+        .map(|el| simulation.gauss(&el).unwrap());
     let mut iter_g_2 = simulation
         .lattice()
         .get_points()
-        .map(|el| sim2.get_gauss(&el).unwrap());
+        .map(|el| sim2.gauss(&el).unwrap());
     for g1 in iter_g_1 {
         let g2 = iter_g_2.next().unwrap();
         assert_eq_matrix!(g1, g2, 0.001_f64);
@@ -393,11 +393,11 @@ fn test_sim_hamiltonian_rayon() {
             &distribution,
         )
         .unwrap();
-    let h = simulation.get_hamiltonian_total();
+    let h = simulation.hamiltonian_total();
     let sim2 = simulation
         .simulate_sync(&SymplecticEulerRayon::new(), 0.000_1_f64)
         .unwrap();
-    let h2 = sim2.get_hamiltonian_total();
+    let h2 = sim2.hamiltonian_total();
     println!("h1: {}, h2: {}", h, h2);
     assert!(h - h2 < 0.01_f64);
 }
@@ -422,11 +422,11 @@ fn test_gauss_law_rayon() {
     let iter_g_1 = simulation
         .lattice()
         .get_points()
-        .map(|el| simulation.get_gauss(&el).unwrap());
+        .map(|el| simulation.gauss(&el).unwrap());
     let mut iter_g_2 = simulation
         .lattice()
         .get_points()
-        .map(|el| sim2.get_gauss(&el).unwrap());
+        .map(|el| sim2.gauss(&el).unwrap());
     for g1 in iter_g_1 {
         let g2 = iter_g_2.next().unwrap();
         assert_eq_matrix!(g1, g2, 0.001_f64);
@@ -602,10 +602,10 @@ fn othonomralization() {
 }
 
 #[test]
-fn random_su3() {
+fn random_su3_t() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     for _ in 0_u32..100_u32 {
-        test_matrix_is_su3(&get_random_su3(&mut rng));
+        test_matrix_is_su3(&random_su3(&mut rng));
     }
 }
 
@@ -692,17 +692,17 @@ fn test_leap_frog() {
     let number_of_pts = 4;
     let beta = 1_f64;
     let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
-    println!("h_l {}", state.get_hamiltonian_links());
+    println!("h_l {}", state.hamiltonian_links());
     let state_hmc =
         LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(
             state, &mut rng,
         );
-    let h1 = state_hmc.get_hamiltonian_total();
+    let h1 = state_hmc.hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc
         .simulate_using_leapfrog_n_auto(&SymplecticEulerRayon::new(), 0.01_f64, 1)
         .unwrap();
-    let h2 = state_hmc_2.get_hamiltonian_total();
+    let h2 = state_hmc_2.hamiltonian_total();
     println!("h_t {}", h2);
     println!("{}", (h1 - h2).exp());
 

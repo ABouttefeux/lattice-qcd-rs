@@ -64,19 +64,19 @@ impl<const D: usize> LatticeCyclique<D> {
     /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
     /// let point = LatticePoint::<4>::new([1, 0, 2, 0].into());
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, DirectionEnum::XNeg.into()),
+    ///     lattice.link_canonical(point, DirectionEnum::XNeg.into()),
     ///     LatticeLinkCanonical::new(LatticePoint::new([0, 0, 2, 0].into()), DirectionEnum::XPos.into()).unwrap()
     /// );
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, DirectionEnum::XPos.into()),
+    ///     lattice.link_canonical(point, DirectionEnum::XPos.into()),
     ///     LatticeLinkCanonical::new(LatticePoint::new([1, 0, 2, 0].into()), DirectionEnum::XPos.into()).unwrap()
     /// );
     /// assert_eq!(
-    ///     lattice.get_link_canonical(point, DirectionEnum::YNeg.into()),
+    ///     lattice.link_canonical(point, DirectionEnum::YNeg.into()),
     ///     LatticeLinkCanonical::new(LatticePoint::new([1, 3, 2, 0].into()), DirectionEnum::YPos.into()).unwrap()
     /// );
     /// ```
-    pub fn get_link_canonical(
+    pub fn link_canonical(
         &self,
         pos: LatticePoint<D>,
         dir: Direction<D>,
@@ -102,13 +102,13 @@ impl<const D: usize> LatticeCyclique<D> {
     /// let l = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
     /// let dir = Direction::new(0, true).unwrap();
     /// let pt = LatticePoint::new(SVector::<_, 3>::new(1, 2, 5));
-    /// let link = l.get_link(pt, dir);
+    /// let link = l.link(pt, dir);
     /// assert_eq!(
     ///     *link.pos(),
     ///     LatticePoint::new(SVector::<_, 3>::new(1, 2, 1))
     /// );
     /// ```
-    pub fn get_link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
+    pub fn link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
             pos_link[i] = pos[i] % self.dim();
@@ -119,8 +119,8 @@ impl<const D: usize> LatticeCyclique<D> {
     /// Transform a [`LatticeLink`] into a [`LatticeLinkCanonical`].
     ///
     /// See [`LatticeCyclique::get_link_canonical`] and [`LatticeLinkCanonical`].
-    pub fn get_canonical(&self, l: LatticeLink<D>) -> LatticeLinkCanonical<D> {
-        self.get_link_canonical(*l.pos(), *l.dir())
+    pub fn into_canonical(&self, l: LatticeLink<D>) -> LatticeLinkCanonical<D> {
+        self.link_canonical(*l.pos(), *l.dir())
     }
 
     /// Get the number of points in a single direction.
@@ -140,7 +140,7 @@ impl<const D: usize> LatticeCyclique<D> {
     pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
         return IteratorLatticeLinkCanonical::new(
             self,
-            self.get_link_canonical(
+            self.link_canonical(
                 LatticePoint::new_zero(),
                 *Direction::positive_directions().first().unwrap(),
             ),
@@ -167,12 +167,12 @@ impl<const D: usize> LatticeCyclique<D> {
     /// Total number of canonical links oriented in space for a set time.
     ///
     /// basically the number of element return by [`LatticeCyclique::get_links`]
-    pub fn get_number_of_canonical_links_space(&self) -> usize {
-        self.get_number_of_points() * D
+    pub fn number_of_canonical_links_space(&self) -> usize {
+        self.number_of_points() * D
     }
 
     /// Total number of point in the lattice for a set time.
-    pub fn get_number_of_points(&self) -> usize {
+    pub fn number_of_points(&self) -> usize {
         self.dim().pow(D.try_into().unwrap())
     }
 
@@ -250,12 +250,12 @@ impl<const D: usize> LatticeCyclique<D> {
 
     /// Retuns whether the number of canonical link is the same as the length of `links`
     pub fn has_compatible_lenght_links(&self, links: &LinkMatrix) -> bool {
-        self.get_number_of_canonical_links_space() == links.len()
+        self.number_of_canonical_links_space() == links.len()
     }
 
     /// Returns wether the number of point is the same as the length of `e_field`
     pub fn has_compatible_lenght_e_field(&self, e_field: &EField<D>) -> bool {
-        self.get_number_of_points() == e_field.len()
+        self.number_of_points() == e_field.len()
     }
 
     /// Retuns the length is compatible for both `links` and `e_field`.
@@ -332,8 +332,8 @@ impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D> {
         match self.element {
             None => (0, Some(0)),
             Some(element) => {
-                let val = self.lattice.get_number_of_canonical_links_space()
-                    - element.to_index(self.lattice);
+                let val =
+                    self.lattice.number_of_canonical_links_space() - element.to_index(self.lattice);
                 (val, Some(val))
             }
         }
@@ -557,7 +557,7 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
         match self.element {
             None => (0, Some(0)),
             Some(element) => {
-                let val = self.lattice.get_number_of_points() - element.to_index(self.lattice);
+                let val = self.lattice.number_of_points() - element.to_index(self.lattice);
                 (val, Some(val))
             }
         }
@@ -992,7 +992,8 @@ impl<const D: usize> Direction<D> {
 
     // TODO add const function for all direction once operation on const generic are added
     /// Get all direction with the sign `IS_POSITIVE`
-    pub const fn get_directions<const IS_POSITIVE: bool>() -> [Self; D] {
+    pub const fn directions_array<const IS_POSITIVE: bool>() -> [Self; D] {
+        // TODO use unsafe code to avoid the allocation
         let mut i = 0_usize;
         let mut array = [Direction {
             index_dir: 0,
@@ -1010,12 +1011,12 @@ impl<const D: usize> Direction<D> {
 
     /// Get all negative direction
     pub const fn negative_directions() -> [Self; D] {
-        Self::get_directions::<false>()
+        Self::directions_array::<false>()
     }
 
     /// Get all positive direction
     pub const fn positive_directions() -> [Self; D] {
-        Self::get_directions::<true>()
+        Self::directions_array::<true>()
     }
 
     /// Get if the position is positive.
@@ -1151,9 +1152,9 @@ impl<const D: usize> std::fmt::Display for Direction<D> {
 /// List all possible direction
 pub trait DirectionList: Sized {
     /// List all directions.
-    fn get_all_directions() -> &'static [Self];
+    fn directions() -> &'static [Self];
     /// List all positive directions.
-    fn get_all_positive_directions() -> &'static [Self];
+    fn positive_directions() -> &'static [Self];
 }
 
 implement_direction_list!();
@@ -1513,11 +1514,11 @@ impl std::fmt::Display for DirectionEnum {
 }
 
 impl DirectionList for DirectionEnum {
-    fn get_all_directions() -> &'static [Self] {
+    fn directions() -> &'static [Self] {
         &Self::DIRECTIONS
     }
 
-    fn get_all_positive_directions() -> &'static [Self] {
+    fn positive_directions() -> &'static [Self] {
         &Self::POSITIVES
     }
 }
@@ -1736,14 +1737,14 @@ mod test {
         assert_eq!(-DirectionEnum::XNeg, DirectionEnum::XPos);
         assert_eq!(-DirectionEnum::XPos, DirectionEnum::XNeg);
 
-        assert_eq!(DirectionEnum::get_all_directions().len(), 8);
-        assert_eq!(DirectionEnum::get_all_positive_directions().len(), 4);
+        assert_eq!(DirectionEnum::directions().len(), 8);
+        assert_eq!(DirectionEnum::positive_directions().len(), 4);
 
-        assert_eq!(Direction::<4>::get_all_directions().len(), 8);
-        assert_eq!(Direction::<4>::get_all_positive_directions().len(), 4);
+        assert_eq!(Direction::<4>::directions().len(), 8);
+        assert_eq!(Direction::<4>::positive_directions().len(), 4);
 
         let l = LatticeCyclique::new(1_f64, 4).unwrap();
-        for dir in Direction::<3>::get_all_directions() {
+        for dir in Direction::<3>::directions() {
             assert_eq!(
                 <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
                 dir.index()
@@ -1752,7 +1753,7 @@ mod test {
 
         let array_dir_name = ["X", "Y", "Z", "T"];
         let array_pos = ["positive", "negative"];
-        for (i, dir) in DirectionEnum::get_all_directions().iter().enumerate() {
+        for (i, dir) in DirectionEnum::directions().iter().enumerate() {
             assert_eq!(
                 dir.to_string(),
                 format!("{} {} direction", array_pos[i / 4], array_dir_name[i % 4])
@@ -1811,15 +1812,15 @@ mod test {
         let mut iterator = l.get_points();
         assert_eq!(
             iterator.size_hint(),
-            (l.get_number_of_points(), Some(l.get_number_of_points()))
+            (l.number_of_points(), Some(l.number_of_points()))
         );
         assert_eq!(iterator.size_hint(), (16, Some(16)));
         iterator.nth(9);
         assert_eq!(
             iterator.size_hint(),
             (
-                l.get_number_of_points() - 10,       // 6
-                Some(l.get_number_of_points() - 10)  // 6
+                l.number_of_points() - 10,       // 6
+                Some(l.number_of_points() - 10)  // 6
             )
         );
         assert!(iterator.nth(4).is_some());
@@ -1833,8 +1834,8 @@ mod test {
         assert_eq!(
             iterator.size_hint(),
             (
-                l.get_number_of_canonical_links_space(),
-                Some(l.get_number_of_canonical_links_space())
+                l.number_of_canonical_links_space(),
+                Some(l.number_of_canonical_links_space())
             )
         );
         assert_eq!(iterator.size_hint(), (16 * 2, Some(16 * 2)));
@@ -1842,8 +1843,8 @@ mod test {
         assert_eq!(
             iterator.size_hint(),
             (
-                l.get_number_of_canonical_links_space() - 10,       // 6
-                Some(l.get_number_of_canonical_links_space() - 10)  // 6
+                l.number_of_canonical_links_space() - 10,       // 6
+                Some(l.number_of_canonical_links_space() - 10)  // 6
             )
         );
         assert!(iterator.nth(20).is_some());

@@ -30,9 +30,9 @@ fn integrator() -> Result<(), Box<dyn Error>> {
 
     let integrator = SymplecticEulerRayon::new();
     let mut state_new = state_with_e.clone();
-    let h = state_new.get_hamiltonian_total();
+    let h = state_new.hamiltonian_total();
     state_new = state_new.simulate_symplectic_n(&integrator, DT, 10)?;
-    let h2 = state_new.get_hamiltonian_total();
+    let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_1_f64);
 
     let state_new = state_with_e.clone();
@@ -40,19 +40,19 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let state_new = state_new.simulate_leap_n(&integrator, DT, 1)?;
     let state_new = state_new.simulate_to_synchrone(&integrator, DT)?;
     let state_new = state_new.simulate_sync_n(&integrator, DT, 1)?;
-    let h2 = state_new.get_hamiltonian_total();
+    let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_01_f64);
 
     let state_new = state_with_e.clone();
     let state_new = state_new.simulate_using_leapfrog_n_auto(&integrator, DT, 10)?;
-    let h2 = state_new.get_hamiltonian_total();
+    let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_01_f64);
 
     let integrator = SymplecticEuler::default();
     let mut state_new = state_with_e.clone();
-    let h = state_new.get_hamiltonian_total();
+    let h = state_new.hamiltonian_total();
     state_new = state_new.simulate_symplectic_n(&integrator, DT, 10)?;
-    let h2 = state_new.get_hamiltonian_total();
+    let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_1_f64);
 
     let state_new = state_with_e.clone();
@@ -60,7 +60,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let state_new = state_new.simulate_leap_n(&integrator, DT, 2)?;
     let state_new = state_new.simulate_to_synchrone(&integrator, DT)?;
     let state_new = state_new.simulate_sync_n(&integrator, DT, 2)?;
-    let h2 = state_new.get_hamiltonian_total();
+    let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_01_f64);
 
     Ok(())

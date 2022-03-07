@@ -41,7 +41,7 @@ I will however commit to more stability once I am ready to release version `0.2.
 
 First let us see how to do a simulation on a 10x10x10x10 lattice with beta = 1. We are looking to compute `1/3 <Re(Tr(P_{ij}))>` the trace of all plaquette after a certain number of steps. In our cases Beta is small so we choose 100'000 steps.
 
-```ignore
+```rust,ignore
 extern crate lattice_qcd_rs as lq;
 extern crate rand_xoshiro;
 

@@ -11,3 +11,4 @@ First release
 - correct doctest Su3Adjoint::as_mut_vector
 - migrate to rust 2021
 - use readme in librairies root documentation
+- rename lots of gettet to match C-GETTER convention

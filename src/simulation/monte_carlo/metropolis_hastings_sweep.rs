@@ -17,7 +17,7 @@ use super::{
         },
         state::{LatticeState, LatticeStateDefault},
     },
-    get_delta_s_old_new_cmp, MonteCarlo,
+    delta_s_old_new_cmp, MonteCarlo,
 };
 
 /// Metropolis Hastings methode by doing a pass on all points
@@ -108,7 +108,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     }
 
     #[inline]
-    fn get_delta_s<const D: usize>(
+    fn delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
         link: &LatticeLinkCanonical<D>,
@@ -116,13 +116,13 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         beta: Real,
     ) -> Real {
         let old_matrix = link_matrix
-            .get_matrix(&LatticeLink::from(*link), lattice)
+            .matrix(&LatticeLink::from(*link), lattice)
             .unwrap();
-        get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
+        delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
 
     #[inline]
-    fn get_potential_modif<const D: usize>(
+    fn potential_modif<const D: usize>(
         &mut self,
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
@@ -131,7 +131,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         let old_link_m = state.link_matrix()[index];
         let mut new_link = old_link_m;
         for _ in 0..self.number_of_update {
-            let rand_m = su3::orthonormalize_matrix(&su3::get_random_su3_close_to_unity(
+            let rand_m = su3::orthonormalize_matrix(&su3::random_su3_close_to_unity(
                 self.spread,
                 &mut self.rng,
             ));
@@ -142,7 +142,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     }
 
     #[inline]
-    fn get_next_element_default<const D: usize>(
+    fn next_element_default<const D: usize>(
         &mut self,
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
@@ -150,8 +150,8 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         self.number_replace_last = 0;
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
-            let potential_modif = self.get_potential_modif(&state, &link);
-            let proba = (-Self::get_delta_s(
+            let potential_modif = self.potential_modif(&state, &link);
+            let proba = (-Self::delta_s(
                 state.link_matrix(),
                 state.lattice(),
                 &link,
@@ -165,10 +165,10 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
             let d = rand::distributions::Bernoulli::new(proba).unwrap();
             if d.sample(&mut self.rng) {
                 self.number_replace_last += 1;
-                *state.get_link_mut(&link).unwrap() = potential_modif;
+                *state.link_mut(&link).unwrap() = potential_modif;
             }
         });
-        self.prob_replace_mean /= lattice.get_number_of_canonical_links_space() as f64;
+        self.prob_replace_mean /= lattice.number_of_canonical_links_space() as f64;
         state
     }
 }
@@ -192,11 +192,11 @@ where
     type Error = Never;
 
     #[inline]
-    fn get_next_element(
+    fn next_element(
         &mut self,
         state: LatticeStateDefault<D>,
     ) -> Result<LatticeStateDefault<D>, Self::Error> {
-        Ok(self.get_next_element_default(state))
+        Ok(self.next_element_default(state))
     }
 }
 

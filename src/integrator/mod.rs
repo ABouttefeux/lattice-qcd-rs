@@ -51,8 +51,8 @@
 //! # let integrator = SymplecticEuler::default();
 //! # let state2 = integrator.integrate_sync_sync(&state1, 0.000_1_f64)?;
 //! # let state3 = integrator.integrate_sync_sync(&state2, 0.000_1_f64)?;
-//! let h = state1.get_hamiltonian_total();
-//! let h2 = state3.get_hamiltonian_total();
+//! let h = state1.hamiltonian_total();
+//! let h2 = state3.hamiltonian_total();
 //! println!("The error on the Hamiltonian is {}", h - h2);
 //! #     Ok(())
 //! # }
@@ -130,7 +130,7 @@ where
     ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
     ///     &mut rng,
     /// );
-    /// let h = state.get_hamiltonian_total();
+    /// let h = state.hamiltonian_total();
     /// let integrator = SymplecticEulerRayon::default();
     /// let mut leap_frog = integrator.integrate_sync_leap(&state, 0.000_001_f64)?;
     /// drop(state);
@@ -139,7 +139,7 @@ where
     ///     leap_frog = integrator.integrate_leap_leap(&leap_frog, 0.000_001_f64)?;
     /// }
     /// let state = integrator.integrate_leap_sync(&leap_frog, 0.000_001_f64)?;
-    /// let h2 = state.get_hamiltonian_total();
+    /// let h2 = state.hamiltonian_total();
     ///
     /// println!("The error on the Hamiltonian is {}", h - h2);
     /// #     Ok(())
@@ -190,14 +190,14 @@ where
     ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
     ///     &mut rng,
     /// );
-    /// let h = state.get_hamiltonian_total();
+    /// let h = state.hamiltonian_total();
     ///
     /// let integrator = SymplecticEulerRayon::default();
     /// for _ in 0..1 {
     ///     // Realistically you would want more steps
     ///     state = integrator.integrate_symplectic(&state, 0.000_001_f64)?;
     /// }
-    /// let h2 = state.get_hamiltonian_total();
+    /// let h2 = state.hamiltonian_total();
     ///
     /// println!("The error on the Hamiltonian is {}", h - h2);
     /// #     Ok(())
@@ -228,11 +228,10 @@ where
 {
     let canonical_link = LatticeLink::from(*link);
     let initial_value = link_matrix
-        .get_matrix(&canonical_link, lattice)
+        .matrix(&canonical_link, lattice)
         .expect("Link matrix not found");
     initial_value
-        + State::get_derivative_u(link, link_matrix, e_field, lattice)
-            .expect("Derivative not found")
+        + State::derivative_u(link, link_matrix, e_field, lattice).expect("Derivative not found")
             * Complex::from(delta_t)
 }
 
@@ -250,10 +249,8 @@ fn integrate_efield<State, const D: usize>(
 where
     State: LatticeStateWithEField<D>,
 {
-    let initial_value = e_field
-        .get_e_vec(point, lattice)
-        .expect("E Field not found");
-    let deriv = State::get_derivative_e(point, link_matrix, e_field, lattice)
-        .expect("Derivative not found");
+    let initial_value = e_field.e_vec(point, lattice).expect("E Field not found");
+    let deriv =
+        State::derivative_e(point, link_matrix, e_field, lattice).expect("Derivative not found");
     initial_value + deriv.map(|el| el * delta_t)
 }

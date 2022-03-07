@@ -15,7 +15,7 @@ use super::{
         },
         state::{LatticeState, LatticeStateDefault},
     },
-    get_staple, MonteCarlo,
+    staple, MonteCarlo,
 };
 
 /// Pseudo heat bath algorithm
@@ -69,7 +69,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
 
     /// Apply te SU2 heat bath methode.
     #[inline]
-    fn get_heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
+    fn heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
         let staple_coeef = staple.determinant().real().sqrt();
         if staple_coeef.is_normal() {
             let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coeef);
@@ -80,7 +80,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         else {
             // just return a random matrix as all matrices
             // have the same selection probability
-            su2::get_random_su2(&mut self.rng)
+            su2::random_su2(&mut self.rng)
         }
     }
 
@@ -93,17 +93,15 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     ) -> na::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
-            .get_matrix(&link.into(), state.lattice())
+            .matrix(&link.into(), state.lattice())
             .unwrap();
-        let a = get_staple(state.link_matrix(), state.lattice(), link);
+        let a = staple(state.link_matrix(), state.lattice(), link);
 
-        let r =
-            su3::get_r(self.get_heat_bath_su2(su3::get_su2_r_unorm(link_matrix * a), state.beta()));
-        let s = su3::get_s(
-            self.get_heat_bath_su2(su3::get_su2_s_unorm(r * link_matrix * a), state.beta()),
-        );
+        let r = su3::get_r(self.heat_bath_su2(su3::get_su2_r_unorm(link_matrix * a), state.beta()));
+        let s =
+            su3::get_s(self.heat_bath_su2(su3::get_su2_s_unorm(r * link_matrix * a), state.beta()));
         let t = su3::get_t(
-            self.get_heat_bath_su2(su3::get_su2_t_unorm(s * r * link_matrix * a), state.beta()),
+            self.heat_bath_su2(su3::get_su2_t_unorm(s * r * link_matrix * a), state.beta()),
         );
 
         t * s * r * link_matrix
@@ -111,14 +109,14 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
 
     #[inline]
     // TODO improve error handeling
-    fn get_next_element_default<const D: usize>(
+    fn next_element_default<const D: usize>(
         &mut self,
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.get_modif(&state, &link);
-            *state.get_link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).unwrap() = potential_modif;
         });
         state
     }
@@ -149,10 +147,10 @@ where
     type Error = Never;
 
     #[inline]
-    fn get_next_element(
+    fn next_element(
         &mut self,
         state: LatticeStateDefault<D>,
     ) -> Result<LatticeStateDefault<D>, Self::Error> {
-        Ok(self.get_next_element_default(state))
+        Ok(self.next_element_default(state))
     }
 }

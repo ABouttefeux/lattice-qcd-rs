@@ -71,10 +71,10 @@ impl FactorialStorageDyn {
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
     /// f.build_storage(6);
-    /// assert_eq!(*f.try_get_factorial(6).unwrap(), 720);
+    /// assert_eq!(*f.try_factorial(6).unwrap(), 720);
     /// ```
     pub fn build_storage(&mut self, value: usize) {
-        self.get_factorial(value);
+        self.factorial(value);
     }
 
     /// Get the factorial number. If it is not already computed build internal storage
@@ -86,10 +86,10 @@ impl FactorialStorageDyn {
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(6), 720);
-    /// assert_eq!(f.get_factorial(4), 24);
+    /// assert_eq!(f.factorial(6), 720);
+    /// assert_eq!(f.factorial(4), 24);
     /// ```
-    pub fn get_factorial(&mut self, value: usize) -> FactorialNumber {
+    pub fn factorial(&mut self, value: usize) -> FactorialNumber {
         let mut len = self.data.len();
         if len == 0 {
             self.data.push(1);
@@ -111,11 +111,11 @@ impl FactorialStorageDyn {
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(4), 24);
-    /// assert_eq!(*f.try_get_factorial(4).unwrap(), 24);
-    /// assert_eq!(f.try_get_factorial(6), None);
+    /// assert_eq!(f.factorial(4), 24);
+    /// assert_eq!(*f.try_factorial(4).unwrap(), 24);
+    /// assert_eq!(f.try_factorial(6), None);
     /// ```
-    pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
+    pub fn try_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
 
@@ -124,11 +124,11 @@ impl FactorialStorageDyn {
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(4), 24);
-    /// assert_eq!(f.get_factorial_no_storage(6), 720);
-    /// assert_eq!(f.try_get_factorial(6), None);
+    /// assert_eq!(f.factorial(4), 24);
+    /// assert_eq!(f.factorial_no_storage(6), 720);
+    /// assert_eq!(f.try_factorial(6), None);
     /// ```
-    pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
+    pub fn factorial_no_storage(&self, value: usize) -> FactorialNumber {
         let mut value_m: FactorialNumber = self.data[value.min(self.data.len() - 1)];
         for i in self.data.len() - 1..value {
             value_m *= TryInto::<FactorialNumber>::try_into(i + 1).unwrap();

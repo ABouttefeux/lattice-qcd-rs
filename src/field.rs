@@ -625,10 +625,10 @@ impl LinkMatrix {
     ) -> Self {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
         // using a for loop imporves performance. ( probably because the vector is pre allocated).
-        let mut data = Vec::with_capacity(l.get_number_of_canonical_links_space());
+        let mut data = Vec::with_capacity(l.number_of_canonical_links_space());
         for _ in l.get_links() {
             // the iterator *should* be in order
-            let matrix = su3::get_random_su3(rng);
+            let matrix = su3::random_su3(rng);
             data.push(matrix);
         }
         Self { data }
@@ -666,10 +666,10 @@ impl LinkMatrix {
         let data = run_pool_parallel_vec_with_initialisation_mutable(
             l.get_links(),
             &(),
-            &|rng, _, _| su3::get_random_su3(rng),
+            &|rng, _, _| su3::random_su3(rng),
             rand::thread_rng,
             number_of_thread,
-            l.get_number_of_canonical_links_space(),
+            l.number_of_canonical_links_space(),
             l,
             &CMatrix3::zeros(),
         )?;
@@ -691,18 +691,18 @@ impl LinkMatrix {
     /// ```
     pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
         Self {
-            data: vec![CMatrix3::identity(); l.get_number_of_canonical_links_space()],
+            data: vec![CMatrix3::identity(); l.number_of_canonical_links_space()],
         }
     }
 
     /// get the link matrix associated to given link using the notation
     /// $`U_{-i}(x) = U^\dagger_{i}(x-i)`$
-    pub fn get_matrix<const D: usize>(
+    pub fn matrix<const D: usize>(
         &self,
         link: &LatticeLink<D>,
         l: &LatticeCyclique<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
-        let link_c = l.get_canonical(*link);
+        let link_c = l.into_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))?;
         if link.is_dir_negative() {
             // that means the the link was in the negative direction
@@ -714,33 +714,33 @@ impl LinkMatrix {
     }
 
     /// Get $`S_ij(x) = U_j(x) U_i(x+j) U^\dagger_j(x+i)`$.
-    pub fn get_sij<const D: usize>(
+    pub fn sij<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
-        let u_j = self.get_matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
+        let u_j = self.matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
-        let u_i_p_j = self.get_matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
+        let u_i_p_j = self.matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
         let point_pi = lattice.add_point_direction(*point, dir_i);
         let u_j_pi_d = self
-            .get_matrix(&LatticeLink::new(point_pi, *dir_j), lattice)?
+            .matrix(&LatticeLink::new(point_pi, *dir_j), lattice)?
             .adjoint();
         Some(u_j * u_i_p_j * u_j_pi_d)
     }
 
     /// Get the plaquette $`P_{ij}(x) = U_i(x) S^\dagger_ij(x)`$.
-    pub fn get_pij<const D: usize>(
+    pub fn pij<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
-        let s_ij = self.get_sij(point, dir_i, dir_j, lattice)?;
-        let u_i = self.get_matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
+        let s_ij = self.sij(point, dir_i, dir_j, lattice)?;
+        let u_i = self.matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
     }
 
@@ -750,7 +750,7 @@ impl LinkMatrix {
         &self,
         lattice: &LatticeCyclique<D>,
     ) -> Option<na::Complex<Real>> {
-        if lattice.get_number_of_canonical_links_space() != self.len() {
+        if lattice.number_of_canonical_links_space() != self.len() {
             return None;
         }
         // the order does not matter as we sum
@@ -765,8 +765,7 @@ impl LinkMatrix {
                             .iter()
                             .filter(|dir_j| dir_i.index() < dir_j.index())
                             .map(|dir_j| {
-                                self.get_pij(&point, dir_i, dir_j, lattice)
-                                    .map(|el| el.trace())
+                                self.pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                             })
                             .sum::<Option<na::Complex<Real>>>()
                     })
@@ -774,12 +773,12 @@ impl LinkMatrix {
             })
             .sum::<Option<na::Complex<Real>>>()?;
         let number_of_directions = (D * (D - 1)) / 2;
-        let number_of_plaquette = (lattice.get_number_of_points() * number_of_directions) as f64;
+        let number_of_plaquette = (lattice.number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
     }
 
     /// Get the clover, used for F_mu_nu tensor
-    pub fn get_clover<const D: usize>(
+    pub fn clover<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
@@ -787,43 +786,43 @@ impl LinkMatrix {
         lattice: &LatticeCyclique<D>,
     ) -> Option<CMatrix3> {
         Some(
-            self.get_pij(point, dir_i, dir_j, lattice)?
-                + self.get_pij(point, dir_j, &-dir_i, lattice)?
-                + self.get_pij(point, &-dir_i, &-dir_j, lattice)?
-                + self.get_pij(point, &-dir_j, dir_i, lattice)?,
+            self.pij(point, dir_i, dir_j, lattice)?
+                + self.pij(point, dir_j, &-dir_i, lattice)?
+                + self.pij(point, &-dir_i, &-dir_j, lattice)?
+                + self.pij(point, &-dir_j, dir_i, lattice)?,
         )
     }
 
     /// Get the `F^{ij}` tensor using the clover appropriation. The direction should be set to positive
     /// See arXive:1512.02374.
     // TODO negative directions
-    pub fn get_f_mu_nu<const D: usize>(
+    pub fn f_mu_nu<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<CMatrix3> {
-        let m = self.get_clover(point, dir_i, dir_j, lattice)?
-            - self.get_clover(point, dir_j, dir_i, lattice)?;
+        let m = self.clover(point, dir_i, dir_j, lattice)?
+            - self.clover(point, dir_j, dir_i, lattice)?;
         Some(m / Complex::from(8_f64 * lattice.size() * lattice.size()))
     }
 
     /// Get the chromomagentic field at a given point
-    pub fn get_magnetic_field_vec<const D: usize>(
+    pub fn magnetic_field_vec<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
         for dir in &Direction::<D>::positive_directions() {
-            vec[dir.index()] = self.get_magnetic_field(point, dir, lattice)?;
+            vec[dir.index()] = self.magnetic_field(point, dir, lattice)?;
         }
         Some(vec)
     }
 
     /// Get the chromomagentic field at a given point alongisde a given direction
-    pub fn get_magnetic_field<const D: usize>(
+    pub fn magnetic_field<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir: &Direction<D>,
@@ -835,7 +834,7 @@ impl LinkMatrix {
                 Direction::<D>::positive_directions()
                     .iter()
                     .map(|dir_j| {
-                        let f_mn = self.get_f_mu_nu(point, dir_i, dir_j, lattice)?;
+                        let f_mn = self.f_mu_nu(point, dir_i, dir_j, lattice)?;
                         let lc = Complex::from(
                             levi_civita(&[dir.index(), dir_i.index(), dir_j.index()]).to_f64(),
                         );
@@ -848,12 +847,12 @@ impl LinkMatrix {
     }
 
     /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
-    pub fn get_magnetic_field_link<const D: usize>(
+    pub fn magnetic_field_link<const D: usize>(
         &self,
         link: &LatticeLink<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
-        self.get_magnetic_field(link.pos(), link.dir(), lattice)
+        self.magnetic_field(link.pos(), link.dir(), lattice)
     }
 
     /// Return the number of elements.
@@ -1061,7 +1060,7 @@ impl<const D: usize> EField<D> {
         rng: &mut Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
-        let mut data = Vec::with_capacity(l.get_number_of_points());
+        let mut data = Vec::with_capacity(l.number_of_points());
         for _ in l.get_points() {
             // iterator *should* be ordoned
             data.push(SVector::<Su3Adjoint, D>::from_fn(|_, _| {
@@ -1108,12 +1107,12 @@ impl<const D: usize> EField<D> {
     pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
         Self {
-            data: vec![SVector::<Su3Adjoint, D>::from_element(p1); l.get_number_of_points()],
+            data: vec![SVector::<Su3Adjoint, D>::from_element(p1); l.number_of_points()],
         }
     }
 
     /// Get `E(point) = [E_x(point), E_y(point), E_z(point)]`.
-    pub fn get_e_vec(
+    pub fn e_vec(
         &self,
         point: &LatticePoint<D>,
         l: &LatticeCyclique<D>,
@@ -1123,13 +1122,13 @@ impl<const D: usize> EField<D> {
 
     /// Get `E_{dir}(point)`. The sign of the direction does not change the output. i.e.
     /// `E_{-dir}(point) = E_{dir}(point)`.
-    pub fn get_e_field(
+    pub fn e_field(
         &self,
         point: &LatticePoint<D>,
         dir: &Direction<D>,
         l: &LatticeCyclique<D>,
     ) -> Option<&Su3Adjoint> {
-        let value = self.get_e_vec(point, l);
+        let value = self.e_vec(point, l);
         match value {
             Some(vec) => vec.get(dir.index()),
             None => None,
@@ -1143,24 +1142,24 @@ impl<const D: usize> EField<D> {
 
     /// Return the Gauss parameter `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
     #[inline]
-    pub fn get_gauss(
+    pub fn gauss(
         &self,
         link_matrix: &LinkMatrix,
         point: &LatticePoint<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<CMatrix3> {
-        if lattice.get_number_of_points() != self.len()
-            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        if lattice.number_of_points() != self.len()
+            || lattice.number_of_canonical_links_space() != link_matrix.len()
         {
             return None;
         }
         Direction::positive_directions()
             .iter()
             .map(|dir| {
-                let e_i = self.get_e_field(point, dir, lattice)?;
-                let u_mi = link_matrix.get_matrix(&LatticeLink::new(*point, -*dir), lattice)?;
+                let e_i = self.e_field(point, dir, lattice)?;
+                let u_mi = link_matrix.matrix(&LatticeLink::new(*point, -*dir), lattice)?;
                 let p_mi = lattice.add_point_direction(*point, &-dir);
-                let e_m_i = self.get_e_field(&p_mi, dir, lattice)?;
+                let e_m_i = self.e_field(&p_mi, dir, lattice)?;
                 Some(e_i.to_matrix() - u_mi * e_m_i.to_matrix() * u_mi.adjoint())
             })
             .sum::<Option<CMatrix3>>()
@@ -1168,13 +1167,13 @@ impl<const D: usize> EField<D> {
 
     /// Get the deviation from the Gauss law
     #[inline]
-    pub fn get_gauss_sum_div(
+    pub fn gauss_sum_div(
         &self,
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
     ) -> Option<Real> {
-        if lattice.get_number_of_points() != self.len()
-            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        if lattice.number_of_points() != self.len()
+            || lattice.number_of_canonical_links_space() != link_matrix.len()
         {
             return None;
         }
@@ -1182,7 +1181,7 @@ impl<const D: usize> EField<D> {
             .get_points()
             .par_bridge()
             .map(|point| {
-                self.get_gauss(link_matrix, &point, lattice).map(|el| {
+                self.gauss(link_matrix, &point, lattice).map(|el| {
                     (su3::GENERATORS.iter().copied().sum::<CMatrix3>() * el)
                         .trace()
                         .abs()
@@ -1242,19 +1241,19 @@ impl<const D: usize> EField<D> {
         // TODO improve
         const NUMBER_FOR_LOOP: usize = 4;
 
-        if lattice.get_number_of_points() != self.len()
-            || lattice.get_number_of_canonical_links_space() != link_matrix.len()
+        if lattice.number_of_points() != self.len()
+            || lattice.number_of_canonical_links_space() != link_matrix.len()
         {
             return None;
         }
         let mut return_val = self.project_to_gauss_step(link_matrix, lattice);
         loop {
-            let val_dif = return_val.get_gauss_sum_div(link_matrix, lattice)?;
+            let val_dif = return_val.gauss_sum_div(link_matrix, lattice)?;
             //println!("diff : {}", val_dif);
             if val_dif.is_nan() {
                 return None;
             }
-            if val_dif <= f64::EPSILON * (lattice.get_number_of_points() * 4 * 8 * 10) as f64 {
+            if val_dif <= f64::EPSILON * (lattice.number_of_points() * 4 * 8 * 10) as f64 {
                 break;
             }
             for _ in 0_usize..NUMBER_FOR_LOOP {
@@ -1282,15 +1281,15 @@ impl<const D: usize> EField<D> {
             .collect::<Vec<LatticePoint<D>>>()
             .par_iter()
             .map(|point| {
-                let e = self.get_e_vec(point, lattice).unwrap();
+                let e = self.e_vec(point, lattice).unwrap();
                 SVector::<_, D>::from_fn(|index_dir, _| {
                     let dir = Direction::<D>::positive_directions()[index_dir];
                     let u = link_matrix
-                        .get_matrix(&LatticeLink::new(*point, dir), lattice)
+                        .matrix(&LatticeLink::new(*point, dir), lattice)
                         .unwrap();
-                    let gauss = self.get_gauss(link_matrix, point, lattice).unwrap();
+                    let gauss = self.gauss(link_matrix, point, lattice).unwrap();
                     let gauss_p = self
-                        .get_gauss(
+                        .gauss(
                             link_matrix,
                             &lattice.add_point_direction(*point, &dir),
                             lattice,
@@ -1441,12 +1440,12 @@ mod test {
             Su3Adjoint::from([2_f64; 8]),
         ])]);
         assert_eq!(
-            e.get_e_field(
+            e.e_field(
                 &LatticePoint::new([0, 0, 0, 0].into()),
                 &lattice::DirectionEnum::XPos.into(),
                 &l
             ),
-            e.get_e_field(
+            e.e_field(
                 &LatticePoint::new([0, 0, 0, 0].into()),
                 &lattice::DirectionEnum::XNeg.into(),
                 &l
@@ -1560,27 +1559,25 @@ mod test {
         let dir_y = Direction::new(1, true).unwrap();
         let dir_z = Direction::new(2, true).unwrap();
         let clover = link_matrix
-            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .clover(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::identity() * Complex::from(4_f64), clover, EPSILON);
         let f = link_matrix
-            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .f_mu_nu(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), f, EPSILON);
         let b = link_matrix
-            .get_magnetic_field(&point, &dir_x, &lattice)
+            .magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
-        let b_vec = link_matrix
-            .get_magnetic_field_vec(&point, &lattice)
-            .unwrap();
+        let b_vec = link_matrix.magnetic_field_vec(&point, &lattice).unwrap();
         for i in &b_vec {
             assert_eq_matrix!(CMatrix3::zeros(), i, EPSILON);
         }
         // ---
         link_matrix[0] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
         let clover = link_matrix
-            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .clover(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(2_f64, 0_f64),
@@ -1588,7 +1585,7 @@ mod test {
             EPSILON
         );
         let clover = link_matrix
-            .get_clover(&point, &dir_y, &dir_x, &lattice)
+            .clover(&point, &dir_y, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(2_f64, 0_f64),
@@ -1596,7 +1593,7 @@ mod test {
             EPSILON
         );
         let f = link_matrix
-            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .f_mu_nu(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(0_f64, 0_f64),
@@ -1604,18 +1601,16 @@ mod test {
             EPSILON
         );
         let b = link_matrix
-            .get_magnetic_field(&point, &dir_x, &lattice)
+            .magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
-        let b_vec = link_matrix
-            .get_magnetic_field_vec(&point, &lattice)
-            .unwrap();
+        let b_vec = link_matrix.magnetic_field_vec(&point, &lattice).unwrap();
         for i in &b_vec {
             assert_eq_matrix!(CMatrix3::zeros(), i, EPSILON);
         }
         assert_eq_matrix!(
             link_matrix
-                .get_magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
+                .magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
                 .unwrap(),
             b,
             EPSILON
@@ -1625,7 +1620,7 @@ mod test {
         let link = LatticeLinkCanonical::new([1, 0, 0].into(), dir_y).unwrap();
         link_matrix[link.to_index(&lattice)] = CMatrix3::identity() * Complex::new(0_f64, 1_f64);
         let clover = link_matrix
-            .get_clover(&point, &dir_x, &dir_y, &lattice)
+            .clover(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(3_f64, 1_f64),
@@ -1633,7 +1628,7 @@ mod test {
             EPSILON
         );
         let clover = link_matrix
-            .get_clover(&point, &dir_y, &dir_x, &lattice)
+            .clover(&point, &dir_y, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(3_f64, -1_f64),
@@ -1641,7 +1636,7 @@ mod test {
             EPSILON
         );
         let f = link_matrix
-            .get_f_mu_nu(&point, &dir_x, &dir_y, &lattice)
+            .f_mu_nu(&point, &dir_x, &dir_y, &lattice)
             .unwrap();
         assert_eq_matrix!(
             CMatrix3::identity() * Complex::new(0_f64, 0.25_f64),
@@ -1649,22 +1644,22 @@ mod test {
             EPSILON
         );
         let b = link_matrix
-            .get_magnetic_field(&point, &dir_x, &lattice)
+            .magnetic_field(&point, &dir_x, &lattice)
             .unwrap();
         assert_eq_matrix!(CMatrix3::zeros(), b, EPSILON);
         assert_eq_matrix!(
             link_matrix
-                .get_magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
+                .magnetic_field_link(&LatticeLink::new(point, dir_x), &lattice)
                 .unwrap(),
             b,
             EPSILON
         );
         let b = link_matrix
-            .get_magnetic_field(&point, &dir_z, &lattice)
+            .magnetic_field(&point, &dir_z, &lattice)
             .unwrap();
         assert_eq_matrix!(
             link_matrix
-                .get_magnetic_field_link(&LatticeLink::new(point, dir_z), &lattice)
+                .magnetic_field_link(&LatticeLink::new(point, dir_z), &lattice)
                 .unwrap(),
             b,
             EPSILON
@@ -1675,12 +1670,10 @@ mod test {
             EPSILON
         );
         let b_2 = link_matrix
-            .get_magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice)
+            .magnetic_field(&[4, 0, 0].into(), &dir_z, &lattice)
             .unwrap();
         assert_eq_matrix!(b, b_2, EPSILON);
-        let b_vec = link_matrix
-            .get_magnetic_field_vec(&point, &lattice)
-            .unwrap();
+        let b_vec = link_matrix.magnetic_field_vec(&point, &lattice).unwrap();
         for (index, m) in b_vec.iter().enumerate() {
             if index == 2 {
                 assert_eq_matrix!(m, b, EPSILON);

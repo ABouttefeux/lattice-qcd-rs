@@ -182,14 +182,14 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
+    fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
             state,
             self.rng_mut(),
         );
         self.internal
-            .get_next_element_default(state_internal, &mut self.rng)
-            .map(|el| el.get_state_owned())
+            .next_element_default(state_internal, &mut self.rng)
+            .map(|el| el.state_owned())
     }
 }
 
@@ -276,7 +276,7 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_potential_next_element<Rng>(
+    fn potential_next_element<Rng>(
         &mut self,
         state: &State,
         _rng: &mut Rng,
@@ -287,8 +287,8 @@ where
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
-    fn get_probability_of_replacement(old_state: &State, new_state: &State) -> Real {
-        (old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total())
+    fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
+        (old_state.hamiltonian_total() - new_state.hamiltonian_total())
             .exp()
             .min(1_f64)
             .max(0_f64)
@@ -454,14 +454,14 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
+    fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
             state,
             self.rng_mut(),
         );
         self.internal
-            .get_next_element_default(state_internal, &mut self.rng)
-            .map(|el| el.get_state_owned())
+            .next_element_default(state_internal, &mut self.rng)
+            .map(|el| el.state_owned())
     }
 }
 
@@ -563,7 +563,7 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
-    fn get_potential_next_element<Rng>(
+    fn potential_next_element<Rng>(
         &mut self,
         state: &State,
         _rng: &mut Rng,
@@ -574,14 +574,14 @@ where
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
-    fn get_probability_of_replacement(old_state: &State, new_state: &State) -> Real {
-        (old_state.get_hamiltonian_total() - new_state.get_hamiltonian_total())
+    fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
+        (old_state.hamiltonian_total() - new_state.hamiltonian_total())
             .exp()
             .min(1_f64)
             .max(0_f64)
     }
 
-    fn get_next_element_default<Rng>(
+    fn next_element_default<Rng>(
         &mut self,
         state: State,
         rng: &mut Rng,
@@ -589,8 +589,8 @@ where
     where
         Rng: rand::Rng + ?Sized,
     {
-        let potential_next = self.get_potential_next_element(&state, rng)?;
-        let proba = Self::get_probability_of_replacement(&state, &potential_next)
+        let potential_next = self.potential_next_element(&state, rng)?;
+        let proba = Self::probability_of_replacement(&state, &potential_next)
             .min(1_f64)
             .max(0_f64);
         self.prob_replace_last = proba;

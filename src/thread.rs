@@ -303,7 +303,7 @@ where
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     rand::thread_rng,
 ///     4,
-///     l.get_number_of_canonical_links_space(),
+///     l.number_of_canonical_links_space(),
 /// )?;
 /// # Ok(())
 /// # }
@@ -422,7 +422,7 @@ where
 ///     &c,
 ///     &|i: &LatticePoint<4>, c: &usize| i[0] * c,
 ///     4,
-///     l.get_number_of_canonical_links_space(),
+///     l.number_of_canonical_links_space(),
 ///     &l,
 ///     &0,
 /// )?;
@@ -518,7 +518,7 @@ where
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
 ///     rand::thread_rng,
 ///     4,
-///     l.get_number_of_canonical_links_space(),
+///     l.number_of_canonical_links_space(),
 ///     &l,
 ///     &nalgebra::Matrix3::<nalgebra::Complex<f64>>::zeros(),
 /// )?;

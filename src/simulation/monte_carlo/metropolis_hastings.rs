@@ -20,7 +20,7 @@ use super::{
         },
         state::{LatticeState, LatticeStateDefault, LatticeStateNew},
     },
-    get_delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault,
+    delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault,
 };
 
 /// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead when applicable.
@@ -89,7 +89,7 @@ where
 {
     type Error = State::Error;
 
-    fn get_potential_next_element<Rng>(
+    fn potential_next_element<Rng>(
         &mut self,
         state: &State,
         rng: &mut Rng,
@@ -101,7 +101,7 @@ where
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
             let pos = d.sample(rng);
-            link_matrix[pos] *= su3::get_random_su3_close_to_unity(self.spread, rng);
+            link_matrix[pos] *= su3::random_su3_close_to_unity(self.spread, rng);
         });
         State::new(
             state.lattice().clone(),
@@ -194,7 +194,7 @@ where
 {
     type Error = State::Error;
 
-    fn get_potential_next_element<Rng>(
+    fn potential_next_element<Rng>(
         &mut self,
         state: &State,
         rng: &mut Rng,
@@ -206,7 +206,7 @@ where
         let mut link_matrix = state.link_matrix().data().clone();
         (0..self.number_of_update).for_each(|_| {
             let pos = d.sample(rng);
-            link_matrix[pos] *= su3::get_random_su3_close_to_unity(self.spread, rng);
+            link_matrix[pos] *= su3::random_su3_close_to_unity(self.spread, rng);
         });
         State::new(
             state.lattice().clone(),
@@ -215,7 +215,7 @@ where
         )
     }
 
-    fn get_next_element_default<Rng>(
+    fn next_element_default<Rng>(
         &mut self,
         state: State,
         rng: &mut Rng,
@@ -223,8 +223,8 @@ where
     where
         Rng: rand::Rng + ?Sized,
     {
-        let potential_next = self.get_potential_next_element(&state, rng)?;
-        let proba = Self::get_probability_of_replacement(&state, &potential_next)
+        let potential_next = self.potential_next_element(&state, rng)?;
+        let proba = Self::probability_of_replacement(&state, &potential_next)
             .min(1_f64)
             .max(0_f64);
         self.prob_replace_last = proba;
@@ -309,7 +309,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     }
 
     #[inline]
-    fn get_delta_s<const D: usize>(
+    fn delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclique<D>,
         link: &LatticeLinkCanonical<D>,
@@ -317,13 +317,13 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         beta: Real,
     ) -> Real {
         let old_matrix = link_matrix
-            .get_matrix(&LatticeLink::from(*link), lattice)
+            .matrix(&LatticeLink::from(*link), lattice)
             .unwrap();
-        get_delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
+        delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
 
     #[inline]
-    fn get_potential_modif<const D: usize>(
+    fn potential_modif<const D: usize>(
         &mut self,
         state: &LatticeStateDefault<D>,
     ) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>) {
@@ -336,21 +336,19 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         let index = link.to_index(state.lattice());
 
         let old_link_m = state.link_matrix()[index];
-        let rand_m = su3::orthonormalize_matrix(&su3::get_random_su3_close_to_unity(
-            self.spread,
-            &mut self.rng,
-        ));
+        let rand_m =
+            su3::orthonormalize_matrix(&su3::random_su3_close_to_unity(self.spread, &mut self.rng));
         let new_link = rand_m * old_link_m;
         (link, new_link)
     }
 
     #[inline]
-    fn get_next_element_default<const D: usize>(
+    fn next_element_default<const D: usize>(
         &mut self,
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
-        let (link, matrix) = self.get_potential_modif(&state);
-        let delta_s = Self::get_delta_s(
+        let (link, matrix) = self.potential_modif(&state);
+        let delta_s = Self::delta_s(
             state.link_matrix(),
             state.lattice(),
             &link,
@@ -362,7 +360,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         let d = rand::distributions::Bernoulli::new(proba).unwrap();
         if d.sample(&mut self.rng) {
             self.has_replace_last = true;
-            *state.get_link_mut(&link).unwrap() = matrix;
+            *state.link_mut(&link).unwrap() = matrix;
         }
         else {
             self.has_replace_last = false;
@@ -412,11 +410,11 @@ where
     type Error = Never;
 
     #[inline]
-    fn get_next_element(
+    fn next_element(
         &mut self,
         state: LatticeStateDefault<D>,
     ) -> Result<LatticeStateDefault<D>, Self::Error> {
-        Ok(self.get_next_element_default(state))
+        Ok(self.next_element_default(state))
     }
 }
 
@@ -444,9 +442,9 @@ mod test {
         let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01_f64, rng).unwrap();
         for _ in 0_u32..10_u32 {
             let mut simulation2 = simulation.clone();
-            let (link, matrix) = mcd.get_potential_modif(&simulation);
-            *simulation2.get_link_mut(&link).unwrap() = matrix;
-            let ds = MetropolisHastingsDeltaDiagnostic::<rand::rngs::StdRng>::get_delta_s(
+            let (link, matrix) = mcd.potential_modif(&simulation);
+            *simulation2.link_mut(&link).unwrap() = matrix;
+            let ds = MetropolisHastingsDeltaDiagnostic::<rand::rngs::StdRng>::delta_s(
                 simulation.link_matrix(),
                 simulation.lattice(),
                 &link,
@@ -456,10 +454,10 @@ mod test {
             println!(
                 "ds {}, dh {}",
                 ds,
-                -simulation.get_hamiltonian_links() + simulation2.get_hamiltonian_links()
+                -simulation.hamiltonian_links() + simulation2.hamiltonian_links()
             );
-            let prob_of_replacement = (simulation.get_hamiltonian_links()
-                - simulation2.get_hamiltonian_links())
+            let prob_of_replacement = (simulation.hamiltonian_links()
+                - simulation2.hamiltonian_links())
             .exp()
             .min(1_f64)
             .max(0_f64);

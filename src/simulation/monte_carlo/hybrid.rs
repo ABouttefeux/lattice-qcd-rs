@@ -117,8 +117,8 @@ where
     type Error = Error;
 
     #[inline]
-    fn get_next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        self.data.get_next_element(state).map_err(|err| err.into())
+    fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
+        self.data.next_element(state).map_err(|err| err.into())
     }
 }
 
@@ -222,7 +222,7 @@ where
     type Error = HybrideMethodeVecError<E>;
 
     #[inline]
-    fn get_next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
+    fn next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
         if self.methods.is_empty() {
             return Err(HybrideMethodeVecError::NoMethod);
         }
@@ -328,7 +328,7 @@ where
     type Error = HybrideMethodeCoupleError<Error1, Error2>;
 
     #[inline]
-    fn get_next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
+    fn next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
         state = state
             .monte_carlo_step(&mut self.method_1)
             .map_err(HybrideMethodeCoupleError::ErrorFirst)?;

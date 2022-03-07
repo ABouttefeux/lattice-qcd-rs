@@ -72,11 +72,11 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
             impl DirectionList for Direction<#i> {
                 #[inline]
-                fn get_all_directions() -> & 'static [Self] {
+                fn directions() -> & 'static [Self] {
                     &#u_dir_ident
                 }
                 #[inline]
-                fn get_all_positive_directions() -> & 'static [Self] {
+                fn positive_directions() -> & 'static [Self] {
                     &#u_dir_pos_ident
                 }
             }

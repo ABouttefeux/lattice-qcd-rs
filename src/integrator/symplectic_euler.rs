@@ -81,7 +81,7 @@ impl SymplecticEuler {
         Self { number_of_thread }
     }
 
-    fn get_link_matrix_integrate<State, const D: usize>(
+    fn link_matrix_integrate<State, const D: usize>(
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -98,14 +98,14 @@ impl SymplecticEuler {
                 integrate_link::<State, D>(link, link_matrix, e_field, lattice, delta_t)
             },
             self.number_of_thread,
-            lattice.get_number_of_canonical_links_space(),
+            lattice.number_of_canonical_links_space(),
             lattice,
             &CMatrix3::zeros(),
         )
         .map_err(|err| err.into())
     }
 
-    fn get_e_field_integrate<State, const D: usize>(
+    fn e_field_integrate<State, const D: usize>(
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -122,7 +122,7 @@ impl SymplecticEuler {
                 integrate_efield::<State, D>(point, link_matrix, e_field, lattice, delta_t)
             },
             self.number_of_thread,
-            lattice.get_number_of_points(),
+            lattice.number_of_points(),
             lattice,
             &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
@@ -156,18 +156,14 @@ where
     type Error = SymplecticEulerError<State::Error>;
 
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
-        let link_matrix = self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?;
-        let e_field = self.get_e_field_integrate::<State, D>(
-            l.link_matrix(),
-            l.e_field(),
-            l.lattice(),
-            delta_t,
-        )?;
+        let e_field =
+            self.e_field_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t)?;
 
         State::new(
             l.lattice().clone(),
@@ -184,13 +180,13 @@ where
         l: &SimulationStateLeap<State, D>,
         delta_t: Real,
     ) -> Result<SimulationStateLeap<State, D>, Self::Error> {
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?);
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             l.e_field(),
             l.lattice(),
@@ -211,7 +207,7 @@ where
         l: &State,
         delta_t: Real,
     ) -> Result<SimulationStateLeap<State, D>, Self::Error> {
-        let e_field = self.get_e_field_integrate::<State, D>(
+        let e_field = self.e_field_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
@@ -233,14 +229,14 @@ where
         l: &SimulationStateLeap<State, D>,
         delta_t: Real,
     ) -> Result<State, Self::Error> {
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?);
         // we advace the counter by one
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             l.e_field(),
             l.lattice(),
@@ -260,19 +256,19 @@ where
         // override for optimization.
         // This remove a clone operation.
 
-        let e_field_demi = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field_demi = EField::new(self.e_field_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t / 2_f64,
         )?);
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             &e_field_demi,
             l.lattice(),
             delta_t,
         )?);
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             &e_field_demi,
             l.lattice(),

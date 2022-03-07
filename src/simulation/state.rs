@@ -46,7 +46,7 @@ pub trait LatticeState<const D: usize> {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// let point = LatticePoint::new_zero();
     /// let state = LatticeStateDefault::<4>::new_cold(1_f64, 10_f64, 4)?;
-    /// let _plaquette = state.link_matrix().get_pij(
+    /// let _plaquette = state.link_matrix().pij(
     ///     &point,
     ///     &DirectionEnum::XPos.into(),
     ///     &DirectionEnum::YPos.into(),
@@ -73,7 +73,7 @@ pub trait LatticeState<const D: usize> {
     const CA: Real;
 
     /// return the Hamiltonian of the links configuration
-    fn get_hamiltonian_links(&self) -> Real;
+    fn hamiltonian_links(&self) -> Real;
 
     /// Do one monte carlo step with the given method.
     ///
@@ -84,7 +84,7 @@ pub trait LatticeState<const D: usize> {
         Self: Sized,
         M: MonteCarlo<Self, D> + ?Sized,
     {
-        m.get_next_element(self)
+        m.next_element(self)
     }
 
     /// Take the average of the trace of all plaquettes
@@ -163,7 +163,7 @@ where
     fn t(&self) -> usize;
 
     /// get the derivative \partial_t U(link)
-    fn get_derivative_u(
+    fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -171,7 +171,7 @@ where
     ) -> Option<CMatrix3>;
 
     /// get the derivative \partial_t E(point)
-    fn get_derivative_e(
+    fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -179,12 +179,12 @@ where
     ) -> Option<SVector<Su3Adjoint, D>>;
 
     /// Get the energy of the conjugate momenta configuration
-    fn get_hamiltonian_efield(&self) -> Real;
+    fn hamiltonian_efield(&self) -> Real;
 
     /// Get the total energy, by default [`LatticeStateWithEField::get_hamiltonian_efield`]
     /// + [`LatticeState::get_hamiltonian_links`]
-    fn get_hamiltonian_total(&self) -> Real {
-        self.get_hamiltonian_links() + self.get_hamiltonian_efield()
+    fn hamiltonian_total(&self) -> Real {
+        self.hamiltonian_links() + self.hamiltonian_efield()
     }
 }
 
@@ -605,7 +605,7 @@ impl<const D: usize> LatticeStateDefault<D> {
     }
 
     /// Get a mutable reference to the link matrix at `link`
-    pub fn get_link_mut(&mut self, link: &LatticeLinkCanonical<D>) -> Option<&mut CMatrix3> {
+    pub fn link_mut(&mut self, link: &LatticeLinkCanonical<D>) -> Option<&mut CMatrix3> {
         let index = link.to_index(&self.lattice);
         if index < self.link_matrix.len() {
             Some(&mut self.link_matrix[index])
@@ -657,7 +657,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
-        if self.lattice.get_number_of_canonical_links_space() != link_matrix.len() {
+        if self.lattice.number_of_canonical_links_space() != link_matrix.len() {
             panic!("Link matrices are not of the correct size");
         }
         self.link_matrix = link_matrix;
@@ -666,7 +666,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     /// Get the default pure gauge Hamiltonian.
     /// # Panic
     /// Panic if plaquettes cannot be found
-    fn get_hamiltonian_links(&self) -> Real {
+    fn hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice()
             .get_points()
@@ -682,7 +682,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
                                 1_f64
                                     - self
                                         .link_matrix()
-                                        .get_pij(&el, dir_i, dir_j, self.lattice())
+                                        .pij(&el, dir_i, dir_j, self.lattice())
                                         .expect("Plaquette not found")
                                         .trace()
                                         .real()
@@ -743,9 +743,9 @@ where
     }
 
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
-    pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
+    pub fn gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field()
-            .get_gauss(self.link_matrix(), point, self.lattice())
+            .gauss(self.link_matrix(), point, self.lattice())
     }
 }
 
@@ -815,8 +815,8 @@ where
         self.state().beta()
     }
 
-    fn get_hamiltonian_links(&self) -> Real {
-        self.state().get_hamiltonian_links()
+    fn hamiltonian_links(&self) -> Real {
+        self.state().hamiltonian_links()
     }
 }
 
@@ -843,7 +843,7 @@ impl<State, const D: usize> LatticeStateWithEField<D> for SimulationStateLeap<St
 where
     State: LatticeStateWithEField<D> + SimulationStateSynchrone<D> + ?Sized,
 {
-    project!(get_hamiltonian_efield, state, Real);
+    project!(hamiltonian_efield, state, Real);
 
     project!(
         /// The "Electrical" field of this state.
@@ -868,22 +868,22 @@ where
         usize
     );
 
-    fn get_derivative_u(
+    fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<CMatrix3> {
-        State::get_derivative_u(link, link_matrix, e_field, lattice)
+        State::derivative_u(link, link_matrix, e_field, lattice)
     }
 
-    fn get_derivative_e(
+    fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<SVector<Su3Adjoint, D>> {
-        State::get_derivative_e(point, link_matrix, e_field, lattice)
+        State::derivative_e(point, link_matrix, e_field, lattice)
     }
 }
 
@@ -915,7 +915,7 @@ where
 {
     /// Absorbe self and return the state as owned.
     /// It essentialy deconstruct the structure.
-    pub fn get_state_owned(self) -> State
+    pub fn state_owned(self) -> State
     where
         State: Sized,
     {
@@ -975,9 +975,9 @@ where
     State: LatticeState<D> + ?Sized,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
-    pub fn get_gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
+    pub fn gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field
-            .get_gauss(self.link_matrix(), point, self.lattice())
+            .gauss(self.link_matrix(), point, self.lattice())
     }
 }
 
@@ -1168,8 +1168,8 @@ where
         self.lattice_state.beta()
     }
 
-    fn get_hamiltonian_links(&self) -> Real {
-        self.lattice_state.get_hamiltonian_links()
+    fn hamiltonian_links(&self) -> Real {
+        self.lattice_state.hamiltonian_links()
     }
 }
 
@@ -1214,7 +1214,7 @@ where
     Direction<D>: DirectionList,
 {
     /// By default \sum_x Tr(E_i E_i)
-    fn get_hamiltonian_efield(&self) -> Real {
+    fn hamiltonian_efield(&self) -> Real {
         self.lattice()
             .get_points()
             .par_bridge()
@@ -1222,10 +1222,7 @@ where
                 Direction::positive_directions()
                     .iter()
                     .map(|dir_i| {
-                        let e_i = self
-                            .e_field()
-                            .get_e_field(&el, dir_i, self.lattice())
-                            .unwrap();
+                        let e_i = self.e_field().e_field(&el, dir_i, self.lattice()).unwrap();
                         e_i.trace_squared()
                     })
                     .sum::<Real>()
@@ -1242,7 +1239,7 @@ where
     /// # Panic
     /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
     fn set_e_field(&mut self, e_field: EField<D>) {
-        if self.lattice().get_number_of_points() != e_field.len() {
+        if self.lattice().number_of_points() != e_field.len() {
             panic!("e_field is not of the correct size");
         }
         self.e_field = e_field;
@@ -1254,20 +1251,20 @@ where
     }
 
     /// Get the derive of U_i(x).
-    fn get_derivative_u(
+    fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
         lattice: &LatticeCyclique<D>,
     ) -> Option<CMatrix3> {
         let c = Complex::new(0_f64, (2_f64 * Self::CA).sqrt());
-        let u_i = link_matrix.get_matrix(&LatticeLink::from(*link), lattice)?;
-        let e_i = e_field.get_e_field(link.pos(), link.dir(), lattice)?;
+        let u_i = link_matrix.matrix(&LatticeLink::from(*link), lattice)?;
+        let e_i = e_field.e_field(link.pos(), link.dir(), lattice)?;
         Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
     }
 
     /// Get the derive of E(x) (as a vector of Su3Adjoint).
-    fn get_derivative_e(
+    fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
         _e_field: &EField<D>,
@@ -1276,13 +1273,13 @@ where
         let c = -(2_f64 / Self::CA).sqrt();
         let dir_pos = Direction::<D>::positive_directions();
         let iterator = dir_pos.iter().map(|dir| {
-            let u_i = link_matrix.get_matrix(&LatticeLink::new(*point, *dir), lattice)?;
-            let sum_s: CMatrix3 = Direction::<D>::get_all_directions()
+            let u_i = link_matrix.matrix(&LatticeLink::new(*point, *dir), lattice)?;
+            let sum_s: CMatrix3 = Direction::<D>::directions()
                 .iter()
                 .filter(|dir_2| dir_2.to_positive() != *dir)
                 .map(|dir_2| {
                     link_matrix
-                        .get_sij(point, dir, dir_2, lattice)
+                        .sij(point, dir, dir_2, lattice)
                         .map(|el| el.adjoint())
                 })
                 .sum::<Option<CMatrix3>>()?;
@@ -1314,8 +1311,8 @@ mod test {
         assert_eq!(&state, leap_frog.as_ref());
 
         assert_eq!(
-            state.get_gauss(&LatticePoint::default()),
-            leap_frog.get_gauss(&LatticePoint::default())
+            state.gauss(&LatticePoint::default()),
+            leap_frog.gauss(&LatticePoint::default())
         );
 
         let _: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3> =

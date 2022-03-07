@@ -214,7 +214,7 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
         let x =
             x_unorm.try_normalize(f64::EPSILON).expect("unreacheable") * (1_f64 - x0 * x0).sqrt();
         // unreacheable because the while loop above guarentee that the norm is bigger than [`f64::EPSILON`]
-        su2::get_complex_matrix_from_vec(x0, x)
+        su2::complex_matrix_from_vec(x0, x)
     }
 }
 
@@ -424,7 +424,7 @@ impl Distribution<CMatrix2> for CloseToUnit {
     where
         R: rand::Rng + ?Sized,
     {
-        su2::get_random_su2_close_to_unity(self.spread_parameter, rng)
+        su2::random_su2_close_to_unity(self.spread_parameter, rng)
     }
 }
 
@@ -433,7 +433,7 @@ impl Distribution<CMatrix3> for CloseToUnit {
     where
         R: rand::Rng + ?Sized,
     {
-        su3::get_random_su3_close_to_unity(self.spread_parameter, rng)
+        su3::random_su3_close_to_unity(self.spread_parameter, rng)
     }
 }
 

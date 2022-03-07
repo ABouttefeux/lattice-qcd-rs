@@ -39,7 +39,7 @@ use super::{
         super::{error::Never, lattice::LatticeLinkCanonical, su3, Complex},
         state::{LatticeState, LatticeStateDefault},
     },
-    get_staple, MonteCarlo,
+    staple, MonteCarlo,
 };
 
 /// Overrelaxation algortihm using rotation methode.
@@ -89,22 +89,22 @@ impl OverrelaxationSweepRotation {
     ) -> na::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
-            .get_matrix(&link.into(), state.lattice())
+            .matrix(&link.into(), state.lattice())
             .unwrap();
-        let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
+        let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
         let rot = svd.u.unwrap() * svd.v_t.unwrap();
         rot * link_matrix.adjoint() * rot
     }
 
     #[inline]
-    fn get_next_element_default<const D: usize>(
+    fn next_element_default<const D: usize>(
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
-            *state.get_link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).unwrap() = potential_modif;
         });
         state
     }
@@ -126,11 +126,11 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
     type Error = Never;
 
     #[inline]
-    fn get_next_element(
+    fn next_element(
         &mut self,
         state: LatticeStateDefault<D>,
     ) -> Result<LatticeStateDefault<D>, Self::Error> {
-        Ok(Self::get_next_element_default(state))
+        Ok(Self::next_element_default(state))
     }
 }
 
@@ -161,9 +161,9 @@ impl OverrelaxationSweepReverse {
     ) -> na::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
-            .get_matrix(&link.into(), state.lattice())
+            .matrix(&link.into(), state.lattice())
             .unwrap();
-        let a = get_staple(state.link_matrix(), state.lattice(), link).adjoint();
+        let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
         let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
         svd.u.unwrap()
             * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint())
@@ -171,13 +171,13 @@ impl OverrelaxationSweepReverse {
     }
 
     #[inline]
-    fn get_next_element_default<const D: usize>(
+    fn next_element_default<const D: usize>(
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
-            *state.get_link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).unwrap() = potential_modif;
         });
         state
     }
@@ -199,11 +199,11 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
     type Error = Never;
 
     #[inline]
-    fn get_next_element(
+    fn next_element(
         &mut self,
         state: LatticeStateDefault<D>,
     ) -> Result<LatticeStateDefault<D>, Self::Error> {
-        Ok(Self::get_next_element_default(state))
+        Ok(Self::next_element_default(state))
     }
 }
 
@@ -223,9 +223,9 @@ mod test {
         MC::Error: core::fmt::Debug,
     {
         let state = LatticeStateDefault::<3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
-        let h = state.get_hamiltonian_links();
-        let state2 = mc.get_next_element(state).unwrap();
-        let h2 = state2.get_hamiltonian_links();
+        let h = state.hamiltonian_links();
+        let state2 = mc.next_element(state).unwrap();
+        let h2 = state2.hamiltonian_links();
         println!("h1 {}, h2 {}", h, h2);
         // Relative assert : we need to multi by the mean value of h
         // TODO use crate approx ?

@@ -288,7 +288,7 @@ fn create_matrix_from_2_vector(
 }
 
 /// get an orthonormalize matrix from two vector.
-fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
+fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
     let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
@@ -299,7 +299,7 @@ fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Comp
 pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
     let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
     let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
-    get_ortho_matrix_from_2_vector(v1, v2)
+    ortho_matrix_from_2_vector(v1, v2)
 }
 
 /// Orthonormalize the given matrix by mutating its content.
@@ -308,11 +308,11 @@ pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
 }
 
 /// Generate Uniformly distributed SU(3) matrix
-pub fn get_random_su3<Rng>(rng: &mut Rng) -> CMatrix3
+pub fn random_su3<Rng>(rng: &mut Rng) -> CMatrix3
 where
     Rng: rand::Rng + ?Sized,
 {
-    get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
+    rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
 }
 
 /// get a random SU3 with the given distribution.
@@ -320,26 +320,23 @@ where
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
 /// For a matrix Uniformly distributed amoung SU(3) use [`get_random_su3`].
 /// For a matrix close to unity use [`get_random_su3_close_to_unity`]
-fn get_rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
+fn rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
 where
     Rng: rand::Rng + ?Sized,
 {
-    let mut v1 = get_random_vec_3(rng, d);
+    let mut v1 = random_vec_3(rng, d);
     while v1.norm() <= f64::EPSILON {
-        v1 = get_random_vec_3(rng, d);
+        v1 = random_vec_3(rng, d);
     }
-    let mut v2 = get_random_vec_3(rng, d);
+    let mut v2 = random_vec_3(rng, d);
     while v1.dot(&v2).modulus() <= f64::EPSILON {
-        v2 = get_random_vec_3(rng, d);
+        v2 = random_vec_3(rng, d);
     }
-    get_ortho_matrix_from_2_vector(v1, v2)
+    ortho_matrix_from_2_vector(v1, v2)
 }
 
 /// get a random [`na::Vector3<Complex>`].
-fn get_random_vec_3<Rng>(
-    rng: &mut Rng,
-    d: &impl rand_distr::Distribution<Real>,
-) -> na::Vector3<Complex>
+fn random_vec_3<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex>
 where
     Rng: rand::Rng + ?Sized,
 {
@@ -351,13 +348,13 @@ where
 /// Note that it diverges from SU(3) sligthly.
 /// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
 /// outside this boud it will not panic but can have unexpected results.
-pub fn get_random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
+pub fn random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
 where
     R: rand::Rng + ?Sized,
 {
-    let r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let r = get_r(su2::random_su2_close_to_unity(spread_parameter, rng));
+    let s = get_s(su2::random_su2_close_to_unity(spread_parameter, rng));
+    let t = get_t(su2::random_su2_close_to_unity(spread_parameter, rng));
     let distribution = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     let mut x = r * s * t;
     if distribution.sample(rng) {
@@ -526,7 +523,7 @@ pub fn reverse(input: CMatrix3) -> CMatrix3 {
 ///
 /// This number is needed for the computation of exponential matrix
 #[allow(clippy::as_conversions)] // no try into for f64
-pub fn get_factorial_size_for_exp() -> usize {
+pub fn factorial_size_for_exp() -> usize {
     let mut n: usize = 7;
     let mut factorial_value = 1;
     while 1_f64 / (factorial_value as f64) >= Real::EPSILON {
@@ -818,7 +815,7 @@ mod test {
     #[test]
     /// test that [`N`] is indeed what we need
     fn test_constante() {
-        assert_eq!(N, get_factorial_size_for_exp() + 1);
+        assert_eq!(N, factorial_size_for_exp() + 1);
     }
 
     #[test]
@@ -1017,11 +1014,11 @@ mod test {
         );
         assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         for _ in 0_u32..10_u32 {
-            let m = get_random_su3(&mut rng);
+            let m = random_su3(&mut rng);
             assert!(is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
         for _ in 0_u32..10_u32 {
-            let m = get_random_su3(&mut rng) * Complex::from(1.1_f64);
+            let m = random_su3(&mut rng) * Complex::from(1.1_f64);
             assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
     }
