@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::thread::ThreadError;
 
-/// Type that can never be (safly) initialized.
+/// A type that can never be (safly) initialized.
 /// This is temporary, until [`never`](https://doc.rust-lang.org/std/primitive.never.html) is accepted into stable rust.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -23,7 +23,7 @@ impl Display for Never {
 impl Error for Never {}
 
 /// Errors in the implementation of the library. This is unwanted to return this type but
-/// somethimes this is better to return that instead of panicking. It is also used in some example.
+/// sometimes this is better to return that instead of panicking. It is also used in some example.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
@@ -65,7 +65,7 @@ pub enum MultiIntegrationError<Error> {
 impl<Error: Display> Display for MultiIntegrationError<Error> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            MultiIntegrationError::ZeroIntegration => write!(f, "error: no integration steps"),
+            MultiIntegrationError::ZeroIntegration => write!(f, "no integration steps"),
             MultiIntegrationError::IntegrationError(index, error) => {
                 write!(f, "error during intgration step {}: {}", index, error)
             }
@@ -114,7 +114,7 @@ impl Display for StateInitializationError {
             }
             Self::IncompatibleSize => write!(f, "size of lattice and data are imcompatible"),
             Self::LatticeInitializationError(err) => {
-                write!(f, "lattice Initialization error : {}", err)
+                write!(f, "lattice Initialization error: {}", err)
             }
         }
     }
@@ -268,5 +268,23 @@ impl<Error, Data1, Data2> From<ErrorWithOnwnedValue<Error, (Data1, Data2)>>
 {
     fn from(data: ErrorWithOnwnedValue<Error, (Data1, Data2)>) -> Self {
         Self::new(data.error, data.owned.0)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn implementation_error() {
+        assert_eq!(
+            ImplementationError::Unreachable.to_string(),
+            "internal error: entered unreachable code"
+        );
+        assert_eq!(
+            ImplementationError::OptionWithUnexpectedNone.to_string(),
+            "an option contained an unexpected None value"
+        );
     }
 }
