@@ -99,6 +99,7 @@ impl Su3Adjoint {
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
+    // TODO self non consomé ?? passé en &self ? TODO bench
     pub fn to_matrix(self) -> Matrix3<na::Complex<Real>> {
         self.data
             .iter()
@@ -167,7 +168,6 @@ impl Su3Adjoint {
     /// It is used for [`su3::su3_exp_i`].
     /// # Example
     /// ```
-    /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::from([1_f64; 8]);
     /// let m = su3.to_matrix();
@@ -185,7 +185,6 @@ impl Su3Adjoint {
     /// Used for [`su3::su3_exp_i`]
     /// # Example
     /// ```
-    /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::field::Su3Adjoint;
     /// let su3 = Su3Adjoint::from([1_f64; 8]);
     /// let m = su3.to_matrix();
@@ -557,6 +556,7 @@ impl From<[Real; 8]> for Su3Adjoint {
 }
 
 /// Represents the link matrices
+// TODO more doc
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LinkMatrix {
@@ -564,7 +564,7 @@ pub struct LinkMatrix {
 }
 
 impl LinkMatrix {
-    /// Creat a new link matrix field
+    /// Creat a new link matrix field from preexisting data.
     pub const fn new(data: Vec<Matrix3<na::Complex<Real>>>) -> Self {
         Self { data }
     }
@@ -579,17 +579,17 @@ impl LinkMatrix {
         &mut self.data
     }
 
-    /// Get the link_matrix as a Vec
+    /// Get the link_matrix as a [`Vec`].
     pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
         self.data()
     }
 
-    /// Get the link_matrix as a Vec
+    /// Get the link_matrix as a mutable [`Vec`].
     pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
         self.data_mut()
     }
 
-    /// Get the link_matrix as a Vec
+    /// Get the link_matrix as a slice.
     pub fn as_slice(&self) -> &[Matrix3<na::Complex<Real>>] {
         self.data()
     }
@@ -600,7 +600,8 @@ impl LinkMatrix {
     }
 
     /// Single threaded generation with a given random number generator.
-    /// useful to reproduce a set of data but slower than [`LinkMatrix::new_random_threaded`].
+    /// useful to produce a deterministic set of data but slower than
+    /// [`LinkMatrix::new_random_threaded`].
     /// # Example
     /// ```
     /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
@@ -635,7 +636,8 @@ impl LinkMatrix {
     }
 
     /// Multi threaded generation of random data. Due to the non deterministic way threads
-    /// operate a set cannot be reduced easily, In that case use [`LinkMatrix::new_random_threaded`].
+    /// operate a set cannot be reduced easily. If you want deterministic
+    /// generation you can use [`LinkMatrix::new_random_threaded`].
     ///
     /// # Example
     /// ```
@@ -1199,8 +1201,8 @@ impl<const D: usize> EField<D> {
     /// use lattice_qcd_rs::error::ImplementationError;
     /// use lattice_qcd_rs::integrator::SymplecticEulerRayon;
     /// use lattice_qcd_rs::simulation::{
-    ///     LatticeState, LatticeStateDefault, LatticeStateWithEField,
-    ///     LatticeStateWithEFieldSyncDefault, SimulationStateSynchrone,
+    ///     LatticeState, LatticeStateDefault, LatticeStateEFSyncDefault, LatticeStateWithEField,
+    ///     SimulationStateSynchrone,
     /// };
     /// use rand::SeedableRng;
     ///
@@ -1210,7 +1212,7 @@ impl<const D: usize> EField<D> {
     /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
     /// let distribution =
     ///     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
-    /// let mut state = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+    /// let mut state = LatticeStateEFSyncDefault::new_random_e_state(
     ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 6_f64, 4, &mut rng).unwrap(),
     ///     &mut rng,
     /// ); // <- here internally when choosing radomly the EField it is projected.

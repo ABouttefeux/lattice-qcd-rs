@@ -47,7 +47,7 @@ impl<E: Display + Debug + Error + 'static> Error for HybrideMethodeVecError<E> {
 
 /// Adaptator used to convert the error to another type. It is intented to use with [`HybrideMethodeVec`].
 #[derive(PartialEq, Eq, Debug)]
-pub struct AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, const D: usize>
+pub struct AdaptatorMethodError<'a, MC, State, ErrorBase, Error, const D: usize>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -58,7 +58,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize>
-    AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+    AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -84,7 +84,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> AsMut<MC>
-    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -96,7 +96,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> AsRef<MC>
-    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -108,7 +108,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> MonteCarlo<State, D>
-    for AdaptatorErrorMethod<'a, MC, State, ErrorBase, Error, D>
+    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -123,7 +123,7 @@ where
 }
 
 /// hybride methode that combine multiple methodes. It requires that all methods return the same error.
-/// You can use [`AdaptatorErrorMethod`] to convert the error.
+/// You can use [`AdaptatorMethodError`] to convert the error.
 /// If you want type with different error you can use [`HybrideMethodeCouple`].
 pub struct HybrideMethodeVec<'a, State, E, const D: usize>
 where

@@ -76,9 +76,43 @@ where
     fn next_element(&mut self, state: State) -> Result<State, Self::Error>;
 }
 
-/// Some times is is esayer to just implement a potential next element, the rest is done automatically.
+/// Some times it is esayer to just implement a potential next element, the rest is done automatically using an [`McWrapper`].
 ///
-/// To get an [`MonteCarlo`] use the wrapper [`McWrapper`]
+/// To get an [`MonteCarlo`] use the wrapper [`McWrapper`].
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::error::ImplementationError;
+/// use lattice_qcd_rs::simulation::{
+///     LatticeState, LatticeStateDefault, McWrapper, MetropolisHastingsDiagnostic, MonteCarlo,
+/// };
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let mh = MetropolisHastingsDiagnostic::new(1, 0.1_f64)
+///     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+/// let mut wrapper = McWrapper::new(mh, rng);
+///
+/// // Realistically you want more steps than 10
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 6_f64, 4)?;
+/// for _ in 0..100 {
+///     state = state.monte_carlo_step(&mut wrapper)?;
+///     println!(
+///         "probability of acceptance during last step {}, does it accepted the change ? {}",
+///         mh.prob_replace_last(),
+///         mh.has_replace_last()
+///     );
+///     // or state.monte_carlo_step(&mut wrapper)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// let (_, rng) = wrapper.deconstruct(); // get the rng back
+/// #     Ok(())
+/// # }
+/// ```
 pub trait MonteCarloDefault<State, const D: usize>
 where
     State: LatticeState<D>,
@@ -158,7 +192,7 @@ where
 /// for _ in 0..100 {
 ///     state = state.monte_carlo_step(&mut wrapper)?;
 ///     println!(
-///         "probability of acceptance during last step {}, does it accepted the chnage ? {}",
+///         "probability of acceptance during last step {}, does it accepted the change ? {}",
 ///         mh.prob_replace_last(),
 ///         mh.has_replace_last()
 ///     );

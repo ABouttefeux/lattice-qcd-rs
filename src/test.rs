@@ -195,30 +195,28 @@ fn equivalece_exp_r() {
 fn create_sim() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
-            1_f64,
-            1_f64,
-            4,
-            &mut rng,
-            &distribution,
-        )
-        .unwrap();
+    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+        1_f64,
+        1_f64,
+        4,
+        &mut rng,
+        &distribution,
+    )
+    .unwrap();
 }
 
 #[test]
 /// test creation of sim multi threaded
 fn creat_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(
-            1_f64,
-            1_f64,
-            4,
-            &distribution,
-            2,
-        )
-        .unwrap();
+    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(
+        1_f64,
+        1_f64,
+        4,
+        &distribution,
+        2,
+    )
+    .unwrap();
 }
 
 /// return 1 if i==j 0 otherwise
@@ -330,15 +328,14 @@ fn test_thread_vec_error_zero_thread() {
 fn test_sim_hamiltonian() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
-            100_f64,
-            1_f64,
-            10,
-            &mut rng,
-            &distribution,
-        )
-        .unwrap();
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+        100_f64,
+        1_f64,
+        10,
+        &mut rng,
+        &distribution,
+    )
+    .unwrap();
     let h = simulation.hamiltonian_total();
     let sim2 = simulation
         .simulate_sync(&SymplecticEuler::new(8), 0.000_1_f64)
@@ -353,15 +350,14 @@ fn test_sim_hamiltonian() {
 fn test_gauss_law() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
-            1_f64,
-            1_f64,
-            10,
-            &mut rng,
-            &distribution,
-        )
-        .unwrap();
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+        1_f64,
+        1_f64,
+        10,
+        &mut rng,
+        &distribution,
+    )
+    .unwrap();
     let sim2 = simulation
         .simulate_sync(&SymplecticEuler::new(8), 0.000_001_f64)
         .unwrap();
@@ -384,15 +380,14 @@ fn test_gauss_law() {
 fn test_sim_hamiltonian_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
-            100_f64,
-            1_f64,
-            10,
-            &mut rng,
-            &distribution,
-        )
-        .unwrap();
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+        100_f64,
+        1_f64,
+        10,
+        &mut rng,
+        &distribution,
+    )
+    .unwrap();
     let h = simulation.hamiltonian_total();
     let sim2 = simulation
         .simulate_sync(&SymplecticEulerRayon::new(), 0.000_1_f64)
@@ -407,15 +402,14 @@ fn test_sim_hamiltonian_rayon() {
 fn test_gauss_law_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
-            1_f64,
-            1_f64,
-            10,
-            &mut rng,
-            &distribution,
-        )
-        .unwrap();
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+        1_f64,
+        1_f64,
+        10,
+        &mut rng,
+        &distribution,
+    )
+    .unwrap();
     let sim2 = simulation
         .simulate_sync(&SymplecticEulerRayon::new(), 0.000_001_f64)
         .unwrap();
@@ -439,12 +433,9 @@ fn test_sim_cold() {
     let size = 10_f64;
     let number_of_pts = 10;
     let beta = 0.1_f64;
-    let sim1 = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_cold(
-        size,
-        beta,
-        number_of_pts,
-    )
-    .unwrap();
+    let sim1 =
+        LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_cold(size, beta, number_of_pts)
+            .unwrap();
     let sim2 = sim1
         .simulate_to_leapfrog(&SymplecticEulerRayon::new(), 0.1_f64)
         .unwrap();
@@ -651,7 +642,7 @@ fn state_init_error() {
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
 
     assert_eq!(
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+        LatticeStateEFSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
             0_f64, 1_f64, 4, &d, 2,
         ),
         Err(ThreadedStateInitializationError::StateInitializationError(
@@ -662,7 +653,7 @@ fn state_init_error() {
     );
 
     assert_eq!(
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
+        LatticeStateEFSyncDefault::<LatticeStateDefault<3>, 3>::new_random_threaded(
             1_f64, 1_f64, 4, &d, 0,
         ),
         Err(ThreadedStateInitializationError::ThreadingError(
@@ -694,9 +685,7 @@ fn test_leap_frog() {
     let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
     println!("h_l {}", state.hamiltonian_links());
     let state_hmc =
-        LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(
-            state, &mut rng,
-        );
+        LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(state, &mut rng);
     let h1 = state_hmc.hamiltonian_total();
     println!("h_t {}", h1);
     let state_hmc_2 = state_hmc

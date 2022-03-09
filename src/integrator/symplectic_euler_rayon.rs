@@ -30,12 +30,12 @@ use super::{
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// use lattice_qcd_rs::integrator::{SymplecticEulerRayon, SymplecticIntegrator};
 /// use lattice_qcd_rs::simulation::{
-///     LatticeStateDefault, LatticeStateWithEField, LatticeStateWithEFieldSyncDefault,
+///     LatticeStateDefault, LatticeStateEFSyncDefault, LatticeStateWithEField,
 /// };
 /// use rand::SeedableRng;
 ///
 /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
-/// let state1 = LatticeStateWithEFieldSyncDefault::new_random_e_state(
+/// let state1 = LatticeStateEFSyncDefault::new_random_e_state(
 ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
 ///     &mut rng,
 /// );

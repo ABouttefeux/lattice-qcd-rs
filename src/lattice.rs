@@ -118,14 +118,14 @@ impl<const D: usize> LatticeCyclique<D> {
 
     /// Transform a [`LatticeLink`] into a [`LatticeLinkCanonical`].
     ///
-    /// See [`LatticeCyclique::get_link_canonical`] and [`LatticeLinkCanonical`].
+    /// See [`LatticeCyclique::link_canonical`] and [`LatticeLinkCanonical`].
     pub fn into_canonical(&self, l: LatticeLink<D>) -> LatticeLinkCanonical<D> {
         self.link_canonical(*l.pos(), *l.dir())
     }
 
     /// Get the number of points in a single direction.
     ///
-    /// use [`LatticeCyclique::get_number_of_points`] for the total number of points.
+    /// use [`LatticeCyclique::number_of_points`] for the total number of points.
     /// Not to confuse with [`LatticeCyclique::dim_st`] which is the dimension of space-time.
     pub const fn dim(&self) -> usize {
         self.dim
@@ -803,7 +803,7 @@ pub struct LatticeLinkCanonical<const D: usize> {
 impl<const D: usize> LatticeLinkCanonical<D> {
     /// Try create a LatticeLinkCanonical. If the dir is negative it fails.
     ///
-    /// To guaranty creating an element see [LatticeCyclique::get_link_canonical].
+    /// To guaranty creating an element see [LatticeCyclique::link_canonical].
     /// The creation of an element this ways does not guaranties that the element is inside a lattice.
     /// # Example
     /// ```
@@ -980,7 +980,7 @@ impl<const D: usize> Direction<D> {
     }
 
     /// List all directions.
-    /// This is very slow use [`DirectionList::get_all_directions`] instead
+    /// This is very slow use [`DirectionList::directions`] instead
     pub fn directions_vec() -> Vec<Self> {
         let mut x = Vec::with_capacity(2 * D);
         for i in 0..D {

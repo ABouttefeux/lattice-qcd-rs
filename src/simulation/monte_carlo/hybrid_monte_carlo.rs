@@ -41,8 +41,7 @@ use super::{
     super::{
         super::{error::MultiIntegrationError, integrator::SymplecticIntegrator, Real},
         state::{
-            LatticeState, LatticeStateWithEFieldSyncDefault, SimulationStateLeap,
-            SimulationStateSynchrone,
+            LatticeState, LatticeStateEFSyncDefault, SimulationStateLeap, SimulationStateSynchrone,
         },
     },
     MonteCarlo, MonteCarloDefault,
@@ -61,25 +60,25 @@ use super::{
 pub struct HybridMonteCarlo<State, Rng, I, const D: usize>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
 {
-    internal: HybridMonteCarloInternal<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
+    internal: HybridMonteCarloInternal<LatticeStateEFSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
 impl<State, Rng, I, const D: usize> HybridMonteCarlo<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -116,12 +115,11 @@ where
     /// - rng, a random number generator
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
-            internal:
-                HybridMonteCarloInternal::<LatticeStateWithEFieldSyncDefault<State, D>, I, D>::new(
-                    delta_t,
-                    number_of_steps,
-                    integrator,
-                ),
+            internal: HybridMonteCarloInternal::<LatticeStateEFSyncDefault<State, D>, I, D>::new(
+                delta_t,
+                number_of_steps,
+                integrator,
+            ),
             rng,
         }
     }
@@ -140,10 +138,10 @@ where
 impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarlo<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -156,10 +154,10 @@ where
 impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarlo<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -172,10 +170,10 @@ where
 impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -183,10 +181,8 @@ where
     type Error = MultiIntegrationError<I::Error>;
 
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
-            state,
-            self.rng_mut(),
-        );
+        let state_internal =
+            LatticeStateEFSyncDefault::<State, D>::new_random_e_state(state, self.rng_mut());
         self.internal
             .next_element_default(state_internal, &mut self.rng)
             .map(|el| el.state_owned())
@@ -308,26 +304,25 @@ where
 pub struct HybridMonteCarloDiagnostic<State, Rng, I, const D: usize>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
 {
-    internal:
-        HybridMonteCarloInternalDiagnostics<LatticeStateWithEFieldSyncDefault<State, D>, I, D>,
+    internal: HybridMonteCarloInternalDiagnostics<LatticeStateEFSyncDefault<State, D>, I, D>,
     rng: Rng,
 }
 
 impl<State, Rng, I, const D: usize> HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -379,7 +374,7 @@ where
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
             internal: HybridMonteCarloInternalDiagnostics::<
-                LatticeStateWithEFieldSyncDefault<State, D>,
+                LatticeStateEFSyncDefault<State, D>,
                 I,
                 D,
             >::new(delta_t, number_of_steps, integrator),
@@ -411,10 +406,10 @@ where
 impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -427,10 +422,10 @@ where
 impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -444,10 +439,10 @@ impl<State, Rng, I, const D: usize> MonteCarlo<State, D>
     for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
     State: LatticeState<D> + Clone,
-    LatticeStateWithEFieldSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
     I: SymplecticIntegrator<
-        LatticeStateWithEFieldSyncDefault<State, D>,
-        SimulationStateLeap<LatticeStateWithEFieldSyncDefault<State, D>, D>,
+        LatticeStateEFSyncDefault<State, D>,
+        SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
         D,
     >,
     Rng: rand::Rng,
@@ -455,10 +450,8 @@ where
     type Error = MultiIntegrationError<I::Error>;
 
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        let state_internal = LatticeStateWithEFieldSyncDefault::<State, D>::new_random_e_state(
-            state,
-            self.rng_mut(),
-        );
+        let state_internal =
+            LatticeStateEFSyncDefault::<State, D>::new_random_e_state(state, self.rng_mut());
         self.internal
             .next_element_default(state_internal, &mut self.rng)
             .map(|el| el.state_owned())

@@ -12,3 +12,4 @@ First release
 - migrate to rust 2021
 - use readme in librairies root documentation
 - rename lots of gettet to match C-GETTER convention
+- rename some structure for C-WORD-ORDER

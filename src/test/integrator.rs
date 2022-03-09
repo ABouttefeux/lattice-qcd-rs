@@ -21,7 +21,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
 
     let mut rng = mh.rng_owned();
 
-    let state_with_e = LatticeStateWithEFieldSyncDefault::new_random_e(
+    let state_with_e = LatticeStateEFSyncDefault::new_random_e(
         state.lattice().clone(),
         state.beta(),
         state.link_matrix_owned(),

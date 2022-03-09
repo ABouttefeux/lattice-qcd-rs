@@ -376,7 +376,7 @@ where
     }
 }
 
-/// used to generates matrix close the unit, for su2 close to +/-1, see [`su2::get_random_su2_close_to_unity`]
+/// used to generates matrix close the unit, for su2 close to +/-1, see [`su2::random_su2_close_to_unity`]
 /// and for su(3) `[su3::get_r] (+/- 1) * [su3::get_s] (+/- 1) * [su3::get_t] (+/- 1)`
 ///
 /// # Example

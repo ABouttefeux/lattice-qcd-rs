@@ -32,7 +32,8 @@ pub enum ImplementationError {
     Unreachable,
     /// An option contained an unexpected None value.
     ///
-    /// Used when needing to retrun a dyn Error but [`std::option::NoneError`] does not implement [`Error`]
+    /// Used when needing to retrun a dyn Error but `std::option::NoneError` does not implement [`Error`]
+    // TODO NoneError
     OptionWithUnexpectedNone,
 }
 
@@ -130,7 +131,7 @@ impl Error for StateInitializationError {
     }
 }
 
-/// Error while initialising a state
+/// Error while initialising a state using multiple thread or threded function.
 #[non_exhaustive]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ThreadedStateInitializationError {

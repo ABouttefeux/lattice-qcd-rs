@@ -73,7 +73,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
     /// `spread` is the spead factor for the random matrix change
-    /// ( used in [`su3::get_random_su3_close_to_unity`]).
+    /// ( used in [`su3::random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real, rng: Rng) -> Option<Self> {
         if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
             return None;

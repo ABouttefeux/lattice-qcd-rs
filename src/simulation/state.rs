@@ -28,7 +28,7 @@ use super::{
 
 /// Default leap frog simulation state
 pub type LeapFrogStateDefault<const D: usize> =
-    SimulationStateLeap<LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>, D>;
+    SimulationStateLeap<LatticeStateEFSyncDefault<LatticeStateDefault<D>, D>, D>;
 
 /// trait to represent a pure gauge lattice state of dimention `D`.
 ///
@@ -119,7 +119,7 @@ where
 /// Represent a lattice state where the conjugate momenta of the link matrices are included.
 ///
 /// If you have a LatticeState and want the default way of adding the conjugate momenta look at
-/// [`LatticeStateWithEFieldSyncDefault`].
+/// [`LatticeStateEFSyncDefault`].
 ///
 /// If you want to solve the equation of motion using an [`SymplecticIntegrator`] also implement
 /// [`SimulationStateSynchrone`] and the wrapper [`SimulationStateLeap`] can give you an [`SimulationStateLeapFrog`].
@@ -181,8 +181,8 @@ where
     /// Get the energy of the conjugate momenta configuration
     fn hamiltonian_efield(&self) -> Real;
 
-    /// Get the total energy, by default [`LatticeStateWithEField::get_hamiltonian_efield`]
-    /// + [`LatticeState::get_hamiltonian_links`]
+    /// Get the total energy, by default [`LatticeStateWithEField::hamiltonian_efield`]
+    /// + [`LatticeState::hamiltonian_links`]
     fn hamiltonian_total(&self) -> Real {
         self.hamiltonian_links() + self.hamiltonian_efield()
     }
@@ -237,7 +237,7 @@ where
 ///
 /// If you have a LatticeState and want the default way of adding the conjugate momenta and doing
 /// simulation look at
-/// [`LatticeStateWithEFieldSyncDefault`].
+/// [`LatticeStateEFSyncDefault`].
 ///
 /// I would adivce of implementing this trait and not [`SimulationStateLeapFrog`], as there is
 /// a wrapper ([`SimulationStateLeap`]) for [`SimulationStateLeapFrog`].
@@ -893,7 +893,7 @@ where
 /// It also implement [`SimulationStateSynchrone`].
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct LatticeStateWithEFieldSyncDefault<State, const D: usize>
+pub struct LatticeStateEFSyncDefault<State, const D: usize>
 where
     State: LatticeState<D> + ?Sized,
 {
@@ -909,7 +909,7 @@ where
     lattice_state: State, // the DST must be at the end
 }
 
-impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeStateEFSyncDefault<State, D>
 where
     State: LatticeState<D> + ?Sized,
 {
@@ -969,7 +969,7 @@ where
     }
 }
 
-impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeStateEFSyncDefault<State, D>
 where
     Self: LatticeStateWithEField<D>,
     State: LatticeState<D> + ?Sized,
@@ -981,7 +981,7 @@ where
     }
 }
 
-impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeStateEFSyncDefault<State, D>
 where
     Self: LatticeStateWithEFieldNew<D>,
     <Self as LatticeStateWithEFieldNew<D>>::Error: From<LatticeInitializationError>,
@@ -994,7 +994,7 @@ where
     /// in each spatial dimension of the lattice. See [`LatticeCyclique::new`] for more info.
     ///
     /// useful to reproduce a set of data but slower than
-    /// [`LatticeStateWithEFieldSyncDefault::new_random_threaded`].
+    /// [`LatticeStateEFSyncDefault::new_random_threaded`].
     ///
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
@@ -1005,7 +1005,7 @@ where
     /// ```
     /// extern crate rand;
     /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{simulation::{LatticeStateWithEFieldSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::{simulation::{LatticeStateEFSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique};
     /// use rand::{SeedableRng,rngs::StdRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
@@ -1013,8 +1013,8 @@ where
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
     /// assert_eq!(
-    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
-    ///     LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
+    ///     LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_1, &distribution).unwrap(),
+    ///     LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
     pub fn new_deterministe<R>(
@@ -1075,7 +1075,7 @@ where
     }
 }
 
-impl<State, const D: usize> LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeStateEFSyncDefault<State, D>
 where
     Self: LatticeStateWithEFieldNew<D, Error = StateInitializationError>,
     State: LatticeState<D>,
@@ -1084,7 +1084,7 @@ where
     ///
     /// Multi threaded generation of random data. Due to the non deterministic way threads
     /// operate a set cannot be reproduce easily, In that case use
-    /// [`LatticeStateWithEFieldSyncDefault::new_deterministe`].
+    /// [`LatticeStateEFSyncDefault::new_deterministe`].
     ///
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalide
@@ -1136,15 +1136,14 @@ where
 }
 
 /// This is an sync State
-impl<State, const D: usize> SimulationStateSynchrone<D>
-    for LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> SimulationStateSynchrone<D> for LatticeStateEFSyncDefault<State, D>
 where
     State: LatticeState<D> + Clone + ?Sized,
     Self: LatticeStateWithEField<D>,
 {
 }
 
-impl<State, const D: usize> LatticeState<D> for LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeState<D> for LatticeStateEFSyncDefault<State, D>
 where
     State: LatticeState<D> + ?Sized,
 {
@@ -1173,8 +1172,7 @@ where
     }
 }
 
-impl<State, const D: usize> LatticeStateWithEFieldNew<D>
-    for LatticeStateWithEFieldSyncDefault<State, D>
+impl<State, const D: usize> LatticeStateWithEFieldNew<D> for LatticeStateEFSyncDefault<State, D>
 where
     State: LatticeState<D> + LatticeStateNew<D>,
     Self: LatticeStateWithEField<D>,
@@ -1209,7 +1207,7 @@ where
 }
 
 impl<const D: usize> LatticeStateWithEField<D>
-    for LatticeStateWithEFieldSyncDefault<LatticeStateDefault<D>, D>
+    for LatticeStateEFSyncDefault<LatticeStateDefault<D>, D>
 where
     Direction<D>: DirectionList,
 {
@@ -1303,9 +1301,8 @@ mod test {
 
     #[test]
     fn leap_frog_simulation() -> Result<(), StateInitializationError> {
-        let state = LatticeStateWithEFieldSyncDefault::<LatticeStateDefault<3>, 3>::new_cold(
-            1_f64, 6_f64, 4,
-        )?;
+        let state =
+            LatticeStateEFSyncDefault::<LatticeStateDefault<3>, 3>::new_cold(1_f64, 6_f64, 4)?;
 
         let mut leap_frog = SimulationStateLeap::new_from_state(state.clone());
         assert_eq!(&state, leap_frog.as_ref());
@@ -1315,8 +1312,7 @@ mod test {
             leap_frog.gauss(&LatticePoint::default())
         );
 
-        let _: &mut LatticeStateWithEFieldSyncDefault<LatticeStateDefault<3>, 3> =
-            leap_frog.as_mut();
+        let _: &mut LatticeStateEFSyncDefault<LatticeStateDefault<3>, 3> = leap_frog.as_mut();
         Ok(())
     }
 }
