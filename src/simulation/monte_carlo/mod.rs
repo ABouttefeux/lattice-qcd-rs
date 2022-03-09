@@ -12,13 +12,11 @@ use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        field::LinkMatrix,
-        lattice::{Direction, LatticeCyclique, LatticeLink, LatticeLinkCanonical},
-        Complex, Real,
-    },
-    state::{LatticeState, LatticeStateDefault},
+use super::state::{LatticeState, LatticeStateDefault};
+use crate::{
+    field::LinkMatrix,
+    lattice::{Direction, LatticeCyclique, LatticeLink, LatticeLinkCanonical},
+    Complex, Real,
 };
 
 pub mod heat_bath;

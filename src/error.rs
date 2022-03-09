@@ -199,7 +199,7 @@ impl Display for LatticeInitializationError {
 impl Error for LatticeInitializationError {}
 
 /// A struct that combine an error with a owned value
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ErrorWithOnwnedValue<Error, State> {
     error: Error,
@@ -286,5 +286,22 @@ mod test {
             ImplementationError::OptionWithUnexpectedNone.to_string(),
             "an option contained an unexpected None value"
         );
+    }
+
+    /// Test the multi integration error.
+    #[test]
+    fn multi_integration_error() {
+        let e1 = MultiIntegrationError::<LatticeInitializationError>::ZeroIntegration;
+        assert_eq!(e1.to_string(), "no integration steps");
+
+        let index = 2;
+        let error = LatticeInitializationError::DimTooSmall;
+        let e2 = MultiIntegrationError::IntegrationError(index, error);
+        assert_eq!(
+            e2.to_string(),
+            format!("error during intgration step {}: {}", index, error)
+        );
+        assert!(e1.source().is_none());
+        assert!(e2.source().is_some());
     }
 }
