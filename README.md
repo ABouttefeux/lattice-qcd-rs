@@ -7,7 +7,7 @@
 ![](https://img.shields.io/criterion/ABouttefeux/lattice-qcd-rs)
 [![codecov](https://codecov.io/gh/ABouttefeux/lattice-qcd-rs/branch/develop/graph/badge.svg?token=NMRHQZ3ZQ1)](https://codecov.io/gh/ABouttefeux/lattice-qcd-rs)
 
-Classical lattice QCD simulation and tools.
+## Classical lattice QCD simulation and tools.
 
 This library provides tool to simulate a pure gauge SU(3) theory on a lattice. It aimed to provide generic tool such that many different simulation or methods can be used.
 You can easily choose the Monte Carlo algorithm, you can implement you own Hamiltonian etc. It provides also an easy way to do simulation in dimension between 1 and `usize::MAX`. So this library is not limited to d = 3 or d = 4.
@@ -33,9 +33,12 @@ Check out my other repo [plaquette](https://github.com/ABouttefeux/plaquette), a
 
 ## Usage
 
-Add `lattice_qcd_rs = { version = "0.2.0", git = "https://github.com/ABouttefeux/lattice_qcd_rs", branch = "main" }` into your `cargo.toml`.
+Add `lattice_qcd_rs = { version = "0.2.0", git = "https://github.com/ABouttefeux/lattice_qcd_rs" }` into your `cargo.toml`.
+The set of features are 
+ - `serde-serialize` on by default permit the use of serde on some structure
+ - `no-overflow-test` usage interns to desable overflow test for coverage.
 
-for the moment it is not on crates.io. Maybe I will add it. But for the moment it is still in development.
+At the moment it is not on crates.io. Maybe I will add it. But for the moment it is still in development.
 Note that you may want to specify a specific commit as for now I may introduce breaking changes.
 I will however commit to more stability once I am ready to release version `0.2.0`.
 
@@ -47,28 +50,33 @@ extern crate rand_xoshiro;
 
 use lq::prelude::*;
 
-let mut rng = rand_xoshiro::Xoshiro256PlusPlus::from_entropy();
+# use std::error::Error;
+# fn main() -> Result<(), Box<dyn Error>> {
+    let mut rng = rand_xoshiro::Xoshiro256PlusPlus::from_entropy();
 
-let size = 1000_f64;
-let number_of_pts = 10;
-let beta = 1_f64;
+    let size = 1000_f64;
+    let number_of_pts = 10;
+    let beta = 1_f64;
 
-let mut simulation = LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    let mut simulation =
+        LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
 
-let spread_parameter = 0.1_f64;
-let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
+    let spread_parameter = 0.1_f64;
+    let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)?;
 
-for _ in 0..100 {
-    for _ in 0..1_000 {
-        simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+    for _ in 0..100 {
+        for _ in 0..1_000 {
+            simulation = simulation.monte_carlo_step(&mut mc)?;
+        }
+        // the more we advance te more the link matrices
+        // will deviate form SU(3), so we reprojet to SU(3)
+        // every 1_000 steps.
+        simulation.normalize_link_matrices();
     }
-    // the more we advance te more the link matrices
-    // will deviate form SU(3), so we reprojet to SU(3)
-    // every 1_000 steps.
-    simulation.normalize_link_matrices();
-}
 
-let average = simulation.average_trace_plaquette().unwrap().real() / 3_f64;
+    let average = simulation.average_trace_plaquette().unwrap().real() / 3_f64;
+# Ok(())
+# }
 ```
 
 This library use rayon as a way to do some computation in parallel. However not everything can be parallelized. I advice that if you want to do multiple similar simulation (for instance you want to do for Beta = 1, 1.1, 1.2, ...) to use rayon. In order to do multiple parallel simulation.
@@ -131,55 +139,69 @@ Also [ranlux](https://luscher.web.cern.ch/luscher/ranlux/) is a good choice. But
 # Other Examples
 ```rust
 use lattice_qcd_rs::{
+    error::ImplementationError,
+    ComplexField,
     simulation::monte_carlo::MetropolisHastingsDeltaDiagnostic,
     simulation::state::{LatticeState, LatticeStateDefault},
-    ComplexField,
 };
 
+# use std::error::Error;
+# fn main() -> Result<(), Box<dyn Error>> {
 let mut rng = rand::thread_rng();
 
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
 
 let spread_parameter = 1E-5_f64;
-let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng).unwrap();
+let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)
+    .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
 
 let number_of_sims = 100;
 for _ in 0..number_of_sims / 10 {
     for _ in 0..10 {
-        simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+        simulation = simulation.monte_carlo_step(&mut mc)?;
     }
     simulation.normalize_link_matrices(); // we renormalize all matrices back to SU(3);
 }
-let average = simulation.average_trace_plaquette().unwrap().real();
+let average = simulation.average_trace_plaquette()
+    .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+    .real();
+# Ok(())
+# }
 ```
 Alternatively other Monte Carlo algorithm can be used like,
 ```rust
 use lattice_qcd_rs::{
+    error::ImplementationError,
     simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
     simulation::state::{LatticeState, LatticeStateDefault},
 };
 
+# use std::error::Error;
+# fn main() -> Result<(), Box<dyn Error>> {
 let mut rng = rand::thread_rng();
 
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
 
 let number_of_rand = 20;
 let spread_parameter = 1E-5_f64;
 let mut mc = McWrapper::new(
-    MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter).unwrap(),
+    MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter)
+        .ok_or(ImplementationError::OptionWithUnexpectedNone)?,
     rng,
 );
 
-simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+simulation = simulation.monte_carlo_step(&mut mc)?;
 simulation.normalize_link_matrices();
+# Ok(())
+# }
 ```
 or
 ```rust
@@ -189,19 +211,23 @@ use lattice_qcd_rs::{
     simulation::state::{LatticeState, LatticeStateDefault},
 };
 
+# use std::error::Error;
+# fn main() -> Result<(), Box<dyn Error>> {
 let mut rng = rand::thread_rng();
 
 let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
 
 let delta_t = 1E-3_f64;
 let number_of_step = 10;
 let mut mc =
     HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
 
-simulation = simulation.monte_carlo_step(&mut mc).unwrap();
+simulation = simulation.monte_carlo_step(&mut mc)?;
 simulation.normalize_link_matrices();
+# Ok(())
+# }
 ```

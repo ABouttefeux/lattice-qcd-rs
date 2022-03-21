@@ -540,8 +540,6 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// # Example
     /// This example demonstrate how to reproduce the same configuration
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclique, dim};
     /// use rand::{rngs::StdRng, SeedableRng};
     ///
@@ -1003,8 +1001,6 @@ where
     ///
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
     /// # use lattice_qcd_rs::{simulation::{LatticeStateEFSyncDefault, LatticeStateDefault}, lattice::LatticeCyclique};
     /// use rand::{SeedableRng,rngs::StdRng};
     ///

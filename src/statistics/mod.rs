@@ -9,10 +9,12 @@ pub mod distribution;
 
 pub use distribution::*;
 
-/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. It uses the power of the parallel iterator to do the computation
+/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`].
+/// It uses the power of the parallel iterator to do the computation
 /// and might give better performance than [`mean`].
 ///
-/// Alternatively there is [`mean_par_iter_val`] for parallel iterator with non reference values.
+/// Alternatively there is [`mean_par_iter_val`] for parallel iterator
+/// with non reference values.
 /// # Example
 /// ```
 /// use lattice_qcd_rs::statistics::mean_par_iter;
@@ -35,8 +37,10 @@ where
     mean_par_iter_val(data.cloned())
 }
 
-/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. If you want to use reference use [`mean_par_iter`].
-/// It uses the power of the parallel iterator to do the computation and is particullary usefull in combination of a map.
+/// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. If you want
+/// to use reference use [`mean_par_iter`].
+/// It uses the power of the parallel iterator to do the computation and is
+/// particullary usefull in combination of a map.
 ///
 /// # Example
 /// ```
@@ -60,7 +64,8 @@ where
     mean / len as f64
 }
 
-/// Compute the variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`].
+/// Compute the variance (squared of standard deviation) from
+/// a [`rayon::iter::IndexedParallelIterator`].
 ///
 /// The alternative for iterator that yield non reference is [`variance_par_iter_val`].
 /// # Example
@@ -88,9 +93,11 @@ where
     variance_par_iter_val(data.cloned())
 }
 
-/// Compute the variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`] by value.
+/// Compute the variance (squared of standard deviation) from
+/// a [`rayon::iter::IndexedParallelIterator`] by value.
 ///
-/// The alternative for the variance from a iterator that yields reference is [`variance_par_iter`].
+/// The alternative for the variance from a iterator that yields reference
+/// is [`variance_par_iter`].
 /// # Example
 /// ```
 /// use lattice_qcd_rs::statistics::variance_par_iter_val;
@@ -119,10 +126,13 @@ where
     variance
 }
 
-/// Compute the mean and variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`].
-/// Provides better performance than computing the mean and variation separately as this methode comsume the iterator only once.
+/// Compute the mean and variance (squared of standard deviation) from
+/// a [`rayon::iter::IndexedParallelIterator`].
+/// Provides better performance than computing the mean and variation separately
+/// as this methode comsume the iterator only once.
 ///
-/// The alternative for iterators returning non-references is [`mean_and_variance_par_iter_val`]
+/// The alternative for iterators returning non-references
+/// is [`mean_and_variance_par_iter_val`]
 /// # Examples
 /// see the example of [`mean_par_iter`] and [`variance_par_iter`].
 pub fn mean_and_variance_par_iter<'a, It, T>(data: It) -> [T; 2]
@@ -142,8 +152,10 @@ where
     mean_and_variance_par_iter_val(data.cloned())
 }
 
-/// Compute the mean and variance (squared of standard deviation) from a [`rayon::iter::IndexedParallelIterator`] by value.
-/// Provides better performance than computing the mean and variation separately as this methode comsume the iterator only once.
+/// Compute the mean and variance (squared of standard deviation) from
+/// a [`rayon::iter::IndexedParallelIterator`] by value.
+/// Provides better performance than computing the mean and variation separately as
+/// this methode comsume the iterator only once.
 ///
 /// The alternative for iterators returning references is [`mean_and_variance_par_iter`].
 /// # Example
@@ -168,7 +180,8 @@ where
     [mean / len as f64, var]
 }
 
-/// Computes the mean the statistical error on this value a [`rayon::iter::IndexedParallelIterator`].
+/// Computes the mean the statistical error on this value
+/// a [`rayon::iter::IndexedParallelIterator`].
 ///
 /// The statistical error is defined by `sqrt(variance / len)`.
 ///
@@ -179,7 +192,8 @@ pub fn mean_with_error_par_iter<'a, It: IndexedParallelIterator<Item = &'a f64> 
     mean_with_error_par_iter_val(data.cloned())
 }
 
-/// Computes the mean the statistical error on this value a [`rayon::iter::IndexedParallelIterator`] by value.
+/// Computes the mean the statistical error on this value
+/// a [`rayon::iter::IndexedParallelIterator`] by value.
 ///
 /// The statistical error is defined by `sqrt(variance / len)`.
 ///

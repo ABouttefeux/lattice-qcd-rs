@@ -14,8 +14,8 @@ include = ["logo.svg"]
 
 [features]
 serde-serialize = ["serde", "nalgebra/serde-serialize"]
-default = ["serde-serialize"]
 no-overflow-test= []
+default = ["serde-serialize"]
 
 [workspace]
 members = ["procedural_macro"]

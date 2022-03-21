@@ -223,8 +223,7 @@ fn creat_sim_threaded() {
 const fn delta(i: usize, j: usize) -> f64 {
     if i == j {
         1_f64
-    }
-    else {
+    } else {
         0_f64
     }
 }
@@ -574,8 +573,7 @@ fn othonomralization() {
         println!("{} , {}", m, orthonormalize_matrix(&m));
         if m.determinant() != Complex::from(0_f64) {
             test_matrix_is_su3(&orthonormalize_matrix(&m));
-        }
-        else {
+        } else {
             assert_eq!(
                 orthonormalize_matrix(&m).determinant(),
                 Complex::from(0_f64)

@@ -1,14 +1,20 @@
 //! Numerical integrators to carry out simulations.
 //!
 //! See [`SymplecticIntegrator`]. The simulations are done on [`LatticeStateWithEField`]
-//! It also require a notion of [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
+//! It also require a notion of [`SimulationStateSynchrone`]
+//! and [`SimulationStateLeapFrog`].
 //!
-//! Even thought it is effortless to implement both [`SimulationStateSynchrone`] and [`SimulationStateLeapFrog`].
-//! I adivce against it and implement only [`SimulationStateSynchrone`] and use [`super::simulation::SimulationStateLeap`]
-//! for leap frog states as it gives a compile time check that you did not forget doing a demi steps.
+//! Even thought it is effortless to implement both [`SimulationStateSynchrone`]
+//! and [`SimulationStateLeapFrog`].
+//! I adivce against it and implement only [`SimulationStateSynchrone`] and
+//! use [`super::simulation::SimulationStateLeap`]
+//! for leap frog states as it gives a compile time check that you did not forget
+//! doing a demi steps.
 //!
-//! This library gives two implementations of [`SymplecticIntegrator`]: [`SymplecticEuler`] and [`SymplecticEulerRayon`].
-//! I would advice using [`SymplecticEulerRayon`] if you do not mind the little more momory it uses.
+//! This library gives two implementations of [`SymplecticIntegrator`]:
+//! [`SymplecticEuler`] and [`SymplecticEulerRayon`].
+//! I would advice using [`SymplecticEulerRayon`] if you do not mind the little
+//! more momory it uses.
 //! # Example
 //! let us create a basic random state and let us simulate.
 //! ```
