@@ -10,3 +10,4 @@ Cargo.lock
 **/*.rs.bk
 data/
 .vscode/settings.json
+logo.png

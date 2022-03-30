@@ -1,4 +1,4 @@
-//! tool for easy use of mutli threading.
+//! Tool for easy use of multi threading.
 
 use std::{
     any::Any,
@@ -17,7 +17,7 @@ use rayon::prelude::ParallelIterator;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::lattice::{LatticeCyclique, LatticeElementToIndex};
+use super::lattice::{LatticeCyclic, LatticeElementToIndex};
 
 /// Multithreading error.
 ///
@@ -27,7 +27,7 @@ use super::lattice::{LatticeCyclique, LatticeElementToIndex};
 #[non_exhaustive]
 pub enum ThreadAnyError {
     /// Tried to run some jobs with 0 threads
-    ThreadNumberIncorect,
+    ThreadNumberIncorrect,
     /// One or more of the threads panicked. Inside the [`Box`] is the panic message.
     /// see [`run_pool_parallel`] example.
     Panic(Vec<Box<dyn Any + Send + 'static>>),
@@ -36,7 +36,7 @@ pub enum ThreadAnyError {
 impl Display for ThreadAnyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ThreadNumberIncorect => write!(f, "number of thread is incorrect"),
+            Self::ThreadNumberIncorrect => write!(f, "number of thread is incorrect"),
             Self::Panic(any) => {
                 let n = any.len();
                 if n == 0 {
@@ -85,7 +85,7 @@ impl Error for ThreadAnyError {}
 #[non_exhaustive]
 pub enum ThreadError {
     /// Tried to run some jobs with 0 threads
-    ThreadNumberIncorect,
+    ThreadNumberIncorrect,
     /// One of the thread panicked with the given messages.
     /// see [`run_pool_parallel`] example.
     Panic(Vec<Option<String>>),
@@ -94,7 +94,7 @@ pub enum ThreadError {
 impl Display for ThreadError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ThreadNumberIncorect => write!(f, "number of thread is incorrect"),
+            Self::ThreadNumberIncorrect => write!(f, "number of thread is incorrect"),
             Self::Panic(strings) => {
                 let n = strings.len();
                 if n == 0 {
@@ -136,7 +136,7 @@ impl From<ThreadAnyError> for ThreadError {
     #[allow(clippy::manual_map)] // clarity / false positive ?
     fn from(f: ThreadAnyError) -> Self {
         match f {
-            ThreadAnyError::ThreadNumberIncorect => Self::ThreadNumberIncorect,
+            ThreadAnyError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadAnyError::Panic(any) => Self::Panic(
                 any.iter()
                     .map(|element| {
@@ -159,7 +159,7 @@ impl From<ThreadAnyError> for ThreadError {
 impl From<ThreadError> for ThreadAnyError {
     fn from(f: ThreadError) -> Self {
         match f {
-            ThreadError::ThreadNumberIncorect => Self::ThreadNumberIncorect,
+            ThreadError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadError::Panic(strings) => Self::Panic(
                 strings
                     .iter()
@@ -181,12 +181,12 @@ impl From<ThreadError> for ThreadAnyError {
 ///
 /// The pool of job is given by `iter`. the job is given by `closure` that have the form `|key,common_data| -> Data`.
 /// `number_of_thread` determine the number of job done in parallel and should be greater than 0,
-/// otherwise return [`ThreadAnyError::ThreadNumberIncorect`].
-/// `capacity` is used to determine the capacity of the [`HashMap`] upon initisation (see [`HashMap::with_capacity`])
+/// otherwise return [`ThreadAnyError::ThreadNumberIncorrect`].
+/// `capacity` is used to determine the capacity of the [`HashMap`] upon initiation (see [`HashMap::with_capacity`])
 ///
 /// # Errors
-/// Returns [`ThreadAnyError::ThreadNumberIncorect`] is the number of threads is 0.
-/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Containt the panic message.
+/// Returns [`ThreadAnyError::ThreadNumberIncorrect`] is the number of threads is 0.
+/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Contains the panic message.
 ///
 /// # Example
 /// let us computes the value of `i^2 * c` for i in \[2,9999\] with 4 threads
@@ -237,7 +237,7 @@ where
     Data: Send,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
 {
-    run_pool_parallel_with_initialisation_mutable(
+    run_pool_parallel_with_initializations_mutable(
         iter,
         common_data,
         &|_, key, common| closure(key, common),
@@ -253,20 +253,20 @@ where
 /// closure_init is run once per thread and store inside a mutable data which closure can modify.
 ///
 /// # Errors
-/// Returns [`ThreadAnyError::ThreadNumberIncorect`] is the number of threads is 0.
-/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Containt the panick message.
+/// Returns [`ThreadAnyError::ThreadNumberIncorrect`] is the number of threads is 0.
+/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Contains the panic message.
 ///
 /// # Examples
 /// Let us create some value but we will greet the user from the threads
 /// ```
-/// # use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// # use lattice_qcd_rs::thread::run_pool_parallel_with_initializations_mutable;
 /// # use std::error::Error;
 ///
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// let iter = 0_u128..100000_u128;
 /// let c = 5_u128;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
-/// let result = run_pool_parallel_with_initialisation_mutable(
+/// let result = run_pool_parallel_with_initializations_mutable(
 ///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i, c| {
@@ -290,14 +290,14 @@ where
 /// extern crate rand;
 /// extern crate rand_distr;
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::lattice::LatticeCyclique;
-/// use lattice_qcd_rs::thread::run_pool_parallel_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::LatticeCyclic;
+/// use lattice_qcd_rs::thread::run_pool_parallel_with_initializations_mutable;
 /// # use std::error::Error;
 ///
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
+/// let l = LatticeCyclic::<4>::new(1_f64, 4)?;
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
-/// let result = run_pool_parallel_with_initialisation_mutable(
+/// let result = run_pool_parallel_with_initializations_mutable(
 ///     l.get_links(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
@@ -308,9 +308,9 @@ where
 /// # Ok(())
 /// # }
 /// ```
-#[allow(clippy::needless_return)] // for lisibiliy
-#[allow(clippy::semicolon_if_nothing_returned)] // I actually want to retun a never in the future
-pub fn run_pool_parallel_with_initialisation_mutable<Key, Data, CommonData, InitData, F, FInit>(
+#[allow(clippy::needless_return)] // for readability
+#[allow(clippy::semicolon_if_nothing_returned)] // I actually want to returns a never in the future
+pub fn run_pool_parallel_with_initializations_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
     closure: &F,
@@ -326,7 +326,7 @@ where
     FInit: Send + Clone + FnOnce() -> InitData,
 {
     if number_of_thread == 0 {
-        return Err(ThreadAnyError::ThreadNumberIncorect);
+        return Err(ThreadAnyError::ThreadNumberIncorrect);
     }
     else if number_of_thread == 1 {
         let mut hash_map = HashMap::<Key, Data>::with_capacity(capacity);
@@ -404,18 +404,18 @@ where
 /// (see [`std::vec::Vec::with_capacity`]).
 ///
 /// # Errors
-/// Returns [`ThreadAnyError::ThreadNumberIncorect`] is the number of threads is 0.
-/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Containt the panick message.
+/// Returns [`ThreadAnyError::ThreadNumberIncorrect`] is the number of threads is 0.
+/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Contains the panic message.
 ///
 /// # Example
 /// ```
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
+/// use lattice_qcd_rs::lattice::{LatticeCyclic, LatticeElementToIndex, LatticePoint};
 /// use lattice_qcd_rs::thread::run_pool_parallel_vec;
 /// # use std::error::Error;
 ///
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
+/// let l = LatticeCyclic::<4>::new(1_f64, 4)?;
 /// let c = 5_usize;
 /// let result = run_pool_parallel_vec(
 ///     l.get_points(),
@@ -437,7 +437,7 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
     closure: &F,
     number_of_thread: usize,
     capacity: usize,
-    l: &LatticeCyclique<D>,
+    l: &LatticeCyclic<D>,
     default_data: &Data,
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
@@ -446,7 +446,7 @@ where
     Data: Send + Clone,
     F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
 {
-    run_pool_parallel_vec_with_initialisation_mutable(
+    run_pool_parallel_vec_with_initializations_mutable(
         iter,
         common_data,
         &|_, key, common| closure(key, common),
@@ -463,22 +463,22 @@ where
 /// run jobs in parallel. Similar to [`run_pool_parallel_vec`] but with initiation.
 ///
 /// # Errors
-/// Returns [`ThreadAnyError::ThreadNumberIncorect`] is the number of threads is 0.
-/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Containt the panick message.
+/// Returns [`ThreadAnyError::ThreadNumberIncorrect`] is the number of threads is 0.
+/// Returns [`ThreadAnyError::Panic`] if a thread panicked. Contains the panic message.
 ///
 /// # Examples
 /// Let us create some value but we will greet the user from the threads
 /// ```
-/// use lattice_qcd_rs::lattice::{LatticeCyclique, LatticeElementToIndex, LatticePoint};
-/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::{LatticeCyclic, LatticeElementToIndex, LatticePoint};
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initializations_mutable;
 /// # use std::error::Error;
 ///
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// let l = LatticeCyclique::<4>::new(1_f64, 25)?;
+/// let l = LatticeCyclic::<4>::new(1_f64, 25)?;
 /// let iter = l.get_points();
 /// let c = 5_usize;
 /// // we could have put 4 inside the closure but this demonstrate how to use common data
-/// let result = run_pool_parallel_vec_with_initialisation_mutable(
+/// let result = run_pool_parallel_vec_with_initializations_mutable(
 ///     iter,
 ///     &c,
 ///     &|has_greeted: &mut bool, i: &LatticePoint<4>, c: &usize| {
@@ -505,14 +505,14 @@ where
 /// extern crate rand_distr;
 /// extern crate nalgebra;
 /// use lattice_qcd_rs::field::Su3Adjoint;
-/// use lattice_qcd_rs::lattice::LatticeCyclique;
-/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initialisation_mutable;
+/// use lattice_qcd_rs::lattice::LatticeCyclic;
+/// use lattice_qcd_rs::thread::run_pool_parallel_vec_with_initializations_mutable;
 /// # use std::error::Error;
 ///
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// let l = LatticeCyclique::<4>::new(1_f64, 4)?;
+/// let l = LatticeCyclic::<4>::new(1_f64, 4)?;
 /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
-/// let result = run_pool_parallel_vec_with_initialisation_mutable(
+/// let result = run_pool_parallel_vec_with_initializations_mutable(
 ///     l.get_links(),
 ///     &distribution,
 ///     &|rng, _, d| Su3Adjoint::random(rng, d).to_su3(),
@@ -526,9 +526,9 @@ where
 /// # }
 /// ```
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::needless_return)] // for lisibiliy
-#[allow(clippy::semicolon_if_nothing_returned)] // I actually want to retun a never in the future
-pub fn run_pool_parallel_vec_with_initialisation_mutable<
+#[allow(clippy::needless_return)] // for readability
+#[allow(clippy::semicolon_if_nothing_returned)] // I actually want to return a never in the future
+pub fn run_pool_parallel_vec_with_initializations_mutable<
     Key,
     Data,
     CommonData,
@@ -543,7 +543,7 @@ pub fn run_pool_parallel_vec_with_initialisation_mutable<
     closure_init: FInit,
     number_of_thread: usize,
     capacity: usize,
-    l: &LatticeCyclique<D>,
+    l: &LatticeCyclic<D>,
     default_data: &Data,
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
@@ -555,7 +555,7 @@ where
     Key: LatticeElementToIndex<D>,
 {
     if number_of_thread == 0 {
-        return Err(ThreadAnyError::ThreadNumberIncorect);
+        return Err(ThreadAnyError::ThreadNumberIncorrect);
     }
     else if number_of_thread == 1 {
         let mut vec = Vec::<Data>::with_capacity(capacity);
@@ -598,7 +598,7 @@ where
                 });
                 threads.push(handel);
             }
-            // we drop channel so we can proprely assert if they are closed
+            // we drop channel so we can properly assert if they are closed
             drop(result_tx);
             let mut vec = Vec::<Data>::with_capacity(capacity);
             for message in result_rx {
@@ -675,7 +675,7 @@ where
 /// assert_eq!(result[10], 10 * 10 * c);
 /// ```
 /// # Panic.
-/// panic if the closure panic at any point during the evalutation
+/// panic if the closure panic at any point during the evaluation
 /// ```should_panic
 /// # use lattice_qcd_rs::thread::run_pool_parallel_rayon;
 /// let iter = 0..10;
@@ -708,7 +708,7 @@ mod test {
     #[test]
     fn thread_error() {
         assert_eq!(
-            format!("{}", ThreadAnyError::ThreadNumberIncorect),
+            format!("{}", ThreadAnyError::ThreadNumberIncorrect),
             "number of thread is incorrect"
         );
         assert!(
@@ -719,7 +719,7 @@ mod test {
         );
         assert!(format!("{}", ThreadAnyError::Panic(vec![])).contains("0 thread panicked"));
 
-        assert!(ThreadAnyError::ThreadNumberIncorect.source().is_none());
+        assert!(ThreadAnyError::ThreadNumberIncorrect.source().is_none());
         assert!(ThreadAnyError::Panic(vec![Box::new(())]).source().is_none());
         assert!(
             ThreadAnyError::Panic(vec![Box::new(ImplementationError::Unreachable)])
@@ -731,7 +731,7 @@ mod test {
             .is_none());
         // -------
         assert_eq!(
-            format!("{}", ThreadError::ThreadNumberIncorect),
+            format!("{}", ThreadError::ThreadNumberIncorrect),
             "number of thread is incorrect"
         );
         assert!(format!("{}", ThreadError::Panic(vec![None])).contains("a thread panicked"));
@@ -743,7 +743,7 @@ mod test {
         .contains("message 1"));
         assert!(format!("{}", ThreadError::Panic(vec![])).contains("0 thread panicked"));
 
-        assert!(ThreadError::ThreadNumberIncorect.source().is_none());
+        assert!(ThreadError::ThreadNumberIncorrect.source().is_none());
         assert!(ThreadError::Panic(vec![None]).source().is_none());
         assert!(ThreadError::Panic(vec![Some("".to_string())])
             .source()
@@ -767,10 +767,10 @@ mod test {
         assert_eq!(ThreadError::from(error), error3);
         assert_eq!(ThreadAnyError::from(error3).to_string(), error2.to_string());
 
-        let error = ThreadAnyError::ThreadNumberIncorect;
-        let error2 = ThreadError::ThreadNumberIncorect;
+        let error = ThreadAnyError::ThreadNumberIncorrect;
+        let error2 = ThreadError::ThreadNumberIncorrect;
         assert_eq!(ThreadError::from(error), error2);
-        let error = ThreadAnyError::ThreadNumberIncorect;
+        let error = ThreadAnyError::ThreadNumberIncorrect;
         assert_eq!(ThreadAnyError::from(error2).to_string(), error.to_string());
     }
 }

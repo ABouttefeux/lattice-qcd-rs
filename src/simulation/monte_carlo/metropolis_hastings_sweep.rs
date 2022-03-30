@@ -1,4 +1,4 @@
-//! Metropolis Hastings methode
+//! Metropolis Hastings method
 //!
 //! # Example
 //! see [`MetropolisHastingsSweep`]
@@ -12,7 +12,7 @@ use super::{
         super::{
             error::Never,
             field::LinkMatrix,
-            lattice::{LatticeCyclique, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
+            lattice::{LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
             su3, Complex, Real,
         },
         state::{LatticeState, LatticeStateDefault},
@@ -20,7 +20,7 @@ use super::{
     delta_s_old_new_cmp, MonteCarlo,
 };
 
-/// Metropolis Hastings methode by doing a pass on all points
+/// Metropolis Hastings method by doing a pass on all points
 ///
 /// # Example
 /// ```
@@ -72,7 +72,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     /// than 0.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
-    /// `spread` is the spead factor for the random matrix change
+    /// `spread` is the spread factor for the random matrix change
     /// ( used in [`su3::random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real, rng: Rng) -> Option<Self> {
         if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
@@ -92,7 +92,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         self.prob_replace_mean
     }
 
-    /// Number of accepted chnage during last sweep
+    /// Number of accepted change during last sweep
     pub fn number_replace_last(&self) -> usize {
         self.number_replace_last
     }
@@ -110,7 +110,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     #[inline]
     fn delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta: Real,

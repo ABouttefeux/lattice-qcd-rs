@@ -52,7 +52,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         Self { rng }
     }
 
-    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
+    /// Absorbed self and return the RNG as owned. It essentially deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -67,13 +67,13 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         &self.rng
     }
 
-    /// Apply te SU2 heat bath methode.
+    /// Apply te SU2 heat bath method.
     #[inline]
     fn heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
-        let staple_coeef = staple.determinant().real().sqrt();
-        if staple_coeef.is_normal() {
-            let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coeef);
-            let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coeef).unwrap();
+        let staple_coefficient = staple.determinant().real().sqrt();
+        if staple_coefficient.is_normal() {
+            let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coefficient);
+            let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coefficient).unwrap();
             let rand_m_r: CMatrix2 = self.rng.sample(d_heat_bath_r);
             rand_m_r * v_r
         }
@@ -84,7 +84,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         }
     }
 
-    /// Apply the pesudo heat bath methode and return the new link.
+    /// Apply the pseudo heat bath methods and return the new link.
     #[inline]
     fn get_modif<const D: usize>(
         &mut self,
@@ -108,7 +108,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     }
 
     #[inline]
-    // TODO improve error handeling
+    // TODO improve error handling
     fn next_element_default<const D: usize>(
         &mut self,
         mut state: LatticeStateDefault<D>,

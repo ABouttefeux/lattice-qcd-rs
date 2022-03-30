@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use super::state::{LatticeState, LatticeStateDefault};
 use crate::{
     field::LinkMatrix,
-    lattice::{Direction, LatticeCyclique, LatticeLink, LatticeLinkCanonical},
+    lattice::{Direction, LatticeCyclic, LatticeLink, LatticeLinkCanonical},
     Complex, Real,
 };
 
@@ -66,7 +66,7 @@ pub trait MonteCarlo<State, const D: usize>
 where
     State: LatticeState<D>,
 {
-    /// Error returned while getting the next ellement.
+    /// Error returned while getting the next element.
     type Error;
 
     /// Do one Monte Carlo simulation step.
@@ -76,7 +76,7 @@ where
     fn next_element(&mut self, state: State) -> Result<State, Self::Error>;
 }
 
-/// Some times it is esayer to just implement a potential next element, the rest is done automatically using an [`McWrapper`].
+/// Some times it is easier to just implement a potential next element, the rest is done automatically using an [`McWrapper`].
 ///
 /// To get an [`MonteCarlo`] use the wrapper [`McWrapper`].
 /// # Example
@@ -110,6 +110,7 @@ where
 /// }
 /// // operation at the end of the simulation
 /// let (_, rng) = wrapper.deconstruct(); // get the rng back
+///                                       // continue with further operation using the same rng ...
 /// #     Ok(())
 /// # }
 /// ```
@@ -117,13 +118,13 @@ pub trait MonteCarloDefault<State, const D: usize>
 where
     State: LatticeState<D>,
 {
-    /// Error returned while getting the next ellement.
+    /// Error returned while getting the next element.
     type Error;
 
     /// Generate a radom element from the previous element (like a Markov chain).
     ///
     /// # Errors
-    /// Gives an error if a potential next ellement cannot be generated.
+    /// Gives an error if a potential next element cannot be generated.
     fn potential_next_element<Rng>(
         &mut self,
         state: &State,
@@ -145,7 +146,7 @@ where
     /// Get the next element in the chain either the old state or a new one replacing it.
     ///
     /// # Errors
-    /// Gives an error if a potential next ellement cannot be generated.
+    /// Gives an error if a potential next element cannot be generated.
     fn next_element_default<Rng>(
         &mut self,
         state: State,
@@ -321,7 +322,7 @@ where
 #[inline]
 fn delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
-    lattice: &LatticeCyclique<D>,
+    lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
     new_link: &na::Matrix3<Complex>,
     beta: Real,
@@ -336,7 +337,7 @@ fn delta_s_old_new_cmp<const D: usize>(
 #[inline]
 fn staple<const D: usize>(
     link_matrix: &LinkMatrix,
-    lattice: &LatticeCyclique<D>,
+    lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
 ) -> na::Matrix3<Complex> {
     let dir_j = link.dir();

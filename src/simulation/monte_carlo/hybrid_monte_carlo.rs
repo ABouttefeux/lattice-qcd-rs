@@ -1,4 +1,4 @@
-//! Hybrid Monte Carlo methode
+//! Hybrid Monte Carlo method
 //!
 //! # Example
 //! ```
@@ -41,7 +41,8 @@ use super::{
     super::{
         super::{error::MultiIntegrationError, integrator::SymplecticIntegrator, Real},
         state::{
-            LatticeState, LatticeStateEFSyncDefault, SimulationStateLeap, SimulationStateSynchrone,
+            LatticeState, LatticeStateEFSyncDefault, SimulationStateLeap,
+            SimulationStateSynchronous,
         },
     },
     MonteCarlo, MonteCarloDefault,
@@ -50,17 +51,20 @@ use super::{
 /// Hybrid Monte Carlo algorithm (HCM for short).
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
-/// This conjugatewd momenta is also refed as the "Electric" field
+/// This conjugated momenta is also refed as the "Electric" field
 /// or `e_field` with distribution N(0, 1 / beta). And to solve the equation of motion.
 /// The new state is accepted with probability Exp( -H_old + H_new) where the Hamiltonian has an extra term Tr(E_i ^ 2).
-/// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
-/// Which means that the methode has a high acceptance rate.
+/// The advantage is that the simulation can be done in a symplectic way i.e. it conserved the Hamiltonian.
+/// Which means that the method has a high acceptance rate.
+///
+/// # Example
+/// See the the level module documentation.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarlo<State, Rng, I, const D: usize>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -74,8 +78,8 @@ where
 
 impl<State, Rng, I, const D: usize> HybridMonteCarlo<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -108,10 +112,10 @@ where
         pub internal.number_of_steps() -> usize
     );
 
-    /// gvies the following parameter for the HCM :
-    /// - delta_t is the step size per intgration of the equation of motion
+    /// gives the following parameter for the HCM :
+    /// - delta_t is the step size per integration of the equation of motion
     /// - number_of_steps is the number of time
-    /// - integrator is the methode to solve the equation of motion
+    /// - integrator is the methods to solve the equation of motion
     /// - rng, a random number generator
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
@@ -124,7 +128,7 @@ where
         }
     }
 
-    /// Get a mutlable reference to the rng.
+    /// Get a mutable reference to the rng.
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
@@ -137,8 +141,8 @@ where
 
 impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarlo<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -153,8 +157,8 @@ where
 
 impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarlo<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -169,8 +173,8 @@ where
 
 impl<State, Rng, I, const D: usize> MonteCarlo<State, D> for HybridMonteCarlo<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -194,19 +198,23 @@ where
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, const D: usize>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    /// integration step.
     delta_t: Real,
+    /// number of steps to do.
     number_of_steps: usize,
+    //// integrator used by the internal method
     integrator: I,
+    /// The phantom data such that State can be a generic parameter without being stored.
     #[cfg_attr(feature = "serde-serialize", serde(skip))]
     _phantom: PhantomData<State>,
 }
 
 impl<State, I, const D: usize> HybridMonteCarloInternal<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     getter!(
@@ -247,7 +255,7 @@ where
 
 impl<State, I, const D: usize> AsRef<I> for HybridMonteCarloInternal<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     fn as_ref(&self) -> &I {
@@ -257,7 +265,7 @@ where
 
 impl<State, I, const D: usize> AsMut<I> for HybridMonteCarloInternal<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     fn as_mut(&mut self) -> &mut I {
@@ -267,7 +275,7 @@ where
 
 impl<State, I, const D: usize> MonteCarloDefault<State, D> for HybridMonteCarloInternal<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     type Error = MultiIntegrationError<I::Error>;
@@ -294,17 +302,20 @@ where
 /// Hybrid Monte Carlo algorithm ( HCM for short) with diagnostics.
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
-/// This conjugatewd momenta is also refed as the "Electric" field
+/// This conjugated momenta is also refed as the "Electric" field
 /// or `e_field` with distribution N(0, 1 / beta). And to solve the equation of motion.
 /// The new state is accepted with probability Exp( -H_old + H_new) where the Hamiltonian has an extra term Tr(E_i ^ 2).
-/// The advantage is that the simulation can be done in a simpleptic way i.e. it conserved the Hamiltonian.
-/// Which means that the methode has a high acceptance rate.
+/// The advantage is that the simulation can be done in a symplectic way i.e. it conserved the Hamiltonian.
+/// Which means that the method has a high acceptance rate.
+///
+/// # Example
+/// See the the level module documentation.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct HybridMonteCarloDiagnostic<State, Rng, I, const D: usize>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -318,8 +329,8 @@ where
 
 impl<State, Rng, I, const D: usize> HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -366,10 +377,10 @@ where
         usize
     );
 
-    /// gvies the following parameter for the HCM :
-    /// - delta_t is the step size per intgration of the equation of motion
+    /// gives the following parameter for the HCM :
+    /// - delta_t is the step size per integration of the equation of motion
     /// - number_of_steps is the number of time
-    /// - integrator is the methode to solve the equation of motion
+    /// - integrator is the method to solve the equation of motion
     /// - rng, a random number generator
     pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
@@ -382,7 +393,7 @@ where
         }
     }
 
-    /// Get a mutlable reference to the rng.
+    /// Get a mutable reference to the rng.
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
@@ -405,8 +416,8 @@ where
 
 impl<State, Rng, I, const D: usize> AsRef<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -421,8 +432,8 @@ where
 
 impl<State, Rng, I, const D: usize> AsMut<Rng> for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -438,8 +449,8 @@ where
 impl<State, Rng, I, const D: usize> MonteCarlo<State, D>
     for HybridMonteCarloDiagnostic<State, Rng, I, D>
 where
-    State: LatticeState<D> + Clone,
-    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchrone<D>,
+    State: LatticeState<D> + Clone + ?Sized,
+    LatticeStateEFSyncDefault<State, D>: SimulationStateSynchronous<D>,
     I: SymplecticIntegrator<
         LatticeStateEFSyncDefault<State, D>,
         SimulationStateLeap<LatticeStateEFSyncDefault<State, D>, D>,
@@ -463,7 +474,7 @@ where
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     delta_t: Real,
@@ -477,7 +488,7 @@ where
 
 impl<State, I, const D: usize> HybridMonteCarloInternalDiagnostics<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     getter!(
@@ -523,6 +534,7 @@ where
         self.has_replace_last
     }
 
+    /// get the integrator as a mutable reference.
     pub fn integrator_mut(&mut self) -> &mut I {
         &mut self.integrator
     }
@@ -530,7 +542,7 @@ where
 
 impl<State, I, const D: usize> AsRef<I> for HybridMonteCarloInternalDiagnostics<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     fn as_ref(&self) -> &I {
@@ -540,7 +552,7 @@ where
 
 impl<State, I, const D: usize> AsMut<I> for HybridMonteCarloInternalDiagnostics<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     fn as_mut(&mut self) -> &mut I {
@@ -551,7 +563,7 @@ where
 impl<State, I, const D: usize> MonteCarloDefault<State, D>
     for HybridMonteCarloInternalDiagnostics<State, I, D>
 where
-    State: SimulationStateSynchrone<D>,
+    State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
     type Error = MultiIntegrationError<I::Error>;

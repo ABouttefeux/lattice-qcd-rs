@@ -38,7 +38,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let state_new = state_with_e.clone();
     let state_new = state_new.simulate_to_leapfrog(&integrator, DT)?;
     let state_new = state_new.simulate_leap_n(&integrator, DT, 1)?;
-    let state_new = state_new.simulate_to_synchrone(&integrator, DT)?;
+    let state_new = state_new.simulate_to_synchronous(&integrator, DT)?;
     let state_new = state_new.simulate_sync_n(&integrator, DT, 1)?;
     let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_01_f64);
@@ -58,7 +58,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let state_new = state_with_e.clone();
     let state_new = state_new.simulate_to_leapfrog(&integrator, DT)?;
     let state_new = state_new.simulate_leap_n(&integrator, DT, 2)?;
-    let state_new = state_new.simulate_to_synchrone(&integrator, DT)?;
+    let state_new = state_new.simulate_to_synchronous(&integrator, DT)?;
     let state_new = state_new.simulate_sync_n(&integrator, DT, 2)?;
     let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_01_f64);

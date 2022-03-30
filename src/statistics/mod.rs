@@ -1,4 +1,4 @@
-//! provide statistical tools
+//! Provide statistical tools
 
 use std::ops::{Div, Mul, Sub};
 
@@ -40,7 +40,7 @@ where
 /// Compute the mean from a [`rayon::iter::IndexedParallelIterator`]. If you want
 /// to use reference use [`mean_par_iter`].
 /// It uses the power of the parallel iterator to do the computation and is
-/// particullary usefull in combination of a map.
+/// particularly useful in combination of a map.
 ///
 /// # Example
 /// ```
@@ -129,7 +129,7 @@ where
 /// Compute the mean and variance (squared of standard deviation) from
 /// a [`rayon::iter::IndexedParallelIterator`].
 /// Provides better performance than computing the mean and variation separately
-/// as this methode comsume the iterator only once.
+/// as this method consume the iterator only once.
 ///
 /// The alternative for iterators returning non-references
 /// is [`mean_and_variance_par_iter_val`]
@@ -155,7 +155,7 @@ where
 /// Compute the mean and variance (squared of standard deviation) from
 /// a [`rayon::iter::IndexedParallelIterator`] by value.
 /// Provides better performance than computing the mean and variation separately as
-/// this methode comsume the iterator only once.
+/// this method consume the iterator only once.
 ///
 /// The alternative for iterators returning references is [`mean_and_variance_par_iter`].
 /// # Example
@@ -395,7 +395,7 @@ where
     [mean, variance]
 }
 
-/// compute the mean the statistocal error on this value a slice.
+/// compute the mean the statistical error on this value a slice.
 ///
 /// The statistical error is defined by `sqrt(variance / len)`.
 pub fn mean_with_error(data: &[f64]) -> [f64; 2] {

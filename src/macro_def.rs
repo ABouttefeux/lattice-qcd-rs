@@ -31,7 +31,7 @@
 //! }
 //! ```
 //! # project!
-//! project an methode on one of the composant to the structur.
+//! project an methods on one of the corposant to the structure.
 //! ## Example
 //! ```ignore
 //! struct A{}
@@ -46,7 +46,7 @@
 //! }
 //! ```
 //! # project_mut!
-//! same as `project!` but with `&mut self` in the signature of the methode replacing `&sefl`
+//! same as `project!` but with `&mut self` in the signature of the method replacing `&self`
 //! ## Example
 //! ```ignore
 //! struct A{}
@@ -146,7 +146,8 @@ macro_rules! project_mut {
 }
 
 #[macro_export]
-/// assert if two matrices are approximatively the same
+/// assert if two matrices are approximately the same
+// TODO example
 macro_rules! assert_eq_matrix {
     ($e:expr, $e2:expr, $epsilon:expr) => {
         let e = $e;
@@ -161,7 +162,8 @@ macro_rules! assert_eq_matrix {
 }
 
 #[macro_export]
-/// assert if two complex are approximatively the same
+/// assert if two complex are approximately the same
+// TODO example
 macro_rules! assert_eq_complex {
     ($e:expr, $e2:expr, $epsilon:expr) => {
         {
@@ -183,6 +185,7 @@ macro_rules! assert_eq_complex {
 
 #[macro_export]
 /// assert if the matrix is U(2) ( unitary 2 x 2)
+// TODO example
 macro_rules! assert_matrix_is_unitary_2 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
@@ -202,6 +205,7 @@ macro_rules! assert_matrix_is_unitary_2 {
 
 #[macro_export]
 /// assert if the matrix is U(3) (unitary 3 x 3)
+// TODO example
 macro_rules! assert_matrix_is_unitary_3 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
@@ -222,6 +226,7 @@ macro_rules! assert_matrix_is_unitary_3 {
 
 #[macro_export]
 /// assert if the matrix is SU(2) (special unitary)
+// TODO examples
 macro_rules! assert_matrix_is_su_2 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;
@@ -242,6 +247,7 @@ macro_rules! assert_matrix_is_su_2 {
 
 #[macro_export]
 /// assert if the matrix is SU(3) (special unitary)
+// TODO examples
 macro_rules! assert_matrix_is_su_3 {
     ($m:expr, $epsilon:expr) => {{
         use nalgebra::ComplexField;

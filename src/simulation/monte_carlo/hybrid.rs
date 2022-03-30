@@ -1,6 +1,31 @@
 //! Combine multiple Monte Carlo methods.
 //!
 //! this module present different ways to combine multiple method
+//!
+//! # Example
+//! ```
+//! # use std::error::Error;
+//! #
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! use lattice_qcd_rs::simulation::{HeatBathSweep, LatticeState, LatticeStateDefault, OverrelaxationSweepReverse, HybridMethodVec};
+//! use rand::SeedableRng;
+//!
+//! let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+//! let mut heat_bath = HeatBathSweep::new(rng);
+//! let mut overrelax = OverrelaxationSweepReverse::default();
+//! let mut hybrid = HybridMethodVec::with_capacity(2);
+//! hybrid.push_method(&mut heat_bath);
+//! hybrid.push_method(&mut overrelax);
+//!
+//! let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 8_f64, 4)?; // 1_f64 : size, 8_f64: beta, 4 number of points.
+//! for _ in 0..2 {
+//!     state = state.monte_carlo_step(&mut hybrid)?;
+//!     // operation to track the progress or the evolution
+//! }
+//! // operation at the end of the simulation
+//! #     Ok(())
+//! # }
+//! ```
 
 use core::fmt::{Debug, Display};
 use std::error::Error;
@@ -12,12 +37,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{super::state::LatticeState, MonteCarlo};
 
-/// Error given by [`HybrideMethodeVec`]
+/// Error given by [`HybridMethodVec`]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub enum HybrideMethodeVecError<Error> {
-    /// An Error comming from one of the method.
+pub enum HybridMethodVecError<Error> {
+    /// An Error coming from one of the method.
     ///
     /// the first field usize gives the position of the method giving the error
     Error(usize, Error),
@@ -25,18 +50,18 @@ pub enum HybrideMethodeVecError<Error> {
     NoMethod,
 }
 
-impl<Error: Display> Display for HybrideMethodeVecError<Error> {
+impl<Error: Display> Display for HybridMethodVecError<Error> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::NoMethod => write!(f, "no monte carlo method"),
             Self::Error(index, error) => {
-                write!(f, "error during intgration step {}: {}", index, error)
+                write!(f, "error during integration step {}: {}", index, error)
             }
         }
     }
 }
 
-impl<E: Display + Debug + Error + 'static> Error for HybrideMethodeVecError<E> {
+impl<E: Display + Debug + Error + 'static> Error for HybridMethodVecError<E> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::NoMethod => None,
@@ -45,9 +70,9 @@ impl<E: Display + Debug + Error + 'static> Error for HybrideMethodeVecError<E> {
     }
 }
 
-/// Adaptator used to convert the error to another type. It is intented to use with [`HybrideMethodeVec`].
+/// Adaptor used to convert the error to another type. It is intended to use with [`HybridMethodVec`].
 #[derive(PartialEq, Eq, Debug)]
-pub struct AdaptatorMethodError<'a, MC, State, ErrorBase, Error, const D: usize>
+pub struct AdaptorMethodError<'a, MC, State, ErrorBase, Error, const D: usize>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -58,7 +83,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize>
-    AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
+    AdaptorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -72,19 +97,19 @@ where
         }
     }
 
-    /// Getter for the reference holded by self.
+    /// Getter for the reference hold by self.
     pub fn data_mut(&mut self) -> &mut MC {
         self.data
     }
 
-    /// Getter for the reference holded by self.
+    /// Getter for the reference hold by self.
     pub fn data(&self) -> &MC {
         self.data
     }
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> AsMut<MC>
-    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
+    for AdaptorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -96,7 +121,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> AsRef<MC>
-    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
+    for AdaptorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -108,7 +133,7 @@ where
 }
 
 impl<'a, MC, State, ErrorBase, Error, const D: usize> MonteCarlo<State, D>
-    for AdaptatorMethodError<'a, MC, State, ErrorBase, Error, D>
+    for AdaptorMethodError<'a, MC, State, ErrorBase, Error, D>
 where
     MC: MonteCarlo<State, D, Error = ErrorBase> + ?Sized,
     ErrorBase: Into<Error>,
@@ -122,17 +147,20 @@ where
     }
 }
 
-/// hybride methode that combine multiple methodes. It requires that all methods return the same error.
-/// You can use [`AdaptatorMethodError`] to convert the error.
-/// If you want type with different error you can use [`HybrideMethodeCouple`].
-pub struct HybrideMethodeVec<'a, State, E, const D: usize>
+/// hybrid method that combine multiple methods. It requires that all methods return the same error.
+/// You can use [`AdaptorMethodError`] to convert the error.
+/// If you want type with different error you can use [`HybridMethodCouple`].
+///
+/// # Example
+/// see level module example [`super`].
+pub struct HybridMethodVec<'a, State, E, const D: usize>
 where
     State: LatticeState<D>,
 {
     methods: Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>,
 }
 
-impl<'a, State, E, const D: usize> HybrideMethodeVec<'a, State, E, D>
+impl<'a, State, E, const D: usize> HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
@@ -145,7 +173,9 @@ where
 
     /// Create an empty Self.
     pub fn new_empty() -> Self {
-        Self { methods: vec![] }
+        Self {
+            methods: Vec::new(),
+        }
     }
 
     /// Create an empty Self where the vector is preallocated for `capacity` element.
@@ -160,17 +190,17 @@ where
         Self { methods }
     }
 
-    /// Get a mutable reference to the methodes used,
+    /// Get a mutable reference to the methods used,
     pub fn methods_mut(&mut self) -> &mut Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         &mut self.methods
     }
 
-    /// Add a methode at the end.
+    /// Add a method at the end.
     pub fn push_method(&mut self, mc_ref: &'a mut dyn MonteCarlo<State, D, Error = E>) {
         self.methods.push(mc_ref);
     }
 
-    /// Remove a methode at the end an returns it. Return None if the methodes is empty.
+    /// Remove a method at the end an returns it. Return None if the methods is empty.
     pub fn pop_method(&mut self) -> Option<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         self.methods.pop()
     }
@@ -187,7 +217,7 @@ where
 }
 
 impl<'a, State, E, const D: usize> AsRef<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
-    for HybrideMethodeVec<'a, State, E, D>
+    for HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
@@ -197,7 +227,7 @@ where
 }
 
 impl<'a, State, E, const D: usize> AsMut<Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>>
-    for HybrideMethodeVec<'a, State, E, D>
+    for HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
@@ -206,7 +236,7 @@ where
     }
 }
 
-impl<'a, State, E, const D: usize> Default for HybrideMethodeVec<'a, State, E, D>
+impl<'a, State, E, const D: usize> Default for HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
@@ -215,49 +245,49 @@ where
     }
 }
 
-impl<'a, State, E, const D: usize> MonteCarlo<State, D> for HybrideMethodeVec<'a, State, E, D>
+impl<'a, State, E, const D: usize> MonteCarlo<State, D> for HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
-    type Error = HybrideMethodeVecError<E>;
+    type Error = HybridMethodVecError<E>;
 
     #[inline]
     fn next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
         if self.methods.is_empty() {
-            return Err(HybrideMethodeVecError::NoMethod);
+            return Err(HybridMethodVecError::NoMethod);
         }
         for (index, m) in &mut self.methods.iter_mut().enumerate() {
             let result = state.monte_carlo_step(*m);
             match result {
                 Ok(new_state) => state = new_state,
-                Err(error) => return Err(HybrideMethodeVecError::Error(index, error)),
+                Err(error) => return Err(HybridMethodVecError::Error(index, error)),
             }
         }
         Ok(state)
     }
 }
 
-/// Error given by [`HybrideMethodeCouple`]
+/// Error given by [`HybridMethodCouple`]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub enum HybrideMethodeCoupleError<Error1, Error2> {
+pub enum HybridMethodCoupleError<Error1, Error2> {
     /// First method gave an error
     ErrorFirst(Error1),
     /// Second method gave an error
     ErrorSecond(Error2),
 }
 
-impl<Error1: Display, Error2: Display> Display for HybrideMethodeCoupleError<Error1, Error2> {
+impl<Error1: Display, Error2: Display> Display for HybridMethodCoupleError<Error1, Error2> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ErrorFirst(error) => write!(f, "error during intgration step 1: {}", error),
-            Self::ErrorSecond(error) => write!(f, "error during intgration step 2: {}", error),
+            Self::ErrorFirst(error) => write!(f, "error during integration step 1: {}", error),
+            Self::ErrorSecond(error) => write!(f, "error during integration step 2: {}", error),
         }
     }
 }
 
 impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
-    for HybrideMethodeCoupleError<Error1, Error2>
+    for HybridMethodCoupleError<Error1, Error2>
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -269,9 +299,32 @@ impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
 
 /// This method can combine any two methods. The down side is that it can be very verbose to write
 /// Couples for a large number of methods.
+///
+/// # Example
+/// ```
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use lattice_qcd_rs::simulation::{HeatBathSweep, LatticeState, LatticeStateDefault, OverrelaxationSweepReverse, HybridMethodCouple};
+/// use rand::SeedableRng;
+///
+/// let rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
+/// let heat_bath = HeatBathSweep::new(rng);
+/// let overrelax = OverrelaxationSweepReverse::default();
+/// let mut couple = HybridMethodCouple::new(heat_bath,overrelax);
+///
+/// let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 8_f64, 4)?; // 1_f64 : size, 8_f64: beta, 4 number of points.
+/// for _ in 0..2 {
+///     state = state.monte_carlo_step(&mut couple)?;
+///     // operation to track the progress or the evolution
+/// }
+/// // operation at the end of the simulation
+/// #     Ok(())
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-pub struct HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, const D: usize>
+pub struct HybridMethodCouple<MC1, Error1, MC2, Error2, State, const D: usize>
 where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
@@ -283,7 +336,7 @@ where
 }
 
 impl<MC1, Error1, MC2, Error2, State, const D: usize>
-    HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, D>
+    HybridMethodCouple<MC1, Error1, MC2, Error2, State, D>
 where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
@@ -319,42 +372,42 @@ where
 }
 
 impl<MC1, Error1, MC2, Error2, State, const D: usize> MonteCarlo<State, D>
-    for HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, D>
+    for HybridMethodCouple<MC1, Error1, MC2, Error2, State, D>
 where
     MC1: MonteCarlo<State, D, Error = Error1>,
     MC2: MonteCarlo<State, D, Error = Error2>,
     State: LatticeState<D>,
 {
-    type Error = HybrideMethodeCoupleError<Error1, Error2>;
+    type Error = HybridMethodCoupleError<Error1, Error2>;
 
     #[inline]
     fn next_element(&mut self, mut state: State) -> Result<State, Self::Error> {
         state = state
             .monte_carlo_step(&mut self.method_1)
-            .map_err(HybrideMethodeCoupleError::ErrorFirst)?;
+            .map_err(HybridMethodCoupleError::ErrorFirst)?;
         state
             .monte_carlo_step(&mut self.method_2)
-            .map_err(HybrideMethodeCoupleError::ErrorSecond)
+            .map_err(HybridMethodCoupleError::ErrorSecond)
     }
 }
 
 /// Combine three methods.
-pub type HybrideMethodeTriple<MC1, Error1, MC2, Error2, MC3, Error3, State, const D: usize> =
-    HybrideMethodeCouple<
-        HybrideMethodeCouple<MC1, Error1, MC2, Error2, State, D>,
-        HybrideMethodeCoupleError<Error1, Error2>,
+pub type HybridMethodTriple<MC1, Error1, MC2, Error2, MC3, Error3, State, const D: usize> =
+    HybridMethodCouple<
+        HybridMethodCouple<MC1, Error1, MC2, Error2, State, D>,
+        HybridMethodCoupleError<Error1, Error2>,
         MC3,
         Error3,
         State,
         D,
     >;
 
-/// Error returned by [`HybrideMethodeTriple`].
-pub type HybrideMethodeTripleError<Error1, Error2, Error3> =
-    HybrideMethodeCoupleError<HybrideMethodeCoupleError<Error1, Error2>, Error3>;
+/// Error returned by [`HybridMethodTriple`].
+pub type HybridMethodTripleError<Error1, Error2, Error3> =
+    HybridMethodCoupleError<HybridMethodCoupleError<Error1, Error2>, Error3>;
 
 /// Combine four methods.
-pub type HybrideMethodeQuadruple<
+pub type HybridMethodQuadruple<
     MC1,
     Error1,
     MC2,
@@ -365,21 +418,21 @@ pub type HybrideMethodeQuadruple<
     Error4,
     State,
     const D: usize,
-> = HybrideMethodeCouple<
-    HybrideMethodeTriple<MC1, Error1, MC2, Error2, MC3, Error3, State, D>,
-    HybrideMethodeTripleError<Error1, Error2, Error3>,
+> = HybridMethodCouple<
+    HybridMethodTriple<MC1, Error1, MC2, Error2, MC3, Error3, State, D>,
+    HybridMethodTripleError<Error1, Error2, Error3>,
     MC4,
     Error4,
     State,
     D,
 >;
 
-/// Error returned by [`HybrideMethodeQuadruple`].
-pub type HybrideMethodeQuadrupleError<Error1, Error2, Error3, Error4> =
-    HybrideMethodeCoupleError<HybrideMethodeTripleError<Error1, Error2, Error3>, Error4>;
+/// Error returned by [`HybridMethodQuadruple`].
+pub type HybridMethodQuadrupleError<Error1, Error2, Error3, Error4> =
+    HybridMethodCoupleError<HybridMethodTripleError<Error1, Error2, Error3>, Error4>;
 
 /// Combine four methods.
-pub type HybrideMethodeQuintuple<
+pub type HybridMethodQuintuple<
     MC1,
     Error1,
     MC2,
@@ -392,15 +445,15 @@ pub type HybrideMethodeQuintuple<
     Error5,
     State,
     const D: usize,
-> = HybrideMethodeCouple<
-    HybrideMethodeQuadruple<MC1, Error1, MC2, Error2, MC3, Error3, MC4, Error4, State, D>,
-    HybrideMethodeQuadrupleError<Error1, Error2, Error3, Error4>,
+> = HybridMethodCouple<
+    HybridMethodQuadruple<MC1, Error1, MC2, Error2, MC3, Error3, MC4, Error4, State, D>,
+    HybridMethodQuadrupleError<Error1, Error2, Error3, Error4>,
     MC5,
     Error5,
     State,
     D,
 >;
 
-/// Error returned by [`HybrideMethodeQuintuple`].
-pub type HybrideMethodeTripleQuintuple<Error1, Error2, Error3, Error4, Error5> =
-    HybrideMethodeCoupleError<HybrideMethodeQuadrupleError<Error1, Error2, Error3, Error4>, Error5>;
+/// Error returned by [`HybridMethodQuintuple`].
+pub type HybridMethodQuintupleError<Error1, Error2, Error3, Error4, Error5> =
+    HybridMethodCoupleError<HybridMethodQuadrupleError<Error1, Error2, Error3, Error4>, Error5>;

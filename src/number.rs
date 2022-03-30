@@ -29,7 +29,7 @@ where
     }
 }
 
-/// Fixe point number representewd by i32 for the integer part and 128 bits (16 bytes) as the decimal part
+/// Fixe point number represented by i32 for the integer part and 128 bits (16 bytes) as the decimal part
 pub type I32U128 = FixedPointNumber<i32, u128>;
 
 /*

@@ -1,6 +1,7 @@
-//! module for SU(2) matrix
+//! Module for SU(2) matrix
 
-use rand_distr::Distribution;
+use rand::Rng;
+use rand_distr::{Distribution, Uniform};
 
 use super::{CMatrix2, Complex, ComplexField, Real, I, ONE, ZERO};
 
@@ -49,9 +50,33 @@ pub const PAULI_MATRICES: [&CMatrix2; 3] = [&PAULI_1, &PAULI_2, &PAULI_3];
 
 /// Get a radom SU(2) matrix close the 1 or -1.
 ///
-/// Note that it diverges from SU(2) sligthly.
-/// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
+/// Note that it diverges from SU(2) slightly.
+/// `spread_parameter` should be between between 0 and 1 both excluded to generate valid data.
 /// outside this bound it will not panic but can have unexpected results.
+///
+/// # Example
+/// /// # Example
+/// ```
+/// # use lattice_qcd_rs::{assert_matrix_is_su_2,su2::random_su2_close_to_unity};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// for _ in 0..10 {
+///     assert_matrix_is_su_2!(
+///         random_su2_close_to_unity(0.000_000_001_f64, &mut rng),
+///         0.000_000_1_f64
+///     );
+/// }
+/// ```
+/// but it will be not close to SU(2) up to [`f64::EPSILON`].
+/// ```should_panic
+/// # use lattice_qcd_rs::{assert_matrix_is_su_2,su2::random_su2_close_to_unity};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// assert_matrix_is_su_2!(
+///     random_su2_close_to_unity(0.000_000_001_f64, &mut rng),
+///     f64::EPSILON * 40_f64
+/// );
+/// ```
 pub fn random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix2
 where
     R: rand::Rng + ?Sized,
@@ -59,6 +84,7 @@ where
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
     let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
+    // always exists, unwrap is safe
     let d_sign = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     // we could have use the spread_parameter but it is safer to use the norm of x
     let x0_unsigned = (1_f64 - x.norm_squared()).sqrt();
@@ -74,6 +100,37 @@ where
 }
 
 /// Return `x0 1 + i x_i * \sigma_i`.
+///
+/// # Examples
+/// ```
+/// use lattice_qcd_rs::{
+///     assert_eq_matrix,
+///     su2::{complex_matrix_from_vec, PAULI_1},
+///     CMatrix2,
+/// };
+///
+/// let m = complex_matrix_from_vec(1.0, nalgebra::Vector3::new(0_f64, 0_f64, 0_f64));
+/// assert_eq_matrix!(
+///     m,
+///     CMatrix2::new(
+///         nalgebra::Complex::new(1_f64, 0_f64),
+///         nalgebra::Complex::new(0_f64, 0_f64),
+///         nalgebra::Complex::new(0_f64, 0_f64),
+///         nalgebra::Complex::new(1_f64, 0_f64)
+///     ),
+///     f64::EPSILON
+/// );
+///
+/// let m = complex_matrix_from_vec(0.5_f64, nalgebra::Vector3::new(1_f64, 0_f64, 0_f64));
+/// let m2 = CMatrix2::new(
+///     nalgebra::Complex::new(1_f64, 0_f64),
+///     nalgebra::Complex::new(0_f64, 0_f64),
+///     nalgebra::Complex::new(0_f64, 0_f64),
+///     nalgebra::Complex::new(1_f64, 0_f64),
+/// ) * nalgebra::Complex::new(0.5_f64, 0_f64)
+///     + PAULI_1 * nalgebra::Complex::new(0_f64, 1_f64);
+/// assert_eq_matrix!(m, m2, f64::EPSILON);
+/// ```
 pub fn complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0)
         + x.iter()
@@ -82,14 +139,44 @@ pub fn complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
             .sum::<CMatrix2>()
 }
 
-/// Take any 2x2 matrix and project it to a matric `X` such that `X / X.determinant().modulus().sqrt()`
+/// Take any 2x2 matrix and project it to a matrix `X` such that `X / X.determinant().modulus().sqrt()`
 /// is SU(2).
+///
+/// # Examples
+/// see [`project_to_su2`]
+/// ```
+/// # use lattice_qcd_rs::{su2::{project_to_su2_unorm, random_su2},CMatrix2,  Complex, assert_eq_matrix};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// let m = CMatrix2::zeros();
+/// assert_eq_matrix!(project_to_su2_unorm(m), m, f64::EPSILON);
+/// ```
+// TODO more example
 pub fn project_to_su2_unorm(m: CMatrix2) -> CMatrix2 {
     m - m.adjoint() + CMatrix2::identity() * m.trace().conjugate()
 }
 
 /// Project the matrix to SU(2). Return the identity if the norm after unormalize is
 /// subnormal (see[`f64::is_normal`]).
+///
+/// # Examples
+/// ```
+/// # use lattice_qcd_rs::{su2::{project_to_su2, random_su2, random_matrix_2},CMatrix2,  Complex, assert_eq_matrix, assert_matrix_is_su_2};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// let m = CMatrix2::zeros();
+/// assert_eq_matrix!(project_to_su2(m), CMatrix2::identity(), f64::EPSILON);
+/// for _ in 0..10 {
+///     let m = random_su2(&mut rng);
+///     assert_eq_matrix!(project_to_su2(m * Complex::new(0.5_f64, 0_f64)), m, 4_f64 * f64::EPSILON);
+///     assert_eq_matrix!(project_to_su2(m), m, 4_f64 * f64::EPSILON);
+///     assert_matrix_is_su_2!(project_to_su2(m), 4_f64 * f64::EPSILON);
+/// }
+/// for _ in 0..10 {
+///     let m = random_matrix_2(&mut rng);
+///     assert_matrix_is_su_2!(project_to_su2(m), 4_f64 * f64::EPSILON)
+/// }
+/// ```
 pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
     let m = project_to_su2_unorm(m);
     if m.determinant().modulus().is_normal() {
@@ -101,6 +188,15 @@ pub fn project_to_su2(m: CMatrix2) -> CMatrix2 {
 }
 
 /// Get an Uniformly random SU(2) matrix.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{assert_matrix_is_su_2,su2::random_su2};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// for _ in 0..10 {
+///     assert_matrix_is_su_2!(random_su2(&mut rng), 4_f64 * f64::EPSILON);
+/// }
 pub fn random_su2<Rng>(rng: &mut Rng) -> CMatrix2
 where
     Rng: rand::Rng + ?Sized,
@@ -120,9 +216,31 @@ where
 }
 
 /// Return wether the input matrix is SU(2) up to epsilon.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{su2::{is_matrix_su2, random_su2}, CMatrix2};
+/// # use rand::SeedableRng;
+/// # use nalgebra::{Complex};
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+///
+/// assert!(is_matrix_su2(&random_su2(&mut rng), 4_f64 * f64::EPSILON));
+/// assert!(!is_matrix_su2(&CMatrix2::zeros(), 4_f64 * f64::EPSILON));
+/// assert!(!is_matrix_su2(
+///     &(random_su2(&mut rng) * Complex::new(0.5_f64, 1.7_f64)),
+///     4_f64 * f64::EPSILON
+/// ));
+/// ```
 pub fn is_matrix_su2(m: &CMatrix2, epsilon: f64) -> bool {
     ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon)
         && ((m * m.adjoint() - CMatrix2::identity()).norm() < epsilon)
+}
+
+#[doc(hidden)]
+/// Crate a random 2x2 Matrix
+pub fn random_matrix_2<R: Rng + ?Sized>(rng: &mut R) -> CMatrix2 {
+    let d = Uniform::from(-10_f64..10_f64);
+    CMatrix2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
 #[cfg(test)]

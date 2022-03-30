@@ -46,7 +46,7 @@ pub const fn factorial(n: usize) -> FactorialNumber {
 
 /// Dynamical size factorial storage.
 ///
-/// Used as a lazy cache for factoral number. This is not actually used and might be removed later.
+/// Used as a lazy cache for factorial number. This is not actually used and might be removed later.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FactorialStorageDyn {
     data: Vec<FactorialNumber>,
@@ -141,9 +141,9 @@ impl FactorialStorageDyn {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Sign {
-    /// Stricly negative number (non zero)
+    /// Strictly negative number (non zero)
     Negative,
-    /// Stricly positive number ( non zero)
+    /// Strictly positive number ( non zero)
     Positive,
     /// Zero (or very close to zero)
     Zero,
@@ -164,7 +164,6 @@ impl Sign {
     /// If the value is very close to zero but not quite the sing will nonetheless be [`Sign::Zero`].
     /// If f is NaN the sing will be [`Sign::Zero`].
     pub fn sign_f64(f: f64) -> Self {
-        // TODO manage NaN
         if abs_diff_eq!(f, 0_f64) || f.is_nan() {
             Sign::Zero
         }
@@ -199,7 +198,7 @@ impl Sign {
         }
     }
 
-    /// Retuns the sign of `a - b`, with a and b are usize
+    /// Returns the sign of `a - b`, where `a` and `b` are usize
     #[allow(clippy::comparison_chain)]
     pub const fn sign_from_diff(a: usize, b: usize) -> Self {
         if a == b {

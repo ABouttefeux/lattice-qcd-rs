@@ -1,11 +1,11 @@
-//! Overrelaxation methode
+//! Overrelaxation method
 //!
 //! The goal of the overrelaxation is to move thought the phase space as much as possible but conserving the hamiltonian.
 //! It can be used to improve the speed of thermalisation by vising more states.
-//! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other methode with this one.
-//! You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
+//! Alone it can't advance the simulation as it preserved the hamiltonian. You need to use other method with this one.
+//! You can look at [`super::HybridMethodVec`] and [`super::HybridMethodCouple`].
 //!
-//! In my limimited experience [`OverrelaxationSweepReverse`] moves a bit more though the phase space than [`OverrelaxationSweepRotation`].
+//! In my limited experience [`OverrelaxationSweepReverse`] moves a bit more though the phase space than [`OverrelaxationSweepRotation`].
 //! The difference is slight though.
 //!
 //! # Example
@@ -42,13 +42,13 @@ use super::{
     staple, MonteCarlo,
 };
 
-/// Overrelaxation algortihm using rotation methode.
+/// Overrelaxation algorithm using rotation method.
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
-/// You need to use other methode with this one.
-/// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
+/// You need to use other method with this one.
+/// You can look at [`super::HybridMethodVec`] and [`super::HybridMethodCouple`].
 ///
-/// The algorrtihm is described <https://arxiv.org/abs/hep-lat/0503041> in section 2.1 up to step 2 using `\hat X_{NN}`.
+/// The algorithm is described <https://arxiv.org/abs/hep-lat/0503041> in section 2.1 up to step 2 using `\hat X_{NN}`.
 ///
 /// # Example
 /// ```
@@ -134,13 +134,13 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
     }
 }
 
-/// Overrelaxation algortihm using the reverse methode.
+/// Overrelaxation algorithm using the reverse method.
 ///
 /// Alone it can't advance the simulation as it preserved the hamiltonian.
-/// You need to use other methode with this one.
-/// You can look at [`super::HybrideMethodeVec`] and [`super::HybrideMethodeCouple`].
+/// You need to use other method with this one.
+/// You can look at [`super::HybridMethodVec`] and [`super::HybridMethodCouple`].
 ///
-/// The algorrtihm is described in <https://doi.org/10.1016/0370-2693(90)90032-2>.
+/// The algorithm is described in <https://doi.org/10.1016/0370-2693(90)90032-2>.
 ///
 /// # Example
 /// see level module documentation [`super::overrelaxation`]
@@ -222,7 +222,7 @@ mod test {
         MC: MonteCarlo<LatticeStateDefault<3>, 3>,
         MC::Error: core::fmt::Debug,
     {
-        let state = LatticeStateDefault::<3>::new_deterministe(1_f64, 1_f64, 4, rng).unwrap();
+        let state = LatticeStateDefault::<3>::new_determinist(1_f64, 1_f64, 4, rng).unwrap();
         let h = state.hamiltonian_links();
         let state2 = mc.next_element(state).unwrap();
         let h2 = state2.hamiltonian_links();

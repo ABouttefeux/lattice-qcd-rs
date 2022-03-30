@@ -67,7 +67,7 @@ mod test;
 
 /// alias for [`f64`]
 pub type Real = f64;
-/// easy to use allias for [`nalgebra::Complex::<Real>`]
+/// easy to use alias for [`nalgebra::Complex::<Real>`]
 pub type Complex = na::Complex<Real>;
 /// alias for [`nalgebra::SVector::<N, nalgebra::U8>`]
 pub type Vector8<N> = na::SVector<N, 8>;

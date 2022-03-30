@@ -5,7 +5,6 @@ use std::f64;
 use approx::*;
 use na::ComplexField;
 use rand::SeedableRng;
-use rand_distr::Distribution;
 
 use super::{
     error::*, field::*, integrator::*, lattice::*, simulation::*, su3::*, thread::*, CMatrix3,
@@ -20,8 +19,8 @@ const EPSILON: f64 = 0.000_000_001_f64;
 const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
 /// test the size of iterators
-fn test_itrerator(points: usize) {
-    let l = LatticeCyclique::<4>::new(1_f64, points).unwrap();
+fn test_iterator(points: usize) {
+    let l = LatticeCyclic::<4>::new(1_f64, points).unwrap();
     let link_count = l.get_links().count();
     assert_eq!(link_count, 4 * points * points * points * points);
     assert_eq!(
@@ -35,10 +34,10 @@ fn test_itrerator(points: usize) {
 
 #[test]
 /// test the size of iterators
-fn test_itrerator_length() {
-    test_itrerator(2);
-    test_itrerator(10);
-    test_itrerator(26);
+fn test_iterator_length() {
+    test_iterator(2);
+    test_iterator(10);
+    test_iterator(26);
 }
 
 #[allow(deprecated)]
@@ -149,7 +148,7 @@ fn test_exp_basic() {
 #[test]
 #[allow(deprecated)]
 /// test equivalence of [`su3_exp_i`] and [`MatrixExp`] trait implementation
-fn equivalece_exp_i() {
+fn equivalence_exp_i() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for i in 0..8 {
@@ -171,7 +170,7 @@ fn equivalece_exp_i() {
 #[test]
 #[allow(deprecated)]
 /// test equivalence of [`su3_exp_r`] and [`MatrixExp`] trait implementation
-fn equivalece_exp_r() {
+fn equivalence_exp_r() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     for i in 0..8 {
@@ -195,7 +194,7 @@ fn equivalece_exp_r() {
 fn create_sim() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         1_f64,
         1_f64,
         4,
@@ -207,7 +206,7 @@ fn create_sim() {
 
 #[test]
 /// test creation of sim multi threaded
-fn creat_sim_threaded() {
+fn create_sim_threaded() {
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
     let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_random_threaded(
         1_f64,
@@ -223,7 +222,8 @@ fn creat_sim_threaded() {
 const fn delta(i: usize, j: usize) -> f64 {
     if i == j {
         1_f64
-    } else {
+    }
+    else {
         0_f64
     }
 }
@@ -294,7 +294,7 @@ fn test_thread_error_zero_thread() {
 #[test]
 /// test [`run_pool_parallel_vec`]
 fn test_thread_vec() {
-    let l = LatticeCyclique::<4>::new(1_f64, 10).unwrap();
+    let l = LatticeCyclic::<4>::new(1_f64, 10).unwrap();
     let iter = 0..10000;
     let c = 5;
     for number_of_thread in &[1, 2, 4] {
@@ -316,7 +316,7 @@ fn test_thread_vec() {
 
 #[test]
 fn test_thread_vec_error_zero_thread() {
-    let l = LatticeCyclique::<4>::new(1_f64, 10).unwrap();
+    let l = LatticeCyclic::<4>::new(1_f64, 10).unwrap();
     let iter = 0..10000;
     let result = run_pool_parallel_vec(iter.clone(), &(), &|i, _| i * i, 0, 10000, &l, &0);
     assert!(result.is_err());
@@ -327,7 +327,7 @@ fn test_thread_vec_error_zero_thread() {
 fn test_sim_hamiltonian() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         100_f64,
         1_f64,
         10,
@@ -349,7 +349,7 @@ fn test_sim_hamiltonian() {
 fn test_gauss_law() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         1_f64,
         1_f64,
         10,
@@ -379,7 +379,7 @@ fn test_gauss_law() {
 fn test_sim_hamiltonian_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         100_f64,
         1_f64,
         10,
@@ -401,7 +401,7 @@ fn test_sim_hamiltonian_rayon() {
 fn test_gauss_law_rayon() {
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
     let distribution = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
-    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         1_f64,
         1_f64,
         10,
@@ -427,7 +427,7 @@ fn test_gauss_law_rayon() {
 }
 
 #[test]
-/// test that the simulatation of a cold state does not change over time
+/// test that the simulation of a cold state does not change over time
 fn test_sim_cold() {
     let size = 10_f64;
     let number_of_pts = 10;
@@ -446,7 +446,7 @@ fn test_sim_cold() {
     assert_eq!(sim2.e_field(), sim3.e_field());
     assert_eq!(sim2.link_matrix(), sim3.link_matrix());
     let sim4 = sim3
-        .simulate_to_synchrone(&SymplecticEulerRayon::new(), 0.1_f64)
+        .simulate_to_synchronous(&SymplecticEulerRayon::new(), 0.1_f64)
         .unwrap();
     assert_eq!(sim3.e_field(), sim4.e_field());
     assert_eq!(sim3.link_matrix(), sim4.link_matrix());
@@ -567,13 +567,14 @@ fn othonomralization() {
     assert_eq!(orthonormalize_matrix(&m), mc);
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-    let d = rand::distributions::Uniform::from(-10_f64..10_f64);
+    //let d = rand::distributions::Uniform::from(-10_f64..10_f64);
     for _ in 0_u32..100_u32 {
-        let m = CMatrix3::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
+        let m = random_matrix_3(&mut rng);
         println!("{} , {}", m, orthonormalize_matrix(&m));
         if m.determinant() != Complex::from(0_f64) {
             test_matrix_is_su3(&orthonormalize_matrix(&m));
-        } else {
+        }
+        else {
             assert_eq!(
                 orthonormalize_matrix(&m).determinant(),
                 Complex::from(0_f64)
@@ -582,7 +583,7 @@ fn othonomralization() {
     }
 
     for _ in 0_u32..100_u32 {
-        let mut m = CMatrix3::from_fn(|_, _| Complex::new(d.sample(&mut rng), d.sample(&mut rng)));
+        let mut m = random_matrix_3(&mut rng);
         if m.determinant() != Complex::from(0_f64) {
             orthonormalize_matrix_mut(&mut m);
             test_matrix_is_su3(&m);
@@ -601,36 +602,36 @@ fn random_su3_t() {
 #[test]
 fn lattice_init_error() {
     assert_eq!(
-        LatticeCyclique::<3>::new(0_f64, 4),
+        LatticeCyclic::<3>::new(0_f64, 4),
         Err(LatticeInitializationError::NonPositiveSize)
     );
     assert_eq!(
-        LatticeCyclique::<4>::new(-1_f64, 4),
+        LatticeCyclic::<4>::new(-1_f64, 4),
         Err(LatticeInitializationError::NonPositiveSize)
     );
     assert_eq!(
-        LatticeCyclique::<4>::new(f64::NAN, 4),
+        LatticeCyclic::<4>::new(f64::NAN, 4),
         Err(LatticeInitializationError::NonPositiveSize)
     );
     assert_eq!(
-        LatticeCyclique::<4>::new(-0_f64, 4),
+        LatticeCyclic::<4>::new(-0_f64, 4),
         Err(LatticeInitializationError::NonPositiveSize)
     );
     assert_eq!(
-        LatticeCyclique::<4>::new(f64::INFINITY, 4),
+        LatticeCyclic::<4>::new(f64::INFINITY, 4),
         Err(LatticeInitializationError::NonPositiveSize)
     );
     assert_eq!(
-        LatticeCyclique::<3>::new(1_f64, 1),
+        LatticeCyclic::<3>::new(1_f64, 1),
         Err(LatticeInitializationError::DimTooSmall)
     );
     assert_eq!(
-        LatticeCyclique::<3>::new(1_f64, 1),
+        LatticeCyclic::<3>::new(1_f64, 1),
         Err(LatticeInitializationError::DimTooSmall)
     );
-    assert!(LatticeCyclique::<3>::new(1_f64, 2).is_ok());
+    assert!(LatticeCyclic::<3>::new(1_f64, 2).is_ok());
     assert_eq!(
-        LatticeCyclique::<0>::new(1_f64, 2),
+        LatticeCyclic::<0>::new(1_f64, 2),
         Err(LatticeInitializationError::ZeroDimension)
     );
 }
@@ -655,23 +656,23 @@ fn state_init_error() {
             1_f64, 1_f64, 4, &d, 0,
         ),
         Err(ThreadedStateInitializationError::ThreadingError(
-            ThreadError::ThreadNumberIncorect
+            ThreadError::ThreadNumberIncorrect
         ))
     );
 }
 
 #[test]
 fn test_length_compatible() {
-    let l1 = LatticeCyclique::<2>::new(1_f64, 4).unwrap();
-    let l2 = LatticeCyclique::<2>::new(1_f64, 3).unwrap();
+    let l1 = LatticeCyclic::<2>::new(1_f64, 4).unwrap();
+    let l2 = LatticeCyclic::<2>::new(1_f64, 3).unwrap();
     let link = LinkMatrix::new_cold(&l1);
     let e_f = EField::new_cold(&l1);
-    assert!(l1.has_compatible_lenght(&link, &e_f));
+    assert!(l1.has_compatible_length(&link, &e_f));
     let link2 = LinkMatrix::new_cold(&l2);
     let e_f_2 = EField::new_cold(&l2);
-    assert!(!l1.has_compatible_lenght(&link2, &e_f));
-    assert!(!l1.has_compatible_lenght(&link2, &e_f_2));
-    assert!(l2.has_compatible_lenght(&link2, &e_f_2));
+    assert!(!l1.has_compatible_length(&link2, &e_f));
+    assert!(!l1.has_compatible_length(&link2, &e_f_2));
+    assert!(l2.has_compatible_length(&link2, &e_f_2));
 }
 
 #[test]
@@ -680,7 +681,7 @@ fn test_leap_frog() {
     let size = 1000_f64;
     let number_of_pts = 4;
     let beta = 1_f64;
-    let state = LatticeStateDefault::new_deterministe(size, beta, number_of_pts, &mut rng).unwrap();
+    let state = LatticeStateDefault::new_determinist(size, beta, number_of_pts, &mut rng).unwrap();
     println!("h_l {}", state.hamiltonian_links());
     let state_hmc =
         LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_random_e_state(state, &mut rng);

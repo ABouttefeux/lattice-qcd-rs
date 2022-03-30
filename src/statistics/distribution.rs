@@ -57,14 +57,14 @@ where
     rand::distributions::OpenClosed01: Distribution<T>,
 {
     getter_copy!(
-        /// return the parameter `a`.
+        /// Returns the parameter `a`.
         pub,
         param_exp,
         T
     );
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
-    /// Otherwise return None.
+    /// Otherwise return [`None`].
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
@@ -180,14 +180,14 @@ where
     Uniform<T>: Distribution<T>,
 {
     getter_copy!(
-        /// return the parameter `param_exp`.
+        /// Returns the parameter `param_exp`.
         pub,
         param_exp,
         T
     );
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
-    /// Otherwise return None.
+    /// Otherwise return [`None`].
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
@@ -201,10 +201,10 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
     where
         R: rand::Rng + ?Sized,
     {
-        // TODO make a functrion to reduce copy of code with su2::get_random_su2_close_to_unity
+        // TODO make a function to reduce copy of code with su2::get_random_su2_close_to_unity
 
-        let distr_norm = HeatBathDistributionNorm::new(self.param_exp()).expect("unreacheable");
-        // unreacheable because self.param_exp() > 0 which Create the distribution
+        let distr_norm = HeatBathDistributionNorm::new(self.param_exp()).expect("unreachable");
+        // unreachable because self.param_exp() > 0 which Create the distribution
         let x0: f64 = rng.sample(&distr_norm);
         let uniform = Uniform::new(-1_f64, 1_f64);
         let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
@@ -212,8 +212,8 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
             x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
         }
         let x =
-            x_unorm.try_normalize(f64::EPSILON).expect("unreacheable") * (1_f64 - x0 * x0).sqrt();
-        // unreacheable because the while loop above guarentee that the norm is bigger than [`f64::EPSILON`]
+            x_unorm.try_normalize(f64::EPSILON).expect("unreachable") * (1_f64 - x0 * x0).sqrt();
+        // unreachable because the while loop above guarantee that the norm is bigger than [`f64::EPSILON`]
         su2::complex_matrix_from_vec(x0, x)
     }
 }
@@ -308,7 +308,7 @@ where
     );
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
-    /// Otherwise return None.
+    /// Otherwise return [`None`].
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;

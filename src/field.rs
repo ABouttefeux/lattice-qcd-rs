@@ -13,10 +13,10 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    lattice::{Direction, LatticeCyclique, LatticeElementToIndex, LatticeLink, LatticePoint},
+    lattice::{Direction, LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticePoint},
     su3,
     su3::GENERATORS,
-    thread::{run_pool_parallel_vec_with_initialisation_mutable, ThreadError},
+    thread::{run_pool_parallel_vec_with_initializations_mutable, ThreadError},
     utils::levi_civita,
     CMatrix3, Complex, Real, Vector8, I,
 };
@@ -35,10 +35,10 @@ impl Su3Adjoint {
     /// create a new Su3Adjoint representation where `M = M^a T^a`, where `T` are generators given in [`su3::GENERATORS`].
     /// # Example
     /// ```
-    /// extern crate nalgebra;
     /// use lattice_qcd_rs::field::Su3Adjoint;
+    /// use nalgebra::SVector;
     ///
-    /// let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::from_element(1_f64));
+    /// let su3 = Su3Adjoint::new(SVector::<f64, 8>::from_element(1_f64));
     /// ```
     pub const fn new(data: Vector8<Real>) -> Self {
         Self { data }
@@ -59,7 +59,8 @@ impl Su3Adjoint {
         &self.data
     }
 
-    /// get the su3 adjoint as a [`Vector8`]
+    /// Get the su3 adjoint as a [`Vector8`].
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
@@ -72,7 +73,8 @@ impl Su3Adjoint {
         self.data()
     }
 
-    /// get the su3 adjoint as mut ref to a [`Vector8`]
+    /// Get the su3 adjoint as mut ref to a [`Vector8`].
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::{field::Su3Adjoint, Vector8};
@@ -92,17 +94,18 @@ impl Su3Adjoint {
         self.data_mut()
     }
 
-    /// return the su(3) (Lie algebra) matrix.
+    /// Returns the su(3) (Lie algebra) matrix.
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::{field::Su3Adjoint};
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
-    // TODO self non consomé ?? passé en &self ? TODO bench
+    // TODO self non consumed ?? passé en &self ? TODO bench
     pub fn to_matrix(self) -> Matrix3<na::Complex<Real>> {
         self.data
-            .iter()
+            .into_iter()
             .enumerate()
             .map(|(pos, el)| *GENERATORS[pos] * na::Complex::<Real>::from(el))
             .sum()
@@ -110,9 +113,9 @@ impl Su3Adjoint {
 
     /// Return the SU(3) matrix associated with this generator.
     /// Note that the function consume self.
+    ///
     /// # Example
     /// ```
-    /// # extern crate nalgebra;
     /// # use lattice_qcd_rs::{field::Su3Adjoint};
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_su3().determinant(), nalgebra::Complex::from(1_f64));
@@ -123,13 +126,14 @@ impl Su3Adjoint {
         su3::su3_exp_i(self)
     }
 
-    /// return exp( T^a v^a) where v is self.
+    /// Return exp( T^a v^a) where v is self.
     /// Note that the function consume self.
     pub fn exp(self) -> Matrix3<na::Complex<Real>> {
         su3::su3_exp_r(self)
     }
 
-    /// create a new random SU3 adjoint.
+    /// Create a new random SU3 adjoint.
+    ///
     /// # Example
     /// ```
     /// use lattice_qcd_rs::field::Su3Adjoint;
@@ -166,6 +170,7 @@ impl Su3Adjoint {
     /// If you are looking for the trace square use [Self::trace_squared] instead.
     ///
     /// It is used for [`su3::su3_exp_i`].
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
@@ -182,7 +187,8 @@ impl Su3Adjoint {
     }
 
     /// Return the t coeff `d = i * det(X)`.
-    /// Used for [`su3::su3_exp_i`]
+    /// Used for [`su3::su3_exp_i`].
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
@@ -204,11 +210,23 @@ impl Su3Adjoint {
     /// # let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::zeros());
     /// assert_eq!(su3.len(), 8);
     /// ```
+    #[allow(clippy::unused_self)]
     pub fn len(&self) -> usize {
         self.data.len()
+        //8
     }
 
-    /// Get an iterator over the ellements.
+    /// Return the number of data. This number is 8
+    /// ```
+    /// # use lattice_qcd_rs::field::Su3Adjoint;
+    /// let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::zeros());
+    /// assert_eq!(Su3Adjoint::len_const(), su3.len());
+    /// ```
+    pub const fn len_const() -> usize {
+        8
+    }
+
+    /// Get an iterator over the elements.
     ///
     /// # Example
     /// ```
@@ -220,7 +238,8 @@ impl Su3Adjoint {
         self.data.iter()
     }
 
-    /// Get an iterator over the mutable ref of ellements.
+    /// Get an iterator over the mutable ref of elements.
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
@@ -233,7 +252,7 @@ impl Su3Adjoint {
         self.data.iter_mut()
     }
 
-    /// Get a mutlable reference over the data.
+    /// Get a mutable reference over the data.
     pub fn data_mut(&mut self) -> &mut Vector8<Real> {
         &mut self.data
     }
@@ -482,6 +501,7 @@ impl Neg for &Su3Adjoint {
 /// Return the representation for the zero matrix.
 impl Default for Su3Adjoint {
     /// Return the representation for the zero matrix.
+    ///
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::field::Su3Adjoint;
@@ -504,7 +524,8 @@ impl std::fmt::Display for Su3Adjoint {
 impl Index<usize> for Su3Adjoint {
     type Output = Real;
 
-    /// Get the element at position `pos`
+    /// Get the element at position `pos`.
+    ///
     /// # Panic
     /// Panics if the position is out of bound (greater or equal to 8).
     /// ```should_panic
@@ -518,7 +539,8 @@ impl Index<usize> for Su3Adjoint {
 }
 
 impl IndexMut<usize> for Su3Adjoint {
-    /// Get the element at position `pos`
+    /// Get the element at position `pos`.
+    ///
     /// # Panic
     /// Panics if the position is out of bound (greater or equal to 8).
     /// ```should_panic
@@ -564,7 +586,7 @@ pub struct LinkMatrix {
 }
 
 impl LinkMatrix {
-    /// Creat a new link matrix field from preexisting data.
+    /// Create a new link matrix field from preexisting data.
     pub const fn new(data: Vec<Matrix3<na::Complex<Real>>>) -> Self {
         Self { data }
     }
@@ -602,9 +624,10 @@ impl LinkMatrix {
     /// Single threaded generation with a given random number generator.
     /// useful to produce a deterministic set of data but slower than
     /// [`LinkMatrix::new_random_threaded`].
+    ///
     /// # Example
     /// ```
-    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclic};
     /// use rand::{rngs::StdRng, SeedableRng};
     /// # use std::error::Error;
     ///
@@ -612,20 +635,20 @@ impl LinkMatrix {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
-    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4)?;
+    /// let lattice = LatticeCyclic::<4>::new(1_f64, 4)?;
     /// assert_eq!(
-    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_1),
-    ///     LinkMatrix::new_deterministe(&lattice, &mut rng_2)
+    ///     LinkMatrix::new_determinist(&lattice, &mut rng_1),
+    ///     LinkMatrix::new_determinist(&lattice, &mut rng_2)
     /// );
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new_deterministe<Rng: rand::Rng + ?Sized, const D: usize>(
-        l: &LatticeCyclique<D>,
+    pub fn new_determinist<Rng: rand::Rng + ?Sized, const D: usize>(
+        l: &LatticeCyclic<D>,
         rng: &mut Rng,
     ) -> Self {
         // l.get_links_space().map(|_| Su3Adjoint::random(rng, d).to_su3()).collect()
-        // using a for loop imporves performance. ( probably because the vector is pre allocated).
+        // using a for loop improves performance. ( probably because the vector is pre allocated).
         let mut data = Vec::with_capacity(l.number_of_canonical_links_space());
         for _ in l.get_links() {
             // the iterator *should* be in order
@@ -641,11 +664,11 @@ impl LinkMatrix {
     ///
     /// # Example
     /// ```
-    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclic};
     /// # use std::error::Error;
     ///
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;
     /// let links = LinkMatrix::new_random_threaded(&lattice, 4)?;
     /// assert!(!links.is_empty());
     /// # Ok(())
@@ -653,19 +676,19 @@ impl LinkMatrix {
     /// ```
     ///
     /// # Errors
-    /// Returns [`ThreadError::ThreadNumberIncorect`] if `number_of_thread` is 0.
+    /// Returns [`ThreadError::ThreadNumberIncorrect`] if `number_of_thread` is 0.
     pub fn new_random_threaded<const D: usize>(
-        l: &LatticeCyclique<D>,
+        l: &LatticeCyclic<D>,
         number_of_thread: usize,
     ) -> Result<Self, ThreadError> {
         if number_of_thread == 0 {
-            return Err(ThreadError::ThreadNumberIncorect);
+            return Err(ThreadError::ThreadNumberIncorrect);
         }
         else if number_of_thread == 1 {
             let mut rng = rand::thread_rng();
-            return Ok(LinkMatrix::new_deterministe(l, &mut rng));
+            return Ok(LinkMatrix::new_determinist(l, &mut rng));
         }
-        let data = run_pool_parallel_vec_with_initialisation_mutable(
+        let data = run_pool_parallel_vec_with_initializations_mutable(
             l.get_links(),
             &(),
             &|rng, _, _| su3::random_su3(rng),
@@ -678,20 +701,21 @@ impl LinkMatrix {
         Ok(Self { data })
     }
 
-    /// Create a cold configuration ( where the link matrices is set to the indentity).
+    /// Create a cold configuration ( where the link matrices is set to the identity).
+    ///
     /// # Example
     /// ```
-    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::LinkMatrix, lattice::LatticeCyclic};
     /// # use std::error::Error;
     ///
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;
     /// let links = LinkMatrix::new_cold(&lattice);
     /// assert!(!links.is_empty());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new_cold<const D: usize>(l: &LatticeCyclique<D>) -> Self {
+    pub fn new_cold<const D: usize>(l: &LatticeCyclic<D>) -> Self {
         Self {
             data: vec![CMatrix3::identity(); l.number_of_canonical_links_space()],
         }
@@ -702,7 +726,7 @@ impl LinkMatrix {
     pub fn matrix<const D: usize>(
         &self,
         link: &LatticeLink<D>,
-        l: &LatticeCyclique<D>,
+        l: &LatticeCyclic<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
         let link_c = l.into_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))?;
@@ -721,7 +745,7 @@ impl LinkMatrix {
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
         let u_j = self.matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
@@ -739,7 +763,7 @@ impl LinkMatrix {
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
         let s_ij = self.sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
@@ -750,7 +774,7 @@ impl LinkMatrix {
     #[allow(clippy::as_conversions)] // no try into for f64
     pub fn average_trace_plaquette<const D: usize>(
         &self,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<na::Complex<Real>> {
         if lattice.number_of_canonical_links_space() != self.len() {
             return None;
@@ -785,7 +809,7 @@ impl LinkMatrix {
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<CMatrix3> {
         Some(
             self.pij(point, dir_i, dir_j, lattice)?
@@ -795,26 +819,26 @@ impl LinkMatrix {
         )
     }
 
-    /// Get the `F^{ij}` tensor using the clover appropriation. The direction should be set to positive
-    /// See arXive:1512.02374.
+    /// Get the `F^{ij}` tensor using the clover appropriation. The direction should be set to positive.
+    /// See <https://arxiv.org/abs/1512.02374>.
     // TODO negative directions
     pub fn f_mu_nu<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<CMatrix3> {
         let m = self.clover(point, dir_i, dir_j, lattice)?
             - self.clover(point, dir_j, dir_i, lattice)?;
         Some(m / Complex::from(8_f64 * lattice.size() * lattice.size()))
     }
 
-    /// Get the chromomagentic field at a given point
+    /// Get the chromomagnetic field at a given point.
     pub fn magnetic_field_vec<const D: usize>(
         &self,
         point: &LatticePoint<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<SVector<CMatrix3, D>> {
         let mut vec = SVector::<CMatrix3, D>::zeros();
         for dir in &Direction::<D>::positive_directions() {
@@ -823,12 +847,12 @@ impl LinkMatrix {
         Some(vec)
     }
 
-    /// Get the chromomagentic field at a given point alongisde a given direction
+    /// Get the chromomagnetic field at a given point alongside a given direction.
     pub fn magnetic_field<const D: usize>(
         &self,
         point: &LatticePoint<D>,
         dir: &Direction<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<CMatrix3> {
         let sum = Direction::<D>::positive_directions()
             .iter()
@@ -848,11 +872,11 @@ impl LinkMatrix {
         Some(sum / Complex::new(0_f64, 2_f64))
     }
 
-    /// Get the chromomagentic field at a given point alongisde a given direction given by lattice link
+    /// Get the chromomagnetic field at a given point alongside a given direction given by lattice link.
     pub fn magnetic_field_link<const D: usize>(
         &self,
         link: &LatticeLink<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<Matrix3<na::Complex<Real>>> {
         self.magnetic_field(link.pos(), link.dir(), lattice)
     }
@@ -876,12 +900,12 @@ impl LinkMatrix {
         });
     }
 
-    /// Iter on the data
+    /// Iter on the data.
     pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
-    /// Iter mutably on the data
+    /// Iter mutably on the data.
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator {
@@ -1018,17 +1042,17 @@ impl<const D: usize> EField<D> {
         &mut self.data
     }
 
-    /// Get the e_field as a Vec of Vector of Su3Adjoint
+    /// Get the e_field as a Vec of Vector of [`Su3Adjoint`]
     pub const fn as_vec(&self) -> &Vec<SVector<Su3Adjoint, D>> {
         self.data()
     }
 
-    /// Get the e_field as a slice of Vector of Su3Adjoint
+    /// Get the e_field as a slice of Vector of [`Su3Adjoint`]
     pub fn as_slice(&self) -> &[SVector<Su3Adjoint, D>] {
         &self.data
     }
 
-    /// Get the e_field as mut ref to slice of Vector of Su3Adjoint
+    /// Get the e_field as mut ref to slice of Vector of [`Su3Adjoint`]
     pub fn as_slice_mut(&mut self) -> &mut [SVector<Su3Adjoint, D>] {
         &mut self.data
     }
@@ -1040,31 +1064,33 @@ impl<const D: usize> EField<D> {
 
     /// Single threaded generation with a given random number generator.
     /// useful to reproduce a set of data.
+    ///
     /// # Example
     /// ```
-    /// extern crate rand;
-    /// extern crate rand_distr;
-    /// # use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// # use lattice_qcd_rs::{field::EField, lattice::LatticeCyclic};
+    /// # fn main () -> Result<(), Box<dyn std::error::Error>> {
     /// use rand::{rngs::StdRng, SeedableRng};
     ///
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
-    /// let lattice = LatticeCyclique::<4>::new(1_f64, 4).unwrap();
+    /// let lattice = LatticeCyclic::<4>::new(1_f64, 4)?;
     /// assert_eq!(
-    ///     EField::new_deterministe(&lattice, &mut rng_1, &distribution),
-    ///     EField::new_deterministe(&lattice, &mut rng_2, &distribution)
+    ///     EField::new_determinist(&lattice, &mut rng_1, &distribution),
+    ///     EField::new_determinist(&lattice, &mut rng_2, &distribution)
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
-    pub fn new_deterministe<Rng: rand::Rng + ?Sized>(
-        l: &LatticeCyclique<D>,
+    pub fn new_determinist<Rng: rand::Rng + ?Sized>(
+        l: &LatticeCyclic<D>,
         rng: &mut Rng,
         d: &impl rand_distr::Distribution<Real>,
     ) -> Self {
         let mut data = Vec::with_capacity(l.number_of_points());
         for _ in l.get_points() {
-            // iterator *should* be ordoned
+            // iterator *should* be ordered
             data.push(SVector::<Su3Adjoint, D>::from_fn(|_, _| {
                 Su3Adjoint::random(rng, d)
             }));
@@ -1073,40 +1099,41 @@ impl<const D: usize> EField<D> {
     }
 
     /// Single thread generation by seeding a new rng number.
-    /// To create a seedable and reproducible set use [`EField::new_deterministe`].
+    /// To create a seedable and reproducible set use [`EField::new_determinist`].
     ///
     /// # Example
     /// ```
-    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclic};
     /// # use std::error::Error;
     ///
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// let distribution = rand::distributions::Uniform::from(-1_f64..1_f64);
-    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;
     /// let e_field = EField::new_random(&lattice, &distribution);
     /// assert!(!e_field.is_empty());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new_random(l: &LatticeCyclique<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn new_random(l: &LatticeCyclic<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
         let mut rng = rand::thread_rng();
-        EField::new_deterministe(l, &mut rng, d)
+        EField::new_determinist(l, &mut rng, d)
     }
 
-    /// Create a new cold configuration for the electriccal field, i.e. all E ar set to 0.
+    /// Create a new cold configuration for the electrical field, i.e. all E ar set to 0.
+    ///
     /// # Example
     /// ```
-    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclique};
+    /// use lattice_qcd_rs::{field::EField, lattice::LatticeCyclic};
     /// # use std::error::Error;
     ///
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// let lattice = LatticeCyclique::<3>::new(1_f64, 4)?;
+    /// let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;
     /// let e_field = EField::new_cold(&lattice);
     /// assert!(!e_field.is_empty());
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new_cold(l: &LatticeCyclique<D>) -> Self {
+    pub fn new_cold(l: &LatticeCyclic<D>) -> Self {
         let p1 = Su3Adjoint::new_from_array([0_f64; 8]);
         Self {
             data: vec![SVector::<Su3Adjoint, D>::from_element(p1); l.number_of_points()],
@@ -1117,7 +1144,7 @@ impl<const D: usize> EField<D> {
     pub fn e_vec(
         &self,
         point: &LatticePoint<D>,
-        l: &LatticeCyclique<D>,
+        l: &LatticeCyclic<D>,
     ) -> Option<&SVector<Su3Adjoint, D>> {
         self.data.get(point.to_index(l))
     }
@@ -1128,7 +1155,7 @@ impl<const D: usize> EField<D> {
         &self,
         point: &LatticePoint<D>,
         dir: &Direction<D>,
-        l: &LatticeCyclique<D>,
+        l: &LatticeCyclic<D>,
     ) -> Option<&Su3Adjoint> {
         let value = self.e_vec(point, l);
         match value {
@@ -1148,7 +1175,7 @@ impl<const D: usize> EField<D> {
         &self,
         link_matrix: &LinkMatrix,
         point: &LatticePoint<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<CMatrix3> {
         if lattice.number_of_points() != self.len()
             || lattice.number_of_canonical_links_space() != link_matrix.len()
@@ -1172,7 +1199,7 @@ impl<const D: usize> EField<D> {
     pub fn gauss_sum_div(
         &self,
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<Real> {
         if lattice.number_of_points() != self.len()
             || lattice.number_of_canonical_links_space() != link_matrix.len()
@@ -1192,9 +1219,9 @@ impl<const D: usize> EField<D> {
             .sum::<Option<Real>>()
     }
 
-    /// project to that the gauss law is approximatively respected ( up to `f64::EPSILON * 10` per point).
+    /// project to that the gauss law is approximately respected ( up to `f64::EPSILON * 10` per point).
     ///
-    /// It is mainly use internally but can be use to correct numerical drit in simulations.
+    /// It is mainly use internally but can be use to correct numerical drift in simulations.
     ///
     /// # Example
     /// ```
@@ -1202,7 +1229,7 @@ impl<const D: usize> EField<D> {
     /// use lattice_qcd_rs::integrator::SymplecticEulerRayon;
     /// use lattice_qcd_rs::simulation::{
     ///     LatticeState, LatticeStateDefault, LatticeStateEFSyncDefault, LatticeStateWithEField,
-    ///     SimulationStateSynchrone,
+    ///     SimulationStateSynchronous,
     /// };
     /// use rand::SeedableRng;
     ///
@@ -1213,16 +1240,16 @@ impl<const D: usize> EField<D> {
     /// let distribution =
     ///     rand::distributions::Uniform::from(-std::f64::consts::PI..std::f64::consts::PI);
     /// let mut state = LatticeStateEFSyncDefault::new_random_e_state(
-    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 6_f64, 4, &mut rng).unwrap(),
+    ///     LatticeStateDefault::<3>::new_determinist(1_f64, 6_f64, 4, &mut rng)?,
     ///     &mut rng,
-    /// ); // <- here internally when choosing radomly the EField it is projected.
+    /// ); // <- here internally when choosing randomly the EField it is projected.
     ///
     /// let integrator = SymplecticEulerRayon::default();
     /// for _ in 0..2 {
     ///     for _ in 0..10 {
     ///         state = state.simulate_sync(&integrator, 0.0001_f64)?;
     ///     }
-    ///     // we correct the numberical drift of the EField.
+    ///     // we correct the numerical drift of the EField.
     ///     let new_e_field = state
     ///         .e_field()
     ///         .project_to_gauss(state.link_matrix(), state.lattice())
@@ -1238,7 +1265,7 @@ impl<const D: usize> EField<D> {
     pub fn project_to_gauss(
         &self,
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
     ) -> Option<Self> {
         // TODO improve
         const NUMBER_FOR_LOOP: usize = 4;
@@ -1266,15 +1293,12 @@ impl<const D: usize> EField<D> {
         Some(return_val)
     }
 
-    /// Done one step to project to gauss law
+    /// Done one step to project to gauss law.
+    ///
     /// # Panic
-    /// panics if the link matric and lattice is not of the correct size.
+    /// panics if the link matrix and lattice is not of the correct size.
     #[inline]
-    fn project_to_gauss_step(
-        &self,
-        link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<D>,
-    ) -> Self {
+    fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclic<D>) -> Self {
         /// see <https://arxiv.org/pdf/1512.02374.pdf>
         // TODO verify
         const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
@@ -1434,7 +1458,7 @@ mod test {
     fn test_get_e_field_pos_neg() {
         use super::super::lattice;
 
-        let l = LatticeCyclique::new(1_f64, 4).unwrap();
+        let l = LatticeCyclic::new(1_f64, 4).unwrap();
         let e = EField::new(vec![SVector::<_, 4>::from([
             Su3Adjoint::from([1_f64; 8]),
             Su3Adjoint::from([2_f64; 8]),
@@ -1513,10 +1537,10 @@ mod test {
 
     #[test]
     fn link_matrix() {
-        let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+        let lattice = LatticeCyclic::<3>::new(1_f64, 4).unwrap();
         match LinkMatrix::new_random_threaded(&lattice, 0) {
-            Err(ThreadError::ThreadNumberIncorect) => {}
-            _ => panic!("unexpected ouptut"),
+            Err(ThreadError::ThreadNumberIncorrect) => {}
+            _ => panic!("unexpected output"),
         }
         let link_s = LinkMatrix::new_random_threaded(&lattice, 2);
         assert!(link_s.is_ok());
@@ -1537,7 +1561,7 @@ mod test {
 
     #[test]
     fn e_field() {
-        let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+        let lattice = LatticeCyclic::<3>::new(1_f64, 4).unwrap();
         let e_field_s = LinkMatrix::new_random_threaded(&lattice, 2);
         assert!(e_field_s.is_ok());
         let mut e_field = e_field_s.unwrap();
@@ -1553,8 +1577,8 @@ mod test {
     }
 
     #[test]
-    fn mangetic_field() {
-        let lattice = LatticeCyclique::<3>::new(1_f64, 4).unwrap();
+    fn magnetic_field() {
+        let lattice = LatticeCyclic::<3>::new(1_f64, 4).unwrap();
         let mut link_matrix = LinkMatrix::new_cold(&lattice);
         let point = LatticePoint::from([0, 0, 0]);
         let dir_x = Direction::new(0, true).unwrap();
@@ -1684,5 +1708,11 @@ mod test {
                 assert_eq_matrix!(CMatrix3::zeros(), m, EPSILON);
             }
         }
+    }
+
+    #[test]
+    fn test_len() {
+        let su3 = Su3Adjoint::new(nalgebra::SVector::<f64, 8>::zeros());
+        assert_eq!(Su3Adjoint::len_const(), su3.len());
     }
 }

@@ -8,12 +8,12 @@ use lattice_qcd_rs::{
 };
 use rayon::prelude::*;
 
-fn bench_simulation_creation_deterministe(
+fn bench_simulation_creation_determinist(
     size: usize,
     rng: &mut rand::rngs::ThreadRng,
     d: &impl rand_distr::Distribution<Real>,
 ) {
-    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_deterministe(
+    let _simulation = LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(
         1_f64, 1_f64, size, rng, d,
     )
     .unwrap();
@@ -103,18 +103,18 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut rng = rand::thread_rng();
     let d = rand::distributions::Uniform::from(-f64::consts::PI..f64::consts::PI);
 
-    let mut groupe_creation_deterministe = c.benchmark_group("Sim creation deterministe");
-    groupe_creation_deterministe.sample_size(10);
+    let mut groupe_creation_determinist = c.benchmark_group("Sim creation determinist");
+    groupe_creation_determinist.sample_size(10);
     let array_size: [usize; 6] = [2, 4, 8, 10, 20, 30];
     for el in array_size.iter() {
-        groupe_creation_deterministe.throughput(Throughput::Elements((el.pow(4)) as u64));
-        groupe_creation_deterministe.bench_with_input(
+        groupe_creation_determinist.throughput(Throughput::Elements((el.pow(4)) as u64));
+        groupe_creation_determinist.bench_with_input(
             BenchmarkId::new("size", el.pow(4)),
             el,
-            |b, i| b.iter(|| bench_simulation_creation_deterministe(*i, &mut rng, &d)),
+            |b, i| b.iter(|| bench_simulation_creation_determinist(*i, &mut rng, &d)),
         );
     }
-    groupe_creation_deterministe.finish();
+    groupe_creation_determinist.finish();
 
     let mut groupe_creation_threaded = c.benchmark_group("Sim creation (20) threaded");
     let gp_size: usize = 20;
@@ -170,7 +170,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     groupe_mc.bench_function("simulate 20 D3 Metropolis Hastings Sweep", |b| {
         b.iter_batched(
-            || LatticeStateDefault::<3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(),
+            || LatticeStateDefault::<3>::new_determinist(1000_f64, 2_f64, 20, &mut rng).unwrap(),
             |state_in| state_in.monte_carlo_step(&mut mc),
             BatchSize::LargeInput,
         )
@@ -181,7 +181,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     groupe_mc.bench_function("simulate 20 D3 hybrid monteCarlo 100", |b| {
         b.iter_batched(
-            || LatticeStateDefault::<3>::new_deterministe(1000_f64, 2_f64, 20, &mut rng).unwrap(),
+            || LatticeStateDefault::<3>::new_determinist(1000_f64, 2_f64, 20, &mut rng).unwrap(),
             |state_in| state_in.monte_carlo_step(&mut mch),
             BatchSize::LargeInput,
         )
@@ -196,9 +196,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         groupe_gauss_proj.bench_with_input(BenchmarkId::new("size", n), n, |b, i| {
             b.iter(|| {
                 let state =
-                    LatticeStateDefault::<4>::new_deterministe(1_f64, 1_f64, *i, &mut rng).unwrap();
+                    LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, *i, &mut rng).unwrap();
                 let d = rand_distr::Normal::new(0.0, 0.5_f64).unwrap();
-                let e_field = EField::new_deterministe(state.lattice(), &mut rng, &d);
+                let e_field = EField::new_determinist(state.lattice(), &mut rng, &d);
                 e_field.project_to_gauss(state.link_matrix(), state.lattice());
             })
         });

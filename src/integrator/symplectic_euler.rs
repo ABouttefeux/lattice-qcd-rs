@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 use super::{
     super::{
         field::{EField, LinkMatrix, Su3Adjoint},
-        lattice::LatticeCyclique,
+        lattice::LatticeCyclic,
         simulation::{
             LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-            SimulationStateSynchrone,
+            SimulationStateSynchronous,
         },
         thread::{run_pool_parallel_vec, ThreadError},
         CMatrix3, Real,
@@ -58,7 +58,7 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 
 /// Basic symplectic Euler integrator
 ///
-/// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
+/// slightly slower than [`super::SymplecticEulerRayon`] (for appropriate choice of `number_of_thread`)
 /// but use less memory
 ///
 /// For an example see the module level documentation [`super`].
@@ -85,7 +85,7 @@ impl SymplecticEuler {
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         delta_t: Real,
     ) -> Result<Vec<CMatrix3>, ThreadError>
     where
@@ -109,7 +109,7 @@ impl SymplecticEuler {
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         delta_t: Real,
     ) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
     where
@@ -151,7 +151,7 @@ impl std::fmt::Display for SymplecticEuler {
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>
     for SymplecticEuler
 where
-    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
+    State: SimulationStateSynchronous<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
 {
     type Error = SymplecticEulerError<State::Error>;
 
@@ -235,7 +235,7 @@ where
             l.lattice(),
             delta_t,
         )?);
-        // we advace the counter by one
+        // we advance the counter by one
         let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             l.e_field(),
@@ -256,7 +256,7 @@ where
         // override for optimization.
         // This remove a clone operation.
 
-        let e_field_demi = EField::new(self.e_field_integrate::<State, D>(
+        let e_field_half = EField::new(self.e_field_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
@@ -264,13 +264,13 @@ where
         )?);
         let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
-            &e_field_demi,
+            &e_field_half,
             l.lattice(),
             delta_t,
         )?);
         let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
-            &e_field_demi,
+            &e_field_half,
             l.lattice(),
             delta_t / 2_f64,
         )?);

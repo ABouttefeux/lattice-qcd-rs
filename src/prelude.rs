@@ -1,4 +1,4 @@
-//! reexport for easy use,
+//! Reexport for easy use,
 //! `use lattice_qcd_rs::prelude::*`
 
 pub use super::{
@@ -12,7 +12,7 @@ pub use super::{
         },
         LatticeState, LatticeStateDefault, LatticeStateEFSyncDefault, LatticeStateNew,
         LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-        SimulationStateLeapFrog, SimulationStateSynchrone,
+        SimulationStateLeapFrog, SimulationStateSynchronous,
     },
     CMatrix3, Complex, ComplexField, Real,
 };

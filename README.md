@@ -59,7 +59,7 @@ use lq::prelude::*;
     let beta = 1_f64;
 
     let mut simulation =
-        LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
+        LatticeStateDefault::<4>::new_determinist(size, beta, number_of_pts, &mut rng)?;
 
     let spread_parameter = 0.1_f64;
     let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)?;
@@ -74,7 +74,7 @@ use lq::prelude::*;
         simulation.normalize_link_matrices();
     }
 
-    let average = simulation.average_trace_plaquette().unwrap().real() / 3_f64;
+    let average = simulation.average_trace_plaquette().ok_or(ImplementationError::Unreachable)?.real() / 3_f64;
 # Ok(())
 # }
 ```
@@ -153,7 +153,7 @@ let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
+    LatticeStateDefault::<4>::new_determinist(size, beta, number_of_pts, &mut rng)?;
 
 let spread_parameter = 1E-5_f64;
 let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)
@@ -188,7 +188,7 @@ let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
+    LatticeStateDefault::<3>::new_determinist(size, beta, number_of_pts, &mut rng)?;
 
 let number_of_rand = 20;
 let spread_parameter = 1E-5_f64;
@@ -219,7 +219,7 @@ let size = 1_000_f64;
 let number_of_pts = 4;
 let beta = 2_f64;
 let mut simulation =
-    LatticeStateDefault::<3>::new_deterministe(size, beta, number_of_pts, &mut rng)?;
+    LatticeStateDefault::<3>::new_determinist(size, beta, number_of_pts, &mut rng)?;
 
 let delta_t = 1E-3_f64;
 let number_of_step = 10;

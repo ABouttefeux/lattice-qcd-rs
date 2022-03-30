@@ -38,13 +38,13 @@ mod test;
 use proc_macro::TokenStream;
 use quote::quote;
 
-/// Maximum dimention to impl [`Direction`] for.
+/// Maximum dimension to impl [`Direction`] for.
 const MAX_DIM: usize = 127;
 
 /// Implement [`DirectionList`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/trait.DirectionList.html)
 /// for [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html) of `1` to `127` the value of `MAX_DIM`.
 ///
-/// Using const generics might render this unecessary. Waiting for stabilisation of feature(generic_const_exprs).
+/// Using const generics might render this unnecessary. Waiting for stabilization of feature(generic_const_exprs).
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
     let mut implem = Vec::with_capacity(MAX_DIM);
@@ -66,7 +66,7 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let u_dir_ident = syn::Ident::new(&format!("U{}_DIR", i), proc_macro2::Span::call_site());
         let u_dir_pos_ident =
             syn::Ident::new(&format!("U{}_DIR_POS", i), proc_macro2::Span::call_site());
-        // we store the vallues in array so we can access them as fast as possible.
+        // we store the values in array so we can access them as fast as possible.
         let s = quote! {
             const #u_dir_ident: [Direction<#i>; #i * 2] = [ #(#array_direction),* ];
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
@@ -90,7 +90,7 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
     final_stream.into()
 }
 
-/// The max dimention to imply the [`From`] and [`std::convert::TryFrom`] and for
+/// The max dimension to imply the [`From`] and [`std::convert::TryFrom`] and for
 /// [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html).
 ///
 /// It takes just way to long for 127.
@@ -108,14 +108,14 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
         #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
         #[non_exhaustive]
         pub enum DirectionConversionError {
-            /// The index is out of bound, i.e. the directtion axis does not exist in the lower space dimention.
+            /// The index is out of bound, i.e. the direction axis does not exist in the lower space dimension.
             IndexOutOfBound,
         }
 
         impl std::fmt::Display for DirectionConversionError{
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    Self::IndexOutOfBound => write!(f, "the index is out of bound, the direction axis does not exist in the lower space dimention"),
+                    Self::IndexOutOfBound => write!(f, "the index is out of bound, the direction axis does not exist in the lower space dimension"),
                 }
             }
         }

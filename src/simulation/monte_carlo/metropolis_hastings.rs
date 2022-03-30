@@ -1,7 +1,45 @@
-//! Metropolis Hastings methode
+//! Metropolis Hastings method
 //!
-//! I recomand not using methode in this module, but they may have niche usage.
-//! look at [`super::metropolis_hastings_sweep`] for a more common algoritm.
+//! I recommend not using method in this module, but they may have niche usage.
+//! look at [`super::metropolis_hastings_sweep`] for a more common algorithm.
+//!
+//! # Example
+//! ```rust
+//! use lattice_qcd_rs::{
+//!     error::ImplementationError,
+//!     simulation::monte_carlo::MetropolisHastingsDeltaDiagnostic,
+//!     simulation::state::{LatticeState, LatticeStateDefault},
+//!     ComplexField,
+//! };
+//!
+//! # use std::error::Error;
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! let mut rng = rand::thread_rng();
+//!
+//! let size = 1_000_f64;
+//! let number_of_pts = 4;
+//! let beta = 2_f64;
+//! let mut simulation =
+//!     LatticeStateDefault::<4>::new_determinist(size, beta, number_of_pts, &mut rng)?;
+//!
+//! let spread_parameter = 1E-5_f64;
+//! let mut mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)
+//!     .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
+//!
+//! let number_of_sims = 100;
+//! for _ in 0..number_of_sims / 10 {
+//!     for _ in 0..10 {
+//!         simulation = simulation.monte_carlo_step(&mut mc)?;
+//!     }
+//!     simulation.normalize_link_matrices(); // we renormalize all matrices back to SU(3);
+//! }
+//! let average = simulation
+//!     .average_trace_plaquette()
+//!     .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+//!     .real();
+//! # Ok(())
+//! # }
+//! ```
 
 use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]
@@ -13,8 +51,8 @@ use super::{
             error::Never,
             field::LinkMatrix,
             lattice::{
-                Direction, LatticeCyclique, LatticeElementToIndex, LatticeLink,
-                LatticeLinkCanonical, LatticePoint,
+                Direction, LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical,
+                LatticePoint,
             },
             su3, Complex, Real,
         },
@@ -23,14 +61,20 @@ use super::{
     delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault,
 };
 
-/// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead when applicable.
+/// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`]
+/// instead when applicable.
 ///
-/// This a very general method that can manage every [`LatticeState`] but the tread off is that it is much slower than
-/// a dedicated algorithm knowing the from of the hamiltonian. If you want to use your own hamiltonian I advice to implemnt
+/// This a very general method that can manage every [`LatticeState`] but the tread off
+/// is that it is much slower than
+/// a dedicated algorithm knowing the from of the hamiltonian. If you want to use your own
+/// hamiltonian I advice to implement
 /// you own method too.
 ///
-/// Note that this methode does not do a sweep but change random link matrix,
+/// Note that this method does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+///
+/// # Example
+/// See the example of [`super::McWrapper`]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastings {
@@ -43,7 +87,7 @@ impl MetropolisHastings {
     /// than 0. `0.1_f64` is a good choice for this parameter.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
-    /// `spread` is the spead factor for the random matrix change
+    /// `spread` is the spread factor for the random matrix change
     /// ( used in [`su3::random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real) -> Option<Self> {
         if number_of_update == 0 || !(spread > 0_f64 && spread < 1_f64) {
@@ -56,7 +100,7 @@ impl MetropolisHastings {
     }
 
     getter_copy!(
-        /// Get the number of atempted updates per steps.
+        /// Get the number of attempted updates per steps.
         pub const number_of_update() -> usize
     );
 
@@ -113,9 +157,9 @@ where
 
 /// Metropolis Hastings algorithm with diagnostics. Very slow, use [`MetropolisHastingsDeltaDiagnostic`] instead.
 ///
-/// Similar to [`MetropolisHastingsDiagnostic`] but with diagnotic information.
+/// Similar to [`MetropolisHastingsDiagnostic`] but with diagnostic information.
 ///
-/// Note that this methode does not do a sweep but change random link matrix,
+/// Note that this method does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
 ///
 /// # Example
@@ -134,7 +178,7 @@ impl MetropolisHastingsDiagnostic {
     /// than 0. `0.1_f64` is a good choice for this parameter.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
-    /// `spread` is the spead factor for the random matrix change
+    /// `spread` is the spread factor for the random matrix change
     /// ( used in [`su3::random_su3_close_to_unity`]).
     pub fn new(number_of_update: usize, spread: Real) -> Option<Self> {
         if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
@@ -242,8 +286,11 @@ where
 
 /// Metropolis Hastings algorithm with diagnostics.
 ///
-/// Note that this methode does not do a sweep but change random link matrix,
+/// Note that this method does not do a sweep but change random link matrix,
 /// for a sweep there is [`super::MetropolisHastingsSweep`].
+///
+/// # Example
+/// see example of [`super`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
@@ -289,7 +336,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     /// than 0.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
-    /// `spread` is the spead factor for the random matrix change
+    /// `spread` is the spread factor for the random matrix change
     /// ( used in [`su3::random_su3_close_to_unity`]).
     pub fn new(spread: Real, rng: Rng) -> Option<Self> {
         if spread <= 0_f64 || spread >= 1_f64 {
@@ -303,7 +350,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         })
     }
 
-    /// Absorbe self and return the RNG as owned. It essentialy deconstruct the structure.
+    /// Absorbs self and return the RNG as owned. It essentially deconstruct the structure.
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -311,7 +358,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     #[inline]
     fn delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         link: &LatticeLinkCanonical<D>,
         new_link: &na::Matrix3<Complex>,
         beta: Real,
@@ -328,7 +375,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         state: &LatticeStateDefault<D>,
     ) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>) {
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
-        let d_d = rand::distributions::Uniform::new(0, LatticeCyclique::<D>::dim_st());
+        let d_d = rand::distributions::Uniform::new(0, LatticeCyclic::<D>::dim_st());
 
         let point = LatticePoint::from_fn(|_| d_p.sample(&mut self.rng));
         let direction = Direction::positive_directions()[d_d.sample(&mut self.rng)];
@@ -436,8 +483,7 @@ mod test {
         let number_of_pts = 4;
         let beta = 2_f64;
         let mut simulation =
-            LatticeStateDefault::<4>::new_deterministe(size, beta, number_of_pts, &mut rng)
-                .unwrap();
+            LatticeStateDefault::<4>::new_determinist(size, beta, number_of_pts, &mut rng).unwrap();
 
         let mut mcd = MetropolisHastingsDeltaDiagnostic::new(0.01_f64, rng).unwrap();
         for _ in 0_u32..10_u32 {

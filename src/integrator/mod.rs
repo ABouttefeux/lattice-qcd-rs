@@ -1,20 +1,20 @@
 //! Numerical integrators to carry out simulations.
 //!
 //! See [`SymplecticIntegrator`]. The simulations are done on [`LatticeStateWithEField`]
-//! It also require a notion of [`SimulationStateSynchrone`]
+//! It also require a notion of [`SimulationStateSynchronous`]
 //! and [`SimulationStateLeapFrog`].
 //!
-//! Even thought it is effortless to implement both [`SimulationStateSynchrone`]
+//! Even thought it is effortless to implement both [`SimulationStateSynchronous`]
 //! and [`SimulationStateLeapFrog`].
-//! I adivce against it and implement only [`SimulationStateSynchrone`] and
+//! I advice against it and implement only [`SimulationStateSynchronous`] and
 //! use [`super::simulation::SimulationStateLeap`]
 //! for leap frog states as it gives a compile time check that you did not forget
-//! doing a demi steps.
+//! doing a half steps.
 //!
 //! This library gives two implementations of [`SymplecticIntegrator`]:
 //! [`SymplecticEuler`] and [`SymplecticEulerRayon`].
 //! I would advice using [`SymplecticEulerRayon`] if you do not mind the little
-//! more momory it uses.
+//! more memory it uses.
 //! # Example
 //! let us create a basic random state and let us simulate.
 //! ```
@@ -29,7 +29,7 @@
 //!
 //! let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
 //! let state1 = LatticeStateEFSyncDefault::new_random_e_state(
-//!     LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng)?,
+//!     LatticeStateDefault::<3>::new_determinist(100_f64, 1_f64, 4, &mut rng)?,
 //!     &mut rng,
 //! );
 //! let integrator = SymplecticEuler::default();
@@ -51,7 +51,7 @@
 //! #
 //! # let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
 //! # let state1 = LatticeStateEFSyncDefault::new_random_e_state(
-//! #     LatticeStateDefault::<3>::new_deterministe(100_f64, 1_f64, 4, &mut rng)?,
+//! #     LatticeStateDefault::<3>::new_determinist(100_f64, 1_f64, 4, &mut rng)?,
 //! #     &mut rng,
 //! # );
 //! # let integrator = SymplecticEuler::default();
@@ -63,14 +63,14 @@
 //! #     Ok(())
 //! # }
 //! ```
-//! See [`SimulationStateSynchrone`] for more convenient methods.
+//! See [`SimulationStateSynchronous`] for more convenient methods.
 
 use na::SVector;
 
 use super::{
     field::{EField, LinkMatrix, Su3Adjoint},
-    lattice::{LatticeCyclique, LatticeLink, LatticeLinkCanonical, LatticePoint},
-    simulation::{LatticeStateWithEField, SimulationStateLeapFrog, SimulationStateSynchrone},
+    lattice::{LatticeCyclic, LatticeLink, LatticeLinkCanonical, LatticePoint},
+    simulation::{LatticeStateWithEField, SimulationStateLeapFrog, SimulationStateSynchronous},
     CMatrix3, Complex, Real,
 };
 
@@ -80,35 +80,25 @@ pub mod symplectic_euler_rayon;
 pub use symplectic_euler::SymplecticEuler;
 pub use symplectic_euler_rayon::SymplecticEulerRayon;
 
-/*
-/// Define an numerical integrator
-pub trait Integrator<State, State2>
-    where State: LatticeStateWithEField,
-    State2: LatticeStateWithEField,
-{
-    /// Do one simulation step
-    fn integrate(&self, l: &State, delta_t: Real) -> Result<State2, SimulationError>;
-}
-*/
-
 /// Define an symplectic numerical integrator
 ///
-/// The integrator evlove the state in time.
+/// The integrator evolve the state in time.
 ///
 /// The integrator should be capable of switching between Sync state
 /// (q (or link matrices) at time T , p (or e_field) at time T )
 /// and leap frog (a at time T, p at time T + 1/2)
 ///
+/// # Example
 /// For an example see the module level documentation [`super::integrator`].
 pub trait SymplecticIntegrator<StateSync, StateLeap, const D: usize>
 where
-    StateSync: SimulationStateSynchrone<D>,
+    StateSync: SimulationStateSynchronous<D>,
     StateLeap: SimulationStateLeapFrog<D>,
 {
     /// Type of error returned by the Integrator.
     type Error;
 
-    /// Integrate a sync state to a sync state by advaning the link matrices and the electrical field simultaneously.
+    /// Integrate a sync state to a sync state by advancing the link matrices and the electrical field simultaneously.
     ///
     /// # Example
     /// see the module level documentation [`super::integrator`].
@@ -133,7 +123,7 @@ where
     ///
     /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
     /// let state = LatticeStateEFSyncDefault::new_random_e_state(
-    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
+    ///     LatticeStateDefault::<3>::new_determinist(1_f64, 2_f64, 4, &mut rng)?,
     ///     &mut rng,
     /// );
     /// let h = state.hamiltonian_total();
@@ -176,7 +166,7 @@ where
     fn integrate_leap_sync(&self, l: &StateLeap, delta_t: Real) -> Result<StateSync, Self::Error>;
 
     /// Integrate a Sync state by going to leap and then back to sync.
-    /// This is the symplectic methode of integration, which should conserve approximately the hamiltonian
+    /// This is the symplectic method of integration, which should conserve approximately the hamiltonian
     ///
     /// Note that you might want to override this method as it can save you from a clone.
     ///
@@ -193,7 +183,7 @@ where
     ///
     /// let mut rng = rand::rngs::StdRng::seed_from_u64(0); // change with your seed
     /// let mut state = LatticeStateEFSyncDefault::new_random_e_state(
-    ///     LatticeStateDefault::<3>::new_deterministe(1_f64, 2_f64, 4, &mut rng)?,
+    ///     LatticeStateDefault::<3>::new_determinist(1_f64, 2_f64, 4, &mut rng)?,
     ///     &mut rng,
     /// );
     /// let h = state.hamiltonian_total();
@@ -217,16 +207,17 @@ where
     }
 }
 
-/// function for link intregration.
-/// This must suceed as it is use while doing parallel computation. Returning a Option is undesirable.
+/// function for link integration.
+/// This must succeed as it is use while doing parallel computation. Returning a Option is undesirable.
 /// As it can panic if a out of bound link is passed it needs to stay private.
+///
 /// # Panic
 /// It panics if a out of bound link is passed.
 fn integrate_link<State, const D: usize>(
     link: &LatticeLinkCanonical<D>,
     link_matrix: &LinkMatrix,
     e_field: &EField<D>,
-    lattice: &LatticeCyclique<D>,
+    lattice: &LatticeCyclic<D>,
     delta_t: Real,
 ) -> CMatrix3
 where
@@ -241,15 +232,16 @@ where
             * Complex::from(delta_t)
 }
 
-/// function for "Electrical" field intregration.
-/// Like [`integrate_link`] this must suceed.
+/// function for "Electrical" field integration.
+/// Like [`integrate_link`] this must succeed.
+///
 /// # Panics
 /// It panics if a out of bound link is passed.
 fn integrate_efield<State, const D: usize>(
     point: &LatticePoint<D>,
     link_matrix: &LinkMatrix,
     e_field: &EField<D>,
-    lattice: &LatticeCyclique<D>,
+    lattice: &LatticeCyclic<D>,
     delta_t: Real,
 ) -> SVector<Su3Adjoint, D>
 where
