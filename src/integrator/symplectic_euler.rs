@@ -1,6 +1,6 @@
-//! Basic symplectic Euler integrator
+//! Basic symplectic Euler integrator.
 //!
-//! See [`SymplecticEuler`]
+//! For an example see the module level documentation [`super`].
 
 use std::vec::Vec;
 
@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 use super::{
     super::{
         field::{EField, LinkMatrix, Su3Adjoint},
-        lattice::LatticeCyclique,
+        lattice::LatticeCyclic,
         simulation::{
             LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-            SimulationStateSynchrone,
+            SimulationStateSynchronous,
         },
         thread::{run_pool_parallel_vec, ThreadError},
         CMatrix3, Real,
@@ -23,7 +23,8 @@ use super::{
 };
 
 /// Error for [`SymplecticEuler`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),
@@ -41,7 +42,7 @@ impl<Error: core::fmt::Display> core::fmt::Display for SymplecticEulerError<Erro
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) => write!(f, "{}", error),
+            Self::StateInitializationError(error) => write!(f, "initialization error: {}", error),
         }
     }
 }
@@ -57,8 +58,10 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 
 /// Basic symplectic Euler integrator
 ///
-/// slightly slower than [`super::SymplecticEulerRayon`] (for aproriate choice of `number_of_thread`)
+/// slightly slower than [`super::SymplecticEulerRayon`] (for appropriate choice of `number_of_thread`)
 /// but use less memory
+///
+/// For an example see the module level documentation [`super`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEuler {
@@ -67,8 +70,8 @@ pub struct SymplecticEuler {
 
 impl SymplecticEuler {
     getter_copy!(
-        const,
         /// getter on the number of thread the integrator use.
+        pub const,
         number_of_thread,
         usize
     );
@@ -78,11 +81,11 @@ impl SymplecticEuler {
         Self { number_of_thread }
     }
 
-    fn get_link_matrix_integrate<State, const D: usize>(
+    fn link_matrix_integrate<State, const D: usize>(
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         delta_t: Real,
     ) -> Result<Vec<CMatrix3>, ThreadError>
     where
@@ -95,17 +98,18 @@ impl SymplecticEuler {
                 integrate_link::<State, D>(link, link_matrix, e_field, lattice, delta_t)
             },
             self.number_of_thread,
-            lattice.get_number_of_canonical_links_space(),
+            lattice.number_of_canonical_links_space(),
             lattice,
             &CMatrix3::zeros(),
         )
+        .map_err(|err| err.into())
     }
 
-    fn get_e_field_integrate<State, const D: usize>(
+    fn e_field_integrate<State, const D: usize>(
         self,
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
-        lattice: &LatticeCyclique<D>,
+        lattice: &LatticeCyclic<D>,
         delta_t: Real,
     ) -> Result<Vec<SVector<Su3Adjoint, D>>, ThreadError>
     where
@@ -118,10 +122,11 @@ impl SymplecticEuler {
                 integrate_efield::<State, D>(point, link_matrix, e_field, lattice, delta_t)
             },
             self.number_of_thread,
-            lattice.get_number_of_points(),
+            lattice.number_of_points(),
             lattice,
             &SVector::<_, D>::from_element(Su3Adjoint::default()),
         )
+        .map_err(|err| err.into())
     }
 }
 
@@ -129,30 +134,36 @@ impl Default for SymplecticEuler {
     /// Default value using the number of threads rayon would use,
     /// see [`rayon::current_num_threads()`].
     fn default() -> Self {
-        Self::new(rayon::current_num_threads())
+        Self::new(rayon::current_num_threads().min(1))
+    }
+}
+
+impl std::fmt::Display for SymplecticEuler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Euler integrator with {} thread",
+            self.number_of_thread()
+        )
     }
 }
 
 impl<State, const D: usize> SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>
     for SymplecticEuler
 where
-    State: SimulationStateSynchrone<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
+    State: SimulationStateSynchronous<D> + LatticeStateWithEField<D> + LatticeStateWithEFieldNew<D>,
 {
     type Error = SymplecticEulerError<State::Error>;
 
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
-        let link_matrix = self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?;
-        let e_field = self.get_e_field_integrate::<State, D>(
-            l.link_matrix(),
-            l.e_field(),
-            l.lattice(),
-            delta_t,
-        )?;
+        let e_field =
+            self.e_field_integrate::<State, D>(l.link_matrix(), l.e_field(), l.lattice(), delta_t)?;
 
         State::new(
             l.lattice().clone(),
@@ -169,13 +180,13 @@ where
         l: &SimulationStateLeap<State, D>,
         delta_t: Real,
     ) -> Result<SimulationStateLeap<State, D>, Self::Error> {
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?);
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             l.e_field(),
             l.lattice(),
@@ -196,7 +207,7 @@ where
         l: &State,
         delta_t: Real,
     ) -> Result<SimulationStateLeap<State, D>, Self::Error> {
-        let e_field = self.get_e_field_integrate::<State, D>(
+        let e_field = self.e_field_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
@@ -218,14 +229,14 @@ where
         l: &SimulationStateLeap<State, D>,
         delta_t: Real,
     ) -> Result<State, Self::Error> {
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t,
         )?);
-        // we advace the counter by one
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        // we advance the counter by one
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
             l.e_field(),
             l.lattice(),
@@ -245,21 +256,21 @@ where
         // override for optimization.
         // This remove a clone operation.
 
-        let e_field_demi = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field_half = EField::new(self.e_field_integrate::<State, D>(
             l.link_matrix(),
             l.e_field(),
             l.lattice(),
             delta_t / 2_f64,
         )?);
-        let link_matrix = LinkMatrix::new(self.get_link_matrix_integrate::<State, D>(
+        let link_matrix = LinkMatrix::new(self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
-            &e_field_demi,
+            &e_field_half,
             l.lattice(),
             delta_t,
         )?);
-        let e_field = EField::new(self.get_e_field_integrate::<State, D>(
+        let e_field = EField::new(self.e_field_integrate::<State, D>(
             &link_matrix,
-            &e_field_demi,
+            &e_field_half,
             l.lattice(),
             delta_t / 2_f64,
         )?);

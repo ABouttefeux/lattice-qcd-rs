@@ -1,11 +1,19 @@
 //! Module for SU(3) matrices and su(3) (that is the generators of SU(3) )
 //!
-//! The module defines the SU(3) generator we use the same matrices as on [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices) **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+//! The module defines the SU(3) generator we use the same matrices as on
+//! [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices)
+//! **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
+
+use std::iter::FusedIterator;
 
 use na::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
-use rand_distr::Distribution;
+use rand::Rng;
+use rand_distr::{Distribution, Uniform};
 
-use super::{field::Su3Adjoint, su2, utils, CMatrix2, CMatrix3, Complex, Real, I, ONE, ZERO};
+use super::{
+    field::Su3Adjoint, su2, utils, utils::FactorialNumber, CMatrix2, CMatrix3, Complex, Real, I,
+    ONE, ZERO,
+};
 
 /// SU(3) generator
 /// ```textrust
@@ -167,7 +175,9 @@ pub const GENERATOR_8: CMatrix3 = CMatrix3::new(
     Complex::new(MINUS_ONE_OVER_SQRT_3, 0_f64),
 );
 
+/// -1/sqrt(3), used for [`GENERATOR_8`].
 const MINUS_ONE_OVER_SQRT_3: f64 = -0.577_350_269_189_625_8_f64;
+/// 2/sqrt(3), used for [`GENERATOR_8`].
 const ONE_OVER_2_SQRT_3: f64 = 0.288_675_134_594_812_9_f64;
 
 /// list of SU(3) generators
@@ -186,14 +196,16 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 /// Exponential of matrices.
 ///
 /// Note prefer using [`su3_exp_r`] and [`su3_exp_i`] when possible.
-pub trait MatrixExp<T> {
+#[deprecated(since = "0.2.0", note = "Please use nalgebra exp instead")]
+pub trait MatrixExp<T = Self> {
     /// Return the exponential of the matrix
-    fn exp(&self) -> T;
+    fn exp(self) -> T;
 }
 
 /// Basic implementation of matrix exponential for complex matrices.
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
+#[allow(deprecated)]
 impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
 where
     T: ComplexField + Copy,
@@ -204,9 +216,9 @@ where
         + Allocator<T, D>,
     OMatrix<T, D, D>: Clone,
 {
-    fn exp(&self) -> OMatrix<T, D, D> {
-        let decomposition = self.clone().schur();
-        // a complex matrix is always diagonalisable
+    fn exp(self) -> OMatrix<T, D, D> {
+        let decomposition = self.schur();
+        // a complex matrix is always diagonalizable
         let eigens = decomposition.eigenvalues().unwrap();
         let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
         let (q, _) = decomposition.unpack();
@@ -215,8 +227,56 @@ where
     }
 }
 
-/// Create a matrix (v1, v2 , v1* x v2*)
-fn create_matrix_from_2_vector(
+/// Create a [`super::CMatrix3`] of the form `[v1, v2, v1* x v2*]` where v1* is the conjugate of v1 and
+/// `x` is the cross product.
+///
+/// # Example
+/// ```
+/// # use nalgebra::{Vector3, Complex, Matrix3};
+/// # use lattice_qcd_rs::{assert_eq_matrix};
+/// # use lattice_qcd_rs::su3::create_matrix_from_2_vector;
+/// let v1 = Vector3::new(
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let v2 = Vector3::new(
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// assert_eq_matrix!(
+///     Matrix3::identity(),
+///     create_matrix_from_2_vector(v1, v2),
+///     0.000_000_1_f64
+/// );
+///
+/// let v1 = Vector3::new(
+///     Complex::new(0_f64, 1_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let v2 = Vector3::new(
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+/// );
+/// let m = Matrix3::new(
+///     Complex::new(0_f64, 1_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     // ---
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(1_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     // ---
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, 0_f64),
+///     Complex::new(0_f64, -1_f64),
+/// );
+/// assert_eq_matrix!(m, create_matrix_from_2_vector(v1, v2), 0.000_000_1_f64);
+/// ```
+pub fn create_matrix_from_2_vector(
     v1: na::Vector3<Complex>,
     v2: na::Vector3<Complex>,
 ) -> na::Matrix3<Complex> {
@@ -227,7 +287,7 @@ fn create_matrix_from_2_vector(
 }
 
 /// get an orthonormalize matrix from two vector.
-fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
+fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
     let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
@@ -235,62 +295,101 @@ fn get_ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Comp
 }
 
 /// Try orthonormalize the given matrix.
+// TODO example
 pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
     let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
     let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
-    get_ortho_matrix_from_2_vector(v1, v2)
+    ortho_matrix_from_2_vector(v1, v2)
 }
 
 /// Orthonormalize the given matrix by mutating its content.
+// TODO example
 pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
     *matrix = orthonormalize_matrix(matrix);
 }
 
-/// Generate Uniformly distributed SU(3)
-pub fn get_random_su3(rng: &mut impl rand::Rng) -> CMatrix3 {
-    get_rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
+/// Generate Uniformly distributed SU(3) matrix.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{assert_matrix_is_su_3,su3::random_su3};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// for _ in 0..10 {
+///     assert_matrix_is_su_3!(random_su3(&mut rng), 9_f64 * f64::EPSILON);
+/// }
+/// ```
+pub fn random_su3<Rng>(rng: &mut Rng) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
+    rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
 }
 
-/// get a random su3 with the given distribution.
+/// Get a random SU3 with the given distribution.
 ///
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
-/// For a matrix Uniformly distributed amoung SU(3) use [`get_random_su3`].
+/// For a matrix Uniformly distributed among SU(3) use [`get_random_su3`].
 /// For a matrix close to unity use [`get_random_su3_close_to_unity`]
-fn get_rand_su3_with_dis(
-    rng: &mut impl rand::Rng,
-    d: &impl rand_distr::Distribution<Real>,
-) -> CMatrix3 {
-    let mut v1 = get_random_vec_3(rng, d);
+fn rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
+where
+    Rng: rand::Rng + ?Sized,
+{
+    let mut v1 = random_vec_3(rng, d);
     while v1.norm() <= f64::EPSILON {
-        v1 = get_random_vec_3(rng, d);
+        v1 = random_vec_3(rng, d);
     }
-    let mut v2 = get_random_vec_3(rng, d);
+    let mut v2 = random_vec_3(rng, d);
     while v1.dot(&v2).modulus() <= f64::EPSILON {
-        v2 = get_random_vec_3(rng, d);
+        v2 = random_vec_3(rng, d);
     }
-    get_ortho_matrix_from_2_vector(v1, v2)
+    ortho_matrix_from_2_vector(v1, v2)
 }
 
 /// get a random [`na::Vector3<Complex>`].
-fn get_random_vec_3(
-    rng: &mut impl rand::Rng,
-    d: &impl rand_distr::Distribution<Real>,
-) -> na::Vector3<Complex> {
+fn random_vec_3<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex>
+where
+    Rng: rand::Rng + ?Sized,
+{
     na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
 /// Get a radom SU(3) matrix close to `[get_r] (+/- 1) * [get_s] (+/- 1) * [get_t] (+/- 1)`.
 ///
-/// Note that it diverges from SU(3) sligthly.
-/// `spread_parameter` should be between between 0 and 1 both excluded to generate valide data.
-/// outside this boud it will not panic but can have unexpected results.
-pub fn get_random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
+/// Note that it diverges from SU(3) slightly.
+/// `spread_parameter` should be between between 0 and 1 both excluded to generate valid data.
+/// outside this bound it will not panic but can have unexpected results.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{assert_matrix_is_su_3,su3::random_su3_close_to_unity};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// for _ in 0..10 {
+///     assert_matrix_is_su_3!(
+///         random_su3_close_to_unity(0.000_000_001_f64, &mut rng),
+///         0.000_000_1_f64
+///     );
+/// }
+/// ```
+/// but it will be not close to SU(3) up to [`f64::EPSILON`].
+/// ```should_panic
+/// # use lattice_qcd_rs::{assert_matrix_is_su_3,su3::random_su3_close_to_unity};
+/// # use rand::SeedableRng;
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+/// assert_matrix_is_su_3!(
+///     random_su3_close_to_unity(0.000_000_001_f64, &mut rng),
+///     f64::EPSILON * 180_f64
+/// );
+/// ```
+// TODO review example epsilon
+pub fn random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
 where
     R: rand::Rng + ?Sized,
 {
-    let r = get_r(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let s = get_s(su2::get_random_su2_close_to_unity(spread_parameter, rng));
-    let t = get_t(su2::get_random_su2_close_to_unity(spread_parameter, rng));
+    let r = get_r(su2::random_su2_close_to_unity(spread_parameter, rng));
+    let s = get_s(su2::random_su2_close_to_unity(spread_parameter, rng));
+    let t = get_t(su2::random_su2_close_to_unity(spread_parameter, rng));
     let distribution = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
     let mut x = r * s * t;
     if distribution.sample(rng) {
@@ -300,6 +399,33 @@ where
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the last row and column be the same as identity.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_r, Complex, assert_eq_matrix};
+/// let m1 = CMatrix2::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(3_f64),
+///     Complex::from(4_f64),
+/// );
+///
+/// let m2 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     Complex::from(0_f64),
+///     // ---
+///     Complex::from(3_f64),
+///     Complex::from(4_f64),
+///     Complex::from(0_f64),
+///     // ---
+///     Complex::from(0_f64),
+///     Complex::from(0_f64),
+///     Complex::from(1_f64),
+/// );
+/// assert_eq_matrix!(get_r(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_r(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0, 0)],
@@ -317,6 +443,33 @@ pub fn get_r(m: CMatrix2) -> CMatrix3 {
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the second row and column be the same as identity.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_s, Complex, assert_eq_matrix};
+/// let m1 = CMatrix2::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(3_f64),
+///     Complex::from(4_f64),
+/// );
+///
+/// let m2 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(0_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(0_f64),
+///     Complex::from(1_f64),
+///     Complex::from(0_f64),
+///     // ---
+///     Complex::from(3_f64),
+///     Complex::from(0_f64),
+///     Complex::from(4_f64),
+/// );
+/// assert_eq_matrix!(get_s(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_s(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0, 0)],
@@ -334,6 +487,33 @@ pub fn get_s(m: CMatrix2) -> CMatrix3 {
 }
 
 /// Embed a Matrix2 inside Matrix3 leaving the first row and column be the same as identity.
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_t, Complex, assert_eq_matrix};
+/// let m1 = CMatrix2::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(3_f64),
+///     Complex::from(4_f64),
+/// );
+///
+/// let m2 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(0_f64),
+///     Complex::from(0_f64),
+///     // ---
+///     Complex::from(0_f64),
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(0_f64),
+///     Complex::from(3_f64),
+///     Complex::from(4_f64),
+/// );
+/// assert_eq_matrix!(get_t(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_t(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         ONE,
@@ -350,7 +530,33 @@ pub fn get_t(m: CMatrix2) -> CMatrix3 {
     )
 }
 
-/// get the [`CMatrix2`] sub block corresponing to [`get_r`]
+/// get the [`CMatrix2`] sub block corresponding to [`get_r`]
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_sub_block_r, Complex, assert_eq_matrix};
+///  let m1 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     Complex::from(3_f64),
+///     // ---
+///     Complex::from(4_f64),
+///     Complex::from(5_f64),
+///     Complex::from(6_f64),
+///     // ---
+///     Complex::from(7_f64),
+///     Complex::from(8_f64),
+///     Complex::from(9_f64),
+/// );
+/// let m2 = CMatrix2::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     // ---
+///     Complex::from(4_f64),
+///     Complex::from(5_f64),
+/// );
+/// assert_eq_matrix!(get_sub_block_r(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_sub_block_r(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(0, 0)],
@@ -361,7 +567,33 @@ pub fn get_sub_block_r(m: CMatrix3) -> CMatrix2 {
     )
 }
 
-/// get the [`CMatrix2`] sub block corresponing to [`get_s`]
+/// get the [`CMatrix2`] sub block corresponding to [`get_s`]
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_sub_block_s, Complex, assert_eq_matrix};
+///  let m1 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     Complex::from(3_f64),
+///     // ---
+///     Complex::from(4_f64),
+///     Complex::from(5_f64),
+///     Complex::from(6_f64),
+///     // ---
+///     Complex::from(7_f64),
+///     Complex::from(8_f64),
+///     Complex::from(9_f64),
+/// );
+/// let m2 = CMatrix2::new(
+///     Complex::from(1_f64),
+///     Complex::from(3_f64),
+///     // ---
+///     Complex::from(7_f64),
+///     Complex::from(9_f64),
+/// );
+/// assert_eq_matrix!(get_sub_block_s(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_sub_block_s(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(0, 0)],
@@ -372,7 +604,33 @@ pub fn get_sub_block_s(m: CMatrix3) -> CMatrix2 {
     )
 }
 
-/// get the [`CMatrix2`] sub block corresponing to [`get_t`]
+/// Get the [`CMatrix2`] sub block corresponding to [`get_t`]
+///
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::{CMatrix3, CMatrix2, su3::get_sub_block_t, Complex, assert_eq_matrix};
+///  let m1 = CMatrix3::new(
+///     Complex::from(1_f64),
+///     Complex::from(2_f64),
+///     Complex::from(3_f64),
+///     // ---
+///     Complex::from(4_f64),
+///     Complex::from(5_f64),
+///     Complex::from(6_f64),
+///     // ---
+///     Complex::from(7_f64),
+///     Complex::from(8_f64),
+///     Complex::from(9_f64),
+/// );
+/// let m2 = CMatrix2::new(
+///     Complex::from(5_f64),
+///     Complex::from(6_f64),
+///     // ---
+///     Complex::from(8_f64),
+///     Complex::from(9_f64),
+/// );
+/// assert_eq_matrix!(get_sub_block_t(m1), m2, f64::EPSILON);
+/// ```
 pub fn get_sub_block_t(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(1, 1)],
@@ -383,25 +641,26 @@ pub fn get_sub_block_t(m: CMatrix3) -> CMatrix2 {
     )
 }
 
-/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "r" sub block see
-/// [`get_sub_block_r`] and [`get_r`].
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "r" sub block see
+/// [`get_sub_block_r`] and [`su2::project_to_su2_unorm`].
 pub fn get_su2_r_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_r(input))
 }
 
-/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "s" sub block see
-/// [`get_sub_block_s`] and [`get_s`].
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "s" sub block see
+/// [`get_sub_block_s`] and [`su2::project_to_su2_unorm`].
 pub fn get_su2_s_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_s(input))
 }
 
-/// Get the unormalize SU(2) sub matrix of an SU(3) matrix correspondig to the "t" sub block see
-/// [`get_sub_block_t`] and [`get_t`].
+/// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "t" sub block see
+/// [`get_sub_block_t`] and [`su2::project_to_su2_unorm`].
 pub fn get_su2_t_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_t(input))
 }
 
 /// Get the three unormalize sub SU(2) matrix of the given SU(3) matrix, ordered `r, s, t`
+/// see [`get_sub_block_r`], [`get_sub_block_s`] and [`get_sub_block_t`]
 pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
     [get_su2_r_unorm(m), get_su2_s_unorm(m), get_su2_t_unorm(m)]
 }
@@ -455,14 +714,11 @@ pub fn reverse(input: CMatrix3) -> CMatrix3 {
     })
 }
 
-// u64 is just not enough.
-type FactorialNumber = u128;
-
 /// Return N such that `1/(N-7)!` < [`f64::EPSILON`].
 ///
 /// This number is needed for the computation of exponential matrix
 #[allow(clippy::as_conversions)] // no try into for f64
-pub fn get_factorial_size_for_exp() -> usize {
+pub fn factorial_size_for_exp() -> usize {
     let mut n: usize = 7;
     let mut factorial_value = 1;
     while 1_f64 / (factorial_value as f64) >= Real::EPSILON {
@@ -472,9 +728,11 @@ pub fn get_factorial_size_for_exp() -> usize {
     n
 }
 
+/// Size of the array for FactorialStorageStatic
 const FACTORIAL_STORAGE_STAT_SIZE: usize = utils::MAX_NUMBER_FACTORIAL + 1;
 
-/// static store for factorial number
+/// Static store for factorial number.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct FactorialStorageStatic {
     data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE],
 }
@@ -503,9 +761,55 @@ impl FactorialStorageStatic {
         Self { data }
     }
 
-    /// access in O(1). Return None if `value` is bigger than 34
+    /// access in O(1). Return None if `value` is bigger than 34.
     pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
+    }
+
+    /// Get an iterator over the factorial number form `0!` up to `34!`.
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = &FactorialNumber> + ExactSizeIterator + FusedIterator {
+        self.data.iter()
+    }
+
+    /// Get the slice of factorial number.
+    pub const fn as_slice(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
+        &self.data
+    }
+}
+
+impl Default for FactorialStorageStatic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for FactorialStorageStatic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "factorial Storage : ")?;
+        for (i, n) in self.iter().enumerate() {
+            write!(f, "{}! = {}", i, n)?;
+            if i < self.data.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'a> IntoIterator for &'a FactorialStorageStatic {
+    type IntoIter = <&'a [u128; FACTORIAL_STORAGE_STAT_SIZE] as IntoIterator>::IntoIter;
+    type Item = &'a u128;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl AsRef<[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE]> for FactorialStorageStatic {
+    fn as_ref(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
+        self.as_slice()
     }
 }
 
@@ -513,7 +817,7 @@ impl FactorialStorageStatic {
 /// the set if for all number `N` such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`
 const FACTORIAL_STORAGE_STAT: FactorialStorageStatic = FactorialStorageStatic::new();
 
-/// number of step for the computation of matric exponential using the Cayley–Hamilton theorem.
+/// number of step for the computation of matrix exponential using the Cayley–Hamilton theorem.
 const N: usize = 26;
 
 /// give the SU3 matrix from the adjoint rep, i.e compute `exp(i v^a T^a )`
@@ -562,8 +866,8 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// exp(i X).
 ///
 /// # Panic
-/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
+/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximately su(3),
+/// otherwise the function will panic in debug mod, in release the output gives unexpected values.
 /// ```should_panic
 /// use lattice_qcd_rs::{
 ///     assert_eq_matrix,
@@ -642,8 +946,8 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 ///
 /// # Panic
-/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximatively su(3),
-/// otherwise the function will panic in debug mod, in release the ouptut gives unexpected values.
+/// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximately su(3),
+/// otherwise the function will panic in debug mod, in release the output gives unexpected values.
 /// ```should_panic
 /// use lattice_qcd_rs::{
 ///     assert_eq_matrix,
@@ -682,15 +986,23 @@ pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
     CMatrix3::from_diagonal_element(q0) + matrix * q1 + matrix * matrix * q2
 }
 
-/// return wether the input matrix is SU(3) up to epsilon.
+/// Return wether the input matrix is SU(3) up to epsilon.
+// TODO example
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
     ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon)
         && ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
 }
 
-/// Returns wether the given matric is in the lie algebra su(3) that generates SU(3) up to epsilon
+/// Returns wether the given matrix is in the lie algebra su(3) that generates SU(3) up to epsilon.
 pub fn is_matrix_su3_lie(matrix: &CMatrix3, epsilon: Real) -> bool {
     matrix.trace().modulus() < epsilon && (matrix - matrix.adjoint()).norm() < epsilon
+}
+
+#[doc(hidden)]
+/// Crate a random 3x3 Matrix
+pub fn random_matrix_3<R: Rng + ?Sized>(rng: &mut R) -> CMatrix3 {
+    let d = Uniform::from(-10_f64..10_f64);
+    CMatrix3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
 #[cfg(test)]
@@ -705,8 +1017,8 @@ mod test {
 
     #[test]
     /// test that [`N`] is indeed what we need
-    fn test_constante() {
-        assert_eq!(N, get_factorial_size_for_exp() + 1)
+    fn test_constant() {
+        assert_eq!(N, factorial_size_for_exp() + 1);
     }
 
     #[test]
@@ -807,11 +1119,12 @@ mod test {
         assert_eq_matrix!(get_t(t), m_t, EPSILON);
 
         for p in &extract_su2_unorm(m) {
-            assert_matrix_is_su_2!((p / p.determinant().sqrt()), EPSILON);
+            assert_matrix_is_su_2!(p / p.determinant().sqrt(), EPSILON);
         }
     }
 
     #[test]
+    #[allow(deprecated)]
     fn exp_matrix() {
         let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
         let d = rand::distributions::Uniform::from(-1_f64..1_f64);
@@ -821,7 +1134,7 @@ mod test {
             let output_i = matrix_su3_exp_i(**m);
             assert_eq_matrix!(output_i, (*m * I).exp(), EPSILON);
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             let output_r = matrix_su3_exp_r(m);
@@ -837,7 +1150,7 @@ mod test {
         for m in &GENERATORS {
             assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..100 {
+        for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
             let m = v.to_matrix();
             assert!(is_matrix_su3_lie(&m, f64::EPSILON * 100_f64));
@@ -903,12 +1216,12 @@ mod test {
             Complex::from(1_f64),
         );
         assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
-        for _ in 0..10 {
-            let m = get_random_su3(&mut rng);
+        for _ in 0_u32..10_u32 {
+            let m = random_su3(&mut rng);
             assert!(is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
-        for _ in 0..10 {
-            let m = get_random_su3(&mut rng) * Complex::from(1.1_f64);
+        for _ in 0_u32..10_u32 {
+            let m = random_su3(&mut rng) * Complex::from(1.1_f64);
             assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
     }

@@ -1,4 +1,6 @@
-//! Utils function and structure
+//! Utils functions and structures.
+//!
+//! Mainly things that I do not know where to put.
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -8,12 +10,12 @@ use approx::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-type FactorialNumber = u128;
+pub(crate) type FactorialNumber = u128;
 
-/// Smallest number such that (n+1)! overflow u128.
+/// Smallest number such that `(n+1)!` overflow [`u128`].
 pub const MAX_NUMBER_FACTORIAL: usize = 34;
 
-/// return n!.
+/// return n! (n factorial).
 ///
 /// # Panic
 /// It overflows if `n >= 35` and panics in debug.
@@ -42,13 +44,22 @@ pub const fn factorial(n: usize) -> FactorialNumber {
     }
 }
 
-/// Dynamical size factorial store
+/// Dynamical size factorial storage.
+///
+/// Used as a lazy cache for factorial number. This is not actually used and might be removed later.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FactorialStorageDyn {
     data: Vec<FactorialNumber>,
 }
 
+impl Default for FactorialStorageDyn {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FactorialStorageDyn {
-    /// Create a new object with an empty storage
+    /// Create a new object with an empty storage.
     pub const fn new() -> Self {
         Self { data: Vec::new() }
     }
@@ -60,22 +71,25 @@ impl FactorialStorageDyn {
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
     /// f.build_storage(6);
-    /// assert_eq!(*f.try_get_factorial(6).unwrap(), 720);
+    /// assert_eq!(*f.try_factorial(6).unwrap(), 720);
     /// ```
     pub fn build_storage(&mut self, value: usize) {
-        self.get_factorial(value);
+        self.factorial(value);
     }
 
     /// Get the factorial number. If it is not already computed build internal storage
     ///
-    /// #Example
+    /// # Panic
+    /// panic if value is greater than [`MAX_NUMBER_FACTORIAL`] (34) in debug, overflows otherwise.
+    ///
+    /// # Example
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(6), 720);
-    /// assert_eq!(f.get_factorial(4), 24);
+    /// assert_eq!(f.factorial(6), 720);
+    /// assert_eq!(f.factorial(4), 24);
     /// ```
-    pub fn get_factorial(&mut self, value: usize) -> FactorialNumber {
+    pub fn factorial(&mut self, value: usize) -> FactorialNumber {
         let mut len = self.data.len();
         if len == 0 {
             self.data.push(1);
@@ -93,16 +107,15 @@ impl FactorialStorageDyn {
 
     /// try get factorial from storage
     ///
-    ///
     /// #Example
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(4), 24);
-    /// assert_eq!(*f.try_get_factorial(4).unwrap(), 24);
-    /// assert_eq!(f.try_get_factorial(6), None);
+    /// assert_eq!(f.factorial(4), 24);
+    /// assert_eq!(*f.try_factorial(4).unwrap(), 24);
+    /// assert_eq!(f.try_factorial(6), None);
     /// ```
-    pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
+    pub fn try_factorial(&self, value: usize) -> Option<&FactorialNumber> {
         self.data.get(value)
     }
 
@@ -111,11 +124,11 @@ impl FactorialStorageDyn {
     /// ```
     /// # use lattice_qcd_rs::utils::FactorialStorageDyn;
     /// let mut f = FactorialStorageDyn::new();
-    /// assert_eq!(f.get_factorial(4), 24);
-    /// assert_eq!(f.get_factorial_no_storage(6), 720);
-    /// assert_eq!(f.try_get_factorial(6), None);
+    /// assert_eq!(f.factorial(4), 24);
+    /// assert_eq!(f.factorial_no_storage(6), 720);
+    /// assert_eq!(f.try_factorial(6), None);
     /// ```
-    pub fn get_factorial_no_storage(&self, value: usize) -> FactorialNumber {
+    pub fn factorial_no_storage(&self, value: usize) -> FactorialNumber {
         let mut value_m: FactorialNumber = self.data[value.min(self.data.len() - 1)];
         for i in self.data.len() - 1..value {
             value_m *= TryInto::<FactorialNumber>::try_into(i + 1).unwrap();
@@ -128,9 +141,9 @@ impl FactorialStorageDyn {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Sign {
-    /// Stricly negative number (non zero)
+    /// Strictly negative number (non zero)
     Negative,
-    /// Stricly positive number ( non zero)
+    /// Strictly positive number ( non zero)
     Positive,
     /// Zero (or very close to zero)
     Zero,
@@ -148,10 +161,10 @@ impl Sign {
 
     /// Get the sign form a f64.
     ///
-    /// If the value is very close to zero but not quite the sing will nonetheless be Sign::Zero.
-    pub fn sign(f: f64) -> Self {
-        // TODO manage NaN
-        if abs_diff_eq!(f, 0_f64) {
+    /// If the value is very close to zero but not quite the sing will nonetheless be [`Sign::Zero`].
+    /// If f is NaN the sing will be [`Sign::Zero`].
+    pub fn sign_f64(f: f64) -> Self {
+        if abs_diff_eq!(f, 0_f64) || f.is_nan() {
             Sign::Zero
         }
         else if f > 0_f64 {
@@ -185,7 +198,7 @@ impl Sign {
         }
     }
 
-    /// Retuns the sign of `a - b`, witah a and b are usize
+    /// Returns the sign of `a - b`, where `a` and `b` are usize
     #[allow(clippy::comparison_chain)]
     pub const fn sign_from_diff(a: usize, b: usize) -> Self {
         if a == b {
@@ -200,6 +213,22 @@ impl Sign {
     }
 }
 
+impl Default for Sign {
+    fn default() -> Self {
+        Sign::Zero
+    }
+}
+
+impl std::fmt::Display for Sign {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Positive => write!(f, "positive"),
+            Self::Zero => write!(f, "zero"),
+            Self::Negative => write!(f, "negative"),
+        }
+    }
+}
+
 impl From<Sign> for f64 {
     fn from(s: Sign) -> f64 {
         s.to_f64()
@@ -208,7 +237,19 @@ impl From<Sign> for f64 {
 
 impl From<f64> for Sign {
     fn from(f: f64) -> Sign {
-        Sign::sign(f)
+        Sign::sign_f64(f)
+    }
+}
+
+impl From<Sign> for i8 {
+    fn from(s: Sign) -> i8 {
+        s.to_i8()
+    }
+}
+
+impl From<i8> for Sign {
+    fn from(i: i8) -> Sign {
+        Sign::sign_i8(i)
     }
 }
 
@@ -260,6 +301,7 @@ impl Ord for Sign {
 /// # use lattice_qcd_rs::utils::{Sign, levi_civita};
 /// assert_eq!(Sign::Positive, levi_civita(&[1, 2, 3]));
 /// assert_eq!(Sign::Negative, levi_civita(&[2, 1, 3]));
+/// assert_eq!(Sign::Zero, levi_civita(&[2, 2, 3]));
 /// ```
 pub const fn levi_civita(index: &[usize]) -> Sign {
     let mut prod = 1_i8;
@@ -279,12 +321,14 @@ pub const fn levi_civita(index: &[usize]) -> Sign {
 mod test {
     use super::*;
 
+    #[allow(clippy::missing_const_for_fn)]
     #[test]
     /// test that the factorial pass for MAX_NUMBER_FACTORIAL
     fn test_factorial_pass() {
         factorial(MAX_NUMBER_FACTORIAL);
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     #[test]
     #[should_panic]
     #[cfg(not(feature = "no-overflow-test"))]
@@ -340,18 +384,25 @@ mod test {
         assert_eq!(Sign::Positive, Sign::sign_from_diff(4, 1));
     }
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn sign() {
-        assert_eq!(Sign::sign(0_f64).to_f64(), 0_f64);
-        assert_eq!(Sign::sign(1_f64).to_f64(), 1_f64);
-        assert_eq!(Sign::sign(-1_f64).to_f64(), -1_f64);
-        assert_eq!(Sign::sign(34_f64), Sign::Positive);
-        assert_eq!(Sign::sign(-34_f64), Sign::Negative);
+        assert_eq!(Sign::sign_f64(0_f64).to_f64(), 0_f64);
+        assert_eq!(Sign::sign_f64(1_f64).to_f64(), 1_f64);
+        assert_eq!(Sign::sign_f64(-1_f64).to_f64(), -1_f64);
+        assert_eq!(Sign::sign_f64(34_f64), Sign::Positive);
+        assert_eq!(Sign::sign_f64(-34_f64), Sign::Negative);
         assert_eq!(Sign::from(-34_f64), Sign::Negative);
-        assert_eq!(f64::from(Sign::sign(-1_f64)), -1_f64);
+        assert_eq!(f64::from(Sign::sign_f64(-1_f64)), -1_f64);
         assert_eq!(-Sign::Negative, Sign::Positive);
         assert_eq!(-Sign::Positive, Sign::Negative);
         assert_eq!(-Sign::Zero, Sign::Zero);
+
+        assert_eq!(i8::from(Sign::from(0_i8)), 0_i8);
+        assert_eq!(i8::from(Sign::from(1_i8)), 1_i8);
+        assert_eq!(i8::from(Sign::from(-3_i8)), -1_i8);
+
+        assert_eq!(Sign::default(), Sign::Zero);
 
         // mul
         assert_eq!(Sign::Positive * Sign::Positive, Sign::Positive);
@@ -387,5 +438,15 @@ mod test {
             Some(Ordering::Less)
         );
         assert_eq!(Sign::Zero.partial_cmp(&Sign::Zero), Some(Ordering::Equal));
+
+        // ---
+        assert_eq!(Sign::Positive.to_string(), "positive");
+        assert_eq!(Sign::Negative.to_string(), "negative");
+        assert_eq!(Sign::Zero.to_string(), "zero");
+    }
+
+    #[test]
+    fn factorial_storage_dyn() {
+        assert_eq!(FactorialStorageDyn::default(), FactorialStorageDyn::new());
     }
 }

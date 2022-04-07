@@ -1,8 +1,21 @@
 version: 2
 updates:
+
+# main crate
 - package-ecosystem: cargo
   directory: "/"
   schedule:
     interval: daily
   open-pull-requests-limit: 10
   target-branch: develop
+
+# procedural macro
+- package-ecosystem: cargo
+  directory: "/procedural_macro/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  target-branch: develop
+  label: 
+    - "dependencies"
+    - "macro"
