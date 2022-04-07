@@ -1,0 +1,38 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    
+    - name: Install Rust stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    
+    - name: Build with serd
+      run: cargo build --all --verbose --features serde-serialize
+      
+    - name: Run tests with serd
+      run: cargo test --all --verbose --features serde-serialize
+    
+    - name: Build no features
+      run: cargo build --all --verbose --no-default-features
+      
+    - name: Run tests no features
+      run: cargo test --all --verbose --no-default-features

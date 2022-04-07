@@ -1,0 +1,20 @@
+[package]
+name = "lattice_qcd_rs-procedural_macro"
+version = "0.2.0"
+authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
+edition = "2021"
+description = "Set of procedural macro for the main library lattice_qcd_rs"
+repository = "https://github.com/ABouttefeux/lattice-qcd-rs/"
+license = "MIT OR Apache-2.0"
+publish = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0.17"
+syn = "1.0.90"
+proc-macro2 = "1.0.36"
+
+[dev-dependencies]
+version-sync = "0.9.4"
