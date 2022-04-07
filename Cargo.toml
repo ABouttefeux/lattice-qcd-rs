@@ -7,10 +7,13 @@ readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs"
 categories = ["Science", "Simulation"]
 description = "Lattice QCD simulation"
-keywords = ["QCD", "Lattice", "Monte Carlo", "chromodynamics"]
+keywords = ["QCD", "Lattice", "Monte-Carlo", "chromodynamics"]
 publish = true
 license = "MIT OR Apache-2.0"
-include = ["logo.svg"]
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["lib"]
 
 [features]
 serde-serialize = ["serde", "nalgebra/serde-serialize"]
@@ -37,6 +40,7 @@ version-sync = "0.9.4"
 
 [[bench]]
 name = "bench"
+path = "benches/bench.rs"
 harness = false
 
 [profile.test]
