@@ -382,7 +382,6 @@ where
 ///     f64::EPSILON * 180_f64
 /// );
 /// ```
-// TODO review example epsilon
 pub fn random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
 where
     R: rand::Rng + ?Sized,
