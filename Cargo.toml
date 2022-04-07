@@ -29,7 +29,7 @@ rand_distr = "0.4.3"
 crossbeam = "0.8.1"
 rayon = "1.5.1"
 serde = { version = "1.0", features = ["derive"], optional = true }
-lattice_qcd_rs-procedural_macro = {path = "procedural_macro"}
+lattice_qcd_rs-procedural_macro = {path = "procedural_macro", version = "0.2.0"}
 
 [dev-dependencies]
 criterion = "0.3.5"
