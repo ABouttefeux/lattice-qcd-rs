@@ -12,6 +12,9 @@ publish = true
 license = "MIT OR Apache-2.0"
 include = ["logo.svg"]
 
+[lib]
+path = "src/lib.rs"
+
 [features]
 serde-serialize = ["serde", "nalgebra/serde-serialize"]
 no-overflow-test= []
