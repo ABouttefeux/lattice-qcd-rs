@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use super::EField;
 use crate::builder::GenType;
-use crate::lattice::LatticeCyclique;
+use crate::lattice::LatticeCyclic;
 use crate::{CMatrix3, Real};
 
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ pub struct EFieldProceduralBuilder<
     const D: usize,
 > {
     gen_type: GenType<'rng, Rng>,
-    lattice: Cow<'lat, LatticeCyclique<D>>,
+    lattice: Cow<'lat, LatticeCyclic<D>>,
     distribution: DistributionForBuilder<'dis, Dis>,
 }
 
@@ -65,7 +65,7 @@ impl<
         const D: usize,
     > EFieldProceduralBuilder<'rng, 'lat, 'dis, Rng, Dis, D>
 {
-    pub fn new(lattice: impl Into<Cow<'lat, LatticeCyclique<D>>>) -> Self {
+    pub fn new(lattice: impl Into<Cow<'lat, LatticeCyclic<D>>>) -> Self {
         Self {
             gen_type: GenType::Cold,
             lattice: lattice.into(),
