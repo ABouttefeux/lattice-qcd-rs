@@ -89,12 +89,12 @@ where
 {
     getter!(
         /// Get a ref to the rng.
-        pub rng() -> Rng
+        pub const rng() -> Rng
     );
 
     project!(
         /// Get the integrator.
-        pub internal.integrator() -> &I
+        pub const internal.integrator() -> &I
     );
 
     project_mut!(
@@ -104,12 +104,12 @@ where
 
     project!(
         /// Get `delta_t`.
-        pub internal.delta_t() -> Real
+        pub const internal.delta_t() -> Real
     );
 
     project!(
         /// Get the number of steps.
-        pub internal.number_of_steps() -> usize
+        pub const internal.number_of_steps() -> usize
     );
 
     /// gives the following parameter for the HCM :
@@ -117,7 +117,7 @@ where
     /// - number_of_steps is the number of time
     /// - integrator is the methods to solve the equation of motion
     /// - rng, a random number generator
-    pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
+    pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
             internal: HybridMonteCarloInternal::<LatticeStateEFSyncDefault<State, D>, I, D>::new(
                 delta_t,
@@ -134,6 +134,7 @@ where
     }
 
     /// Get the last probably of acceptance of the random change.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -219,27 +220,27 @@ where
 {
     getter!(
         /// Get the integrator.
-        pub,
+        pub const,
         integrator,
         I
     );
 
     getter_copy!(
         /// Get `delta_t`.
-        pub,
+        pub const,
         delta_t,
         Real
     );
 
     getter_copy!(
         /// Get the number of steps.
-        pub,
+        pub const,
         number_of_steps,
         usize
     );
 
     /// see [HybridMonteCarlo::new]
-    pub fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
+    pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
             delta_t,
             number_of_steps,
@@ -340,14 +341,14 @@ where
 {
     getter!(
         /// Get a ref to the rng.
-        pub,
+        pub const,
         rng,
         Rng
     );
 
     project!(
         /// Get the integrator.
-        pub,
+        pub const,
         integrator,
         internal,
         &I
@@ -363,7 +364,7 @@ where
 
     project!(
         /// Get `delta_t`.
-        pub,
+        pub const,
         delta_t,
         internal,
         Real
@@ -371,7 +372,7 @@ where
 
     project!(
         /// Get the number of steps.
-        pub,
+        pub const,
         number_of_steps,
         internal,
         usize
@@ -382,7 +383,7 @@ where
     /// - number_of_steps is the number of time
     /// - integrator is the method to solve the equation of motion
     /// - rng, a random number generator
-    pub fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
+    pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
             internal: HybridMonteCarloInternalDiagnostics::<
                 LatticeStateEFSyncDefault<State, D>,
@@ -399,16 +400,17 @@ where
     }
 
     /// Get the last probably of acceptance of the random change.
-    pub fn prob_replace_last(&self) -> Real {
+    pub const fn prob_replace_last(&self) -> Real {
         self.internal.prob_replace_last()
     }
 
     /// Get if last step has accepted the replacement.
-    pub fn has_replace_last(&self) -> bool {
+    pub const fn has_replace_last(&self) -> bool {
         self.internal.has_replace_last()
     }
 
     /// Get the last probably of acceptance of the random change.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -493,27 +495,27 @@ where
 {
     getter!(
         /// Get the integrator.
-        pub,
+        pub const,
         integrator,
         I
     );
 
     getter_copy!(
         /// Get `delta_t`.
-        pub,
+        pub const,
         delta_t,
         Real
     );
 
     getter_copy!(
         /// Get the number of steps.
-        pub,
+        pub const,
         number_of_steps,
         usize
     );
 
     /// see [HybridMonteCarlo::new]
-    pub fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
+    pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
             delta_t,
             number_of_steps,
@@ -525,12 +527,12 @@ where
     }
 
     /// Get the last probably of acceptance of the random change.
-    pub fn prob_replace_last(&self) -> Real {
+    pub const fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
 
     /// Get if last step has accepted the replacement.
-    pub fn has_replace_last(&self) -> bool {
+    pub const fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
 

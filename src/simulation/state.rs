@@ -866,7 +866,7 @@ where
 {
     getter!(
         /// get a reference to the state
-        pub,
+        pub const,
         state,
         State
     );
@@ -874,7 +874,7 @@ where
     /// Create a new SimulationStateLeap directly from a state without applying any modification.
     ///
     /// In most cases wou will prefer to build it using [`LatticeStateNew`] or [`Self::from_synchronous`].
-    pub fn new_from_state(state: State) -> Self {
+    pub const fn new_from_state(state: State) -> Self {
         Self { state }
     }
 
@@ -1067,6 +1067,7 @@ where
 {
     /// Absorbs self and return the state as owned.
     /// It essentially deconstruct the structure.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn state_owned(self) -> State
     where
         State: Sized,
@@ -1075,7 +1076,7 @@ where
     }
 
     /// Get a reference to the state.
-    pub fn lattice_state(&self) -> &State {
+    pub const fn lattice_state(&self) -> &State {
         &self.lattice_state
     }
 

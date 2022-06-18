@@ -48,11 +48,12 @@ pub struct HeatBathSweep<Rng: rand::Rng> {
 
 impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     /// Create a new Self form a rng.
-    pub fn new(rng: Rng) -> Self {
+    pub const fn new(rng: Rng) -> Self {
         Self { rng }
     }
 
     /// Absorbed self and return the RNG as owned. It essentially deconstruct the structure.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -63,7 +64,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     }
 
     /// Get a reference to the rng.
-    pub fn rng(&self) -> &Rng {
+    pub const fn rng(&self) -> &Rng {
         &self.rng
     }
 
