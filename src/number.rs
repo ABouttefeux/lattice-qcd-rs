@@ -19,12 +19,12 @@ where
     D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
 {
     /// Get tje integer part of the number
-    pub fn integer(&self) -> I {
+    pub const fn integer(&self) -> I {
         self.integer
     }
 
     /// Get the decimal part of the number as it is stored (as raw data)
-    pub fn decimal(&self) -> D {
+    pub const fn decimal(&self) -> D {
         self.decimal
     }
 }

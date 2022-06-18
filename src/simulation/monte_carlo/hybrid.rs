@@ -103,7 +103,7 @@ where
     }
 
     /// Getter for the reference hold by self.
-    pub fn data(&self) -> &MC {
+    pub const fn data(&self) -> &MC {
         self.data
     }
 }
@@ -344,20 +344,20 @@ where
 {
     getter!(
         /// get the first method
-        pub,
+        pub const,
         method_1,
         MC1
     );
 
     getter!(
         /// get the second method
-        pub,
+        pub const,
         method_2,
         MC2
     );
 
     /// Create a new Self from two methods
-    pub fn new(method_1: MC1, method_2: MC2) -> Self {
+    pub const fn new(method_1: MC1, method_2: MC2) -> Self {
         Self {
             method_1,
             method_2,
@@ -366,6 +366,7 @@ where
     }
 
     /// Deconstruct the structure ang gives back both methods
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn deconstruct(self) -> (MC1, MC2) {
         (self.method_1, self.method_2)
     }

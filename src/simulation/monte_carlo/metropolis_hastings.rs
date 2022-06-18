@@ -303,28 +303,28 @@ pub struct MetropolisHastingsDeltaDiagnostic<Rng: rand::Rng> {
 impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     getter_copy!(
         /// Get the last probably of acceptance of the random change.
-        pub,
+        pub const,
         prob_replace_last,
         Real
     );
 
     getter_copy!(
         /// Get if last step has accepted the replacement.
-        pub,
+        pub const,
         has_replace_last,
         bool
     );
 
     getter!(
         /// Get a ref to the rng.
-        pub,
+        pub const,
         rng,
         Rng
     );
 
     getter_copy!(
         /// Get the spread parameter.
-        pub spread() -> Real
+        pub const spread() -> Real
     );
 
     /// Get a mutable reference to the rng.
@@ -351,6 +351,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     }
 
     /// Absorbs self and return the RNG as owned. It essentially deconstruct the structure.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn rng_owned(self) -> Rng {
         self.rng
     }

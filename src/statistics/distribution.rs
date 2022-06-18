@@ -58,7 +58,7 @@ where
 {
     getter_copy!(
         /// Returns the parameter `a`.
-        pub,
+        pub const,
         param_exp,
         T
     );
@@ -181,7 +181,7 @@ where
 {
     getter_copy!(
         /// Returns the parameter `param_exp`.
-        pub,
+        pub const,
         param_exp,
         T
     );
@@ -302,7 +302,7 @@ where
 {
     getter_copy!(
         /// return the parameter `param_exp`.
-        pub,
+        pub const,
         param_exp,
         T
     );

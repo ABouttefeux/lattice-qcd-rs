@@ -63,7 +63,7 @@ pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
 impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     getter!(
         /// Get a ref to the rng.
-        pub,
+        pub const,
         rng,
         Rng
     );
@@ -88,16 +88,17 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     }
 
     /// Get the mean of last probably of acceptance of the random change.
-    pub fn prob_replace_mean(&self) -> Real {
+    pub const fn prob_replace_mean(&self) -> Real {
         self.prob_replace_mean
     }
 
     /// Number of accepted change during last sweep
-    pub fn number_replace_last(&self) -> usize {
+    pub const fn number_replace_last(&self) -> usize {
         self.number_replace_last
     }
 
     /// Get the last probably of acceptance of the random change.
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn rng_owned(self) -> Rng {
         self.rng
     }

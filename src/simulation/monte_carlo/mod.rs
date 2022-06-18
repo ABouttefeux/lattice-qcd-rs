@@ -226,13 +226,13 @@ where
 {
     getter!(
         /// Get a ref to the rng.
-        pub,
+        pub const,
         rng,
         Rng
     );
 
     /// Create the wrapper.
-    pub fn new(mcd: MCD, rng: Rng) -> Self {
+    pub const fn new(mcd: MCD, rng: Rng) -> Self {
         Self {
             mcd,
             rng,
@@ -241,12 +241,13 @@ where
     }
 
     /// deconstruct the structure to get back the rng if necessary
+    #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn deconstruct(self) -> (MCD, Rng) {
         (self.mcd, self.rng)
     }
 
     /// Get a reference to the [`MonteCarloDefault`] inside the wrapper.
-    pub fn mcd(&self) -> &MCD {
+    pub const fn mcd(&self) -> &MCD {
         &self.mcd
     }
 
