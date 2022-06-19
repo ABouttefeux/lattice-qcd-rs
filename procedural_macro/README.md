@@ -1,4 +1,4 @@
-# Procedural macro for lattice_qcd_rs v0.2.0
+# Procedural macro for lattice_qcd_rs v0.2.1
 
 ![](https://img.shields.io/badge/language-Rust-orange)
 ![License](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-blue.svg)

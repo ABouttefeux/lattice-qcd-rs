@@ -1,6 +1,6 @@
 [package]
 name = "lattice_qcd_rs-procedural_macro"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
 edition = "2021"
 description = "Set of procedural macro for the main library lattice_qcd_rs"
@@ -12,9 +12,9 @@ publish = true
 proc-macro = true
 
 [dependencies]
-quote = "1.0.17"
-syn = "1.0.90"
-proc-macro2 = "1.0.36"
+quote = "1.0.19"
+syn = "1.0.98"
+proc-macro2 = "1.0.39"
 
 [dev-dependencies]
 version-sync = "0.9.4"

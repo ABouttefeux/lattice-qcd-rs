@@ -29,7 +29,7 @@
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs-procedural_macro/0.2.0")]
+#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs-procedural_macro/0.2.1")]
 
 /// Only contains the version test.
 #[cfg(test)]
