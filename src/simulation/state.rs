@@ -8,7 +8,7 @@
 //! for the equation of movement are done at the same time for both the link matrices and
 //! the electric field. It is given by te trait [`SimulationStateSynchronous`]. It can also
 //! be done using the leapfrog method with the trait [`SimulationStateLeapFrog`]
-//! and the wrapper [`SimulationStateLeap!`].
+//! and the wrapper [`SimulationStateLeap`].
 //!
 //! See item documentation for more details.
 
