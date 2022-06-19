@@ -1,4 +1,12 @@
 
+# v0.2.1
+
+- add const on multiple functions where applicable
+- update nalgebra to 0.31.0
+- update num-traits to 0.2.15
+- update rayon to 1.5.3
+ 
+
 # v0.2.0
 
 First release
