@@ -33,7 +33,7 @@ Check out my other repo [plaquette](https://github.com/ABouttefeux/plaquette), a
 
 ## Usage
 
-Add `lattice_qcd_rs = { version = "0.2.0", git = "https://github.com/ABouttefeux/lattice_qcd_rs" }` into your `cargo.toml`.
+Add `lattice_qcd_rs = { version = "0.2.1", git = "https://github.com/ABouttefeux/lattice_qcd_rs" }` into your `cargo.toml`.
 The set of features are 
  - `serde-serialize` on by default permit the use of serde on some structure
  - `no-overflow-test` usage interns to desable overflow test for coverage.
