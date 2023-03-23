@@ -13,7 +13,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0.19"
-syn = "1.0.98"
+syn = "2.0.7"
 proc-macro2 = "1.0.39"
 
 [dev-dependencies]
