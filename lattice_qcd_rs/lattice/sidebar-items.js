@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DirectionConversionError","DirectionEnum","IteratorElement"],"struct":["Direction","IteratorDirection","IteratorLatticeLinkCanonical","IteratorLatticePoint","LatticeCyclic","LatticeLink","LatticeLinkCanonical","LatticePoint"],"trait":["DirectionList","LatticeElementToIndex"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["covariance","covariance_par_iter","covariance_par_iter_val","mean","mean_and_variance","mean_and_variance_par_iter","mean_and_variance_par_iter_val","mean_par_iter","mean_par_iter_val","mean_with_error","mean_with_error_par_iter","mean_with_error_par_iter_val","variance","variance_par_iter","variance_par_iter_val"],"mod":["distribution"]};

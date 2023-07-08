@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["EField","LinkMatrix","Su3Adjoint"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_NUMBER_FACTORIAL"],"enum":["Sign"],"fn":["factorial","levi_civita"],"struct":["FactorialStorageDyn"]};

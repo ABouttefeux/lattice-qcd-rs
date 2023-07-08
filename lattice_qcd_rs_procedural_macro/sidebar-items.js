@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["implement_direction_from","implement_direction_list"]};

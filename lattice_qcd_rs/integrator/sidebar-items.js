@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["symplectic_euler","symplectic_euler_rayon"],"trait":["SymplecticIntegrator"]};

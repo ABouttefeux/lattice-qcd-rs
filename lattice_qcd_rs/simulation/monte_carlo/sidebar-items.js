@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["heat_bath","hybrid","hybrid_monte_carlo","metropolis_hastings","metropolis_hastings_sweep","overrelaxation"],"struct":["McWrapper"],"trait":["MonteCarlo","MonteCarloDefault"]};

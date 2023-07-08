@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PAULI_1","PAULI_2","PAULI_3","PAULI_MATRICES"],"fn":["complex_matrix_from_vec","is_matrix_su2","project_to_su2","project_to_su2_unorm","random_su2","random_su2_close_to_unity"]};

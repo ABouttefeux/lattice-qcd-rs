@@ -1,0 +1,187 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Lattice QCD rs"><title>lattice_qcd_rs - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="lattice_qcd_rs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../lattice_qcd_rs/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../lattice_qcd_rs/index.html"><img class="rust-logo" src="../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><h2 class="location"><a href="#">Crate lattice_qcd_rs</a></h2><div class="sidebar-elems"><ul class="block"><li class="version">Version 0.2.1</li><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">lattice_qcd_rs</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../src/lattice_qcd_rs/lib.rs.html#1-84">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="lattice-qcd-rs"><a href="#lattice-qcd-rs"><img src="logo.svg" alt="Lattice QCD rs" /></a></h2>
+<p><img src="https://img.shields.io/badge/language-Rust-orange" alt="" />
+<img src="https://img.shields.io/badge/license-MIT_OR_Apache--2.0-blue.svg" alt="License" />
+<a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/index.html"><img src="https://img.shields.io/badge/doc-Read_Me-blueviolet" alt="" /></a>
+<img src="https://img.shields.io/github/workflow/status/ABouttefeux/lattice-qcd-rs/Rust" alt="Build" />
+<img src="https://img.shields.io/criterion/ABouttefeux/lattice-qcd-rs" alt="" />
+<a href="https://codecov.io/gh/ABouttefeux/lattice-qcd-rs"><img src="https://codecov.io/gh/ABouttefeux/lattice-qcd-rs/branch/develop/graph/badge.svg?token=NMRHQZ3ZQ1" alt="codecov" /></a></p>
+<h3 id="classical-lattice-qcd-simulation-and-tools"><a href="#classical-lattice-qcd-simulation-and-tools">Classical lattice QCD simulation and tools.</a></h3>
+<p>This library provides tool to simulate a pure gauge SU(3) theory on a lattice. It aimed to provide generic tool such that many different simulation or methods can be used.
+You can easily choose the Monte Carlo algorithm, you can implement you own Hamiltonian etc. It provides also an easy way to do simulation in dimension between 1 and <code>usize::MAX</code>. So this library is not limited to d = 3 or d = 4.</p>
+<p>Check out my other repo <a href="https://github.com/ABouttefeux/plaquette">plaquette</a>, a set of simulation binary I used for my research.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Generic dimension;</li>
+<li>Configurable Monte Carlo algorithm;</li>
+<li>Multi Platform;</li>
+<li>Configurable Hamiltonian;</li>
+<li>Serde support;</li>
+<li>Native rust;</li>
+<li>Some statistical tools;</li>
+</ul>
+<p><strong>Not yet implemented features</strong>:</p>
+<ul>
+<li>More statistical tools;</li>
+<li>Fermion support;</li>
+<li>SU(N) support;</li>
+<li>Config file;</li>
+<li>C friendly API / ABI;</li>
+</ul>
+<h3 id="usage"><a href="#usage">Usage</a></h3>
+<p>Add <code>lattice_qcd_rs = { version = &quot;0.2.1&quot;, git = &quot;https://github.com/ABouttefeux/lattice_qcd_rs&quot; }</code> into your <code>cargo.toml</code>.
+The set of features are </p>
+<ul>
+<li><code>serde-serialize</code> on by default permit the use of serde on some structure</li>
+<li><code>no-overflow-test</code> usage interns to desable overflow test for coverage.</li>
+</ul>
+<p>At the moment it is not on crates.io. Maybe I will add it. But for the moment it is still in development.
+Note that you may want to specify a specific commit as for now I may introduce breaking changes.
+I will however commit to more stability once I am ready to release version <code>0.2.0</code>.</p>
+<p>First let us see how to do a simulation on a 10x10x10x10 lattice with beta = 1. We are looking to compute <code>1/3 &lt;Re(Tr(P_{ij}))&gt;</code> the trace of all plaquette after a certain number of steps. In our cases Beta is small so we choose 100’000 steps.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">extern crate </span>lattice_qcd_rs <span class="kw">as </span>lq;
+<span class="kw">extern crate </span>rand_xoshiro;
+
+<span class="kw">use </span>lq::prelude::<span class="kw-2">*</span>;
+
+    <span class="kw">let </span><span class="kw-2">mut </span>rng = rand_xoshiro::Xoshiro256PlusPlus::from_entropy();
+
+    <span class="kw">let </span>size = <span class="number">1000_f64</span>;
+    <span class="kw">let </span>number_of_pts = <span class="number">10</span>;
+    <span class="kw">let </span>beta = <span class="number">1_f64</span>;
+
+    <span class="kw">let </span><span class="kw-2">mut </span>simulation =
+        LatticeStateDefault::&lt;<span class="number">4</span>&gt;::new_determinist(size, beta, number_of_pts, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>spread_parameter = <span class="number">0.1_f64</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)<span class="question-mark">?</span>;
+
+    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100 </span>{
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">1_000 </span>{
+            simulation = simulation.monte_carlo_step(<span class="kw-2">&amp;mut </span>mc)<span class="question-mark">?</span>;
+        }
+        <span class="comment">// the more we advance te more the link matrices
+        // will deviate form SU(3), so we reprojet to SU(3)
+        // every 1_000 steps.
+        </span>simulation.normalize_link_matrices();
+    }
+
+    <span class="kw">let </span>average = simulation.average_trace_plaquette().ok_or(ImplementationError::Unreachable)<span class="question-mark">?</span>.real() / <span class="number">3_f64</span>;</code></pre></div>
+<p>This library use rayon as a way to do some computation in parallel. However not everything can be parallelized. I advice that if you want to do multiple similar simulation (for instance you want to do for Beta = 1, 1.1, 1.2, …) to use rayon. In order to do multiple parallel simulation.</p>
+<p>Looking for more concrete example ? Check out my other repo <a href="https://github.com/ABouttefeux/plaquette">plaquette</a>. It contain the binary I use for my research.</p>
+<h4 id="i-want-to-do-my-own-thing"><a href="#i-want-to-do-my-own-thing">I want to do my own thing.</a></h4><h5 id="i-want-to-use-my-own-hamiltonian"><a href="#i-want-to-use-my-own-hamiltonian">I want to use my own hamiltonian</a></h5>
+<p>implement the trait <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeState.html"><code>LatticeState</code></a>.</p>
+<p>If you want to use your own state with the <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/hybride_monte_carlo/struct.HybridMonteCarloDiagnostic.html">hybride Monte Carlo</a>
+you will have to implement
+<a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/trait.LatticeStateWithEField.html"><code>LatticeStateWithEField</code></a> for <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/state/struct.LatticeStateEFSyncDefault.html"><code>LatticeStateEFSyncDefault&lt;YourState&gt;</code></a></p>
+<h5 id="i-want-to-use-my-own-monte-carlo-algorithm"><a href="#i-want-to-use-my-own-monte-carlo-algorithm">I want to use my own Monte Carlo algorithm.</a></h5>
+<p>I provide two algorithm: <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/metropolis_hastings/struct.MetropolisHastingsDeltaDiagnostic.html">Metropolis Hastings</a>
+and <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/hybride_monte_carlo/struct.HybridMonteCarloDiagnostic.html">hybride Monte Carlo</a></p>
+<p>Look at the traits <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/trait.MonteCarlo.html"><code>MonteCarlo</code></a>,
+or alternatively <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/trait.MonteCarloDefault.html"><code>MonteCarloDefault</code></a>.</p>
+<p><a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/trait.MonteCarloDefault.html"><code>MonteCarloDefault</code></a> can be easier to implement but note that the entire Hamiltonian is computed each time we do step for the previous and the new one which can be slower to compute the delta Hamiltonian.</p>
+<p>To use a <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/trait.MonteCarloDefault.html"><code>MonteCarloDefault</code></a> as a <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/trait.MonteCarlo.html"><code>MonteCarlo</code></a> there is a wrapper: <a href="https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/simulation/monte_carlo/struct.MCWrapper.html"><code>MCWrapper</code></a>.</p>
+<h3 id="why-"><a href="#why-">Why ?</a></h3>
+<p>This some code for my PhD thesis.
+Mainly I use <a href="https://arxiv.org/abs/0707.2458">arXiv:0707.2458</a>, <a href="https://arxiv.org/abs/0707.2458">arXiv:0902.28568</a> and <a href="https://arxiv.org/abs/2010.07316">arXiv:2010.07316</a> as a basis.</p>
+<h3 id="goal"><a href="#goal">Goal</a></h3>
+<p>The goal is to provide an easy to use, fast and safe library to do classical lattice simulation.</p>
+<h3 id="discussion-about-random-number-generators-rngs"><a href="#discussion-about-random-number-generators-rngs">Discussion about Random Number Generators (RNGs)</a></h3>
+<p>This library use the trait <a href="https://docs.rs/rand/0.8.3/rand/trait.RngCore.html"><code>rand::RngCore</code></a> any time a random number generator.
+The choice of RNG is up to the user of the library. However there is a few trade offs to consider.</p>
+<p>Let us break the different generator into categories.
+For more details see <a href="https://rust-random.github.io/book/guide-gen.html">https://rust-random.github.io/book/guide-gen.html</a>.</p>
+<p>Some of the possible choice :</p>
+<ul>
+<li><strong>Recomanded</strong> <a href="https://docs.rs/rand_xoshiro/0.6.0/rand_xoshiro/struct.Xoshiro256PlusPlus.html"><code>rand_xoshiro::Xoshiro256PlusPlus</code></a>
+Non-cryptographic. It has good performance and statistical quality, reproducible, and has useful <code>jump</code> function.
+It is the recommended PRNG.</li>
+<li><a href="https://docs.rs/rand/0.8.3/rand/rngs/struct.ThreadRng.html"><code>rand::rngs::ThreadRng</code></a> a CSPRNG. The data is not reproducible and it is reseeded often. It is however slow.</li>
+<li><a href="https://docs.rs/rand/0.8.3/rand/rngs/struct.StdRng.html"><code>rand::rngs::StdRng</code></a> cryptographic secure, can be seeded.
+It is determinist but not reproducible between platform. It is however slow.</li>
+<li><a href="https://docs.rs/rand_jitter/0.3.0/rand_jitter/"><code>rand_jitter::JitterRng</code></a> True RNG but very slow.</li>
+</ul>
+<p>Also <a href="https://luscher.web.cern.ch/luscher/ranlux/">ranlux</a> is a good choice. But there is no native rust implementation of it that I know of
+(except mine but it is very slow).</p>
+<h2 id="other-examples"><a href="#other-examples">Other Examples</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>lattice_qcd_rs::{
+    error::ImplementationError,
+    ComplexField,
+    simulation::monte_carlo::MetropolisHastingsDeltaDiagnostic,
+    simulation::state::{LatticeState, LatticeStateDefault},
+};
+
+<span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+
+<span class="kw">let </span>size = <span class="number">1_000_f64</span>;
+<span class="kw">let </span>number_of_pts = <span class="number">4</span>;
+<span class="kw">let </span>beta = <span class="number">2_f64</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>simulation =
+    LatticeStateDefault::&lt;<span class="number">4</span>&gt;::new_determinist(size, beta, number_of_pts, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
+
+<span class="kw">let </span>spread_parameter = <span class="number">1E-5_f64</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>mc = MetropolisHastingsDeltaDiagnostic::new(spread_parameter, rng)
+    .ok_or(ImplementationError::OptionWithUnexpectedNone)<span class="question-mark">?</span>;
+
+<span class="kw">let </span>number_of_sims = <span class="number">100</span>;
+<span class="kw">for _ in </span><span class="number">0</span>..number_of_sims / <span class="number">10 </span>{
+    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
+        simulation = simulation.monte_carlo_step(<span class="kw-2">&amp;mut </span>mc)<span class="question-mark">?</span>;
+    }
+    simulation.normalize_link_matrices(); <span class="comment">// we renormalize all matrices back to SU(3);
+</span>}
+<span class="kw">let </span>average = simulation.average_trace_plaquette()
+    .ok_or(ImplementationError::OptionWithUnexpectedNone)<span class="question-mark">?
+    </span>.real();</code></pre></div>
+<p>Alternatively other Monte Carlo algorithm can be used like,</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>lattice_qcd_rs::{
+    error::ImplementationError,
+    simulation::monte_carlo::{McWrapper, MetropolisHastingsDiagnostic},
+    simulation::state::{LatticeState, LatticeStateDefault},
+};
+
+<span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+
+<span class="kw">let </span>size = <span class="number">1_000_f64</span>;
+<span class="kw">let </span>number_of_pts = <span class="number">4</span>;
+<span class="kw">let </span>beta = <span class="number">2_f64</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>simulation =
+    LatticeStateDefault::&lt;<span class="number">3</span>&gt;::new_determinist(size, beta, number_of_pts, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
+
+<span class="kw">let </span>number_of_rand = <span class="number">20</span>;
+<span class="kw">let </span>spread_parameter = <span class="number">1E-5_f64</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>mc = McWrapper::new(
+    MetropolisHastingsDiagnostic::new(number_of_rand, spread_parameter)
+        .ok_or(ImplementationError::OptionWithUnexpectedNone)<span class="question-mark">?</span>,
+    rng,
+);
+
+simulation = simulation.monte_carlo_step(<span class="kw-2">&amp;mut </span>mc)<span class="question-mark">?</span>;
+simulation.normalize_link_matrices();</code></pre></div>
+<p>or</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>lattice_qcd_rs::{
+    integrator::SymplecticEulerRayon,
+    simulation::monte_carlo::HybridMonteCarloDiagnostic,
+    simulation::state::{LatticeState, LatticeStateDefault},
+};
+
+<span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+
+<span class="kw">let </span>size = <span class="number">1_000_f64</span>;
+<span class="kw">let </span>number_of_pts = <span class="number">4</span>;
+<span class="kw">let </span>beta = <span class="number">2_f64</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>simulation =
+    LatticeStateDefault::&lt;<span class="number">3</span>&gt;::new_determinist(size, beta, number_of_pts, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
+
+<span class="kw">let </span>delta_t = <span class="number">1E-3_f64</span>;
+<span class="kw">let </span>number_of_step = <span class="number">10</span>;
+<span class="kw">let </span><span class="kw-2">mut </span>mc =
+    HybridMonteCarloDiagnostic::new(delta_t, number_of_step, SymplecticEulerRayon::new(), rng);
+
+simulation = simulation.monte_carlo_step(<span class="kw-2">&amp;mut </span>mc)<span class="question-mark">?</span>;
+simulation.normalize_link_matrices();</code></pre></div>
+</div></details><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="dim/index.html" title="mod lattice_qcd_rs::dim">dim</a></div><div class="desc docblock-short">Depreciated, module for dimension reexport.</div></li><li><div class="item-name"><a class="mod" href="error/index.html" title="mod lattice_qcd_rs::error">error</a></div><div class="desc docblock-short">Defines different error types.</div></li><li><div class="item-name"><a class="mod" href="field/index.html" title="mod lattice_qcd_rs::field">field</a></div><div class="desc docblock-short">Represent the fields on the lattice.</div></li><li><div class="item-name"><a class="mod" href="integrator/index.html" title="mod lattice_qcd_rs::integrator">integrator</a></div><div class="desc docblock-short">Numerical integrators to carry out simulations.</div></li><li><div class="item-name"><a class="mod" href="lattice/index.html" title="mod lattice_qcd_rs::lattice">lattice</a></div><div class="desc docblock-short">Defines lattices and lattice component.</div></li><li><div class="item-name"><a class="mod" href="number/index.html" title="mod lattice_qcd_rs::number">number</a></div><div class="desc docblock-short">Work in progress</div></li><li><div class="item-name"><a class="mod" href="prelude/index.html" title="mod lattice_qcd_rs::prelude">prelude</a></div><div class="desc docblock-short">Reexport for easy use,
+<code>use lattice_qcd_rs::prelude::*</code></div></li><li><div class="item-name"><a class="mod" href="simulation/index.html" title="mod lattice_qcd_rs::simulation">simulation</a></div><div class="desc docblock-short">Simulation module. Contains Monte Carlo algorithms and simulation states.</div></li><li><div class="item-name"><a class="mod" href="statistics/index.html" title="mod lattice_qcd_rs::statistics">statistics</a></div><div class="desc docblock-short">Provide statistical tools</div></li><li><div class="item-name"><a class="mod" href="su2/index.html" title="mod lattice_qcd_rs::su2">su2</a></div><div class="desc docblock-short">Module for SU(2) matrix</div></li><li><div class="item-name"><a class="mod" href="su3/index.html" title="mod lattice_qcd_rs::su3">su3</a></div><div class="desc docblock-short">Module for SU(3) matrices and su(3) (that is the generators of SU(3) )</div></li><li><div class="item-name"><a class="mod" href="thread/index.html" title="mod lattice_qcd_rs::thread">thread</a></div><div class="desc docblock-short">Tool for easy use of multi threading.</div></li><li><div class="item-name"><a class="mod" href="utils/index.html" title="mod lattice_qcd_rs::utils">utils</a></div><div class="desc docblock-short">Utils functions and structures.</div></li></ul><h2 id="macros" class="small-section-header"><a href="#macros">Macros</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.assert_eq_complex.html" title="macro lattice_qcd_rs::assert_eq_complex">assert_eq_complex</a></div><div class="desc docblock-short">assert if two complex are approximately the same</div></li><li><div class="item-name"><a class="macro" href="macro.assert_eq_matrix.html" title="macro lattice_qcd_rs::assert_eq_matrix">assert_eq_matrix</a></div><div class="desc docblock-short">assert if two matrices are approximately the same</div></li><li><div class="item-name"><a class="macro" href="macro.assert_matrix_is_su_2.html" title="macro lattice_qcd_rs::assert_matrix_is_su_2">assert_matrix_is_su_2</a></div><div class="desc docblock-short">assert if the matrix is SU(2) (special unitary)</div></li><li><div class="item-name"><a class="macro" href="macro.assert_matrix_is_su_3.html" title="macro lattice_qcd_rs::assert_matrix_is_su_3">assert_matrix_is_su_3</a></div><div class="desc docblock-short">assert if the matrix is SU(3) (special unitary)</div></li><li><div class="item-name"><a class="macro" href="macro.assert_matrix_is_unitary_2.html" title="macro lattice_qcd_rs::assert_matrix_is_unitary_2">assert_matrix_is_unitary_2</a></div><div class="desc docblock-short">assert if the matrix is U(2) ( unitary 2 x 2)</div></li><li><div class="item-name"><a class="macro" href="macro.assert_matrix_is_unitary_3.html" title="macro lattice_qcd_rs::assert_matrix_is_unitary_3">assert_matrix_is_unitary_3</a></div><div class="desc docblock-short">assert if the matrix is U(3) (unitary 3 x 3)</div></li></ul><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2><ul class="item-table"><li><div class="item-name"><a class="trait" href="trait.ComplexField.html" title="trait lattice_qcd_rs::ComplexField">ComplexField</a></div><div class="desc docblock-short">Trait shared by all complex fields and its subfields (like real numbers).</div></li><li><div class="item-name"><a class="trait" href="trait.Distribution.html" title="trait lattice_qcd_rs::Distribution">Distribution</a></div><div class="desc docblock-short">Types (distributions) that can be used to create a random instance of <code>T</code>.</div></li><li><div class="item-name"><a class="trait" href="trait.Rng.html" title="trait lattice_qcd_rs::Rng">Rng</a></div><div class="desc docblock-short">An automatically-implemented extension trait on <a href="https://rust-random.github.io/rand/rand_core/trait.RngCore.html" title="trait rand_core::RngCore"><code>RngCore</code></a> providing high-level
+generic methods for sampling values and other convenience methods.</div></li><li><div class="item-name"><a class="trait" href="trait.SeedableRng.html" title="trait lattice_qcd_rs::SeedableRng">SeedableRng</a></div><div class="desc docblock-short">A random number generator that can be explicitly seeded.</div></li></ul><h2 id="types" class="small-section-header"><a href="#types">Type Definitions</a></h2><ul class="item-table"><li><div class="item-name"><a class="type" href="type.CMatrix2.html" title="type lattice_qcd_rs::CMatrix2">CMatrix2</a></div><div class="desc docblock-short">alias for <a href="https://docs.rs/nalgebra/0.25.0/nalgebra/base/alias/type.Matrix2.html" title="type nalgebra::base::alias::Matrix2"><code>nalgebra::Matrix2&lt;nalgebra::Complex&gt;</code></a></div></li><li><div class="item-name"><a class="type" href="type.CMatrix3.html" title="type lattice_qcd_rs::CMatrix3">CMatrix3</a></div><div class="desc docblock-short">alias for <a href="https://docs.rs/nalgebra/0.25.0/nalgebra/base/alias/type.Matrix3.html" title="type nalgebra::base::alias::Matrix3"><code>nalgebra::Matrix3&lt;nalgebra::Complex&gt;</code></a></div></li><li><div class="item-name"><a class="type" href="type.Complex.html" title="type lattice_qcd_rs::Complex">Complex</a></div><div class="desc docblock-short">easy to use alias for <a href="https://docs.rs/num-complex/0.4/num_complex/struct.Complex.html" title="struct num_complex::Complex"><code>nalgebra::Complex::&lt;Real&gt;</code></a></div></li><li><div class="item-name"><a class="type" href="type.Real.html" title="type lattice_qcd_rs::Real">Real</a></div><div class="desc docblock-short">alias for <a href="https://doc.rust-lang.org/1.70.0/std/primitive.f64.html" title="primitive f64"><code>f64</code></a></div></li><li><div class="item-name"><a class="type" href="type.Vector8.html" title="type lattice_qcd_rs::Vector8">Vector8</a></div><div class="desc docblock-short">alias for <a href="https://docs.rs/nalgebra/0.25.0/nalgebra/base/alias/type.SVector.html" title="type nalgebra::base::alias::SVector"><code>nalgebra::SVector::&lt;N, nalgebra::U8&gt;</code></a></div></li></ul></section></div></main></body></html>

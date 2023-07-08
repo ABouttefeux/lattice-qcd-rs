@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["FixedPointNumber"],"type":["I32U128"]};

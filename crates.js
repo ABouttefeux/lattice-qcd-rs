@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["lattice_qcd_rs","lattice_qcd_rs_procedural_macro"];

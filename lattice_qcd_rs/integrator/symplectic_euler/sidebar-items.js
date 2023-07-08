@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SymplecticEulerError"],"struct":["SymplecticEuler"]};
