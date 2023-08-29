@@ -6,7 +6,7 @@
 
 use std::iter::FusedIterator;
 
-use na::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
+use nalgebra::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
 use rand::Rng;
 use rand_distr::{Distribution, Uniform};
 
@@ -209,9 +209,9 @@ pub trait MatrixExp<T = Self> {
 impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
 where
     T: ComplexField + Copy,
-    D: na::DimName + na::DimSub<na::U1>,
-    DefaultAllocator: Allocator<T, D, na::DimDiff<D, na::U1>>
-        + Allocator<T, na::DimDiff<D, na::U1>>
+    D: nalgebra::DimName + nalgebra::DimSub<nalgebra::U1>,
+    DefaultAllocator: Allocator<T, D, nalgebra::DimDiff<D, nalgebra::U1>>
+        + Allocator<T, nalgebra::DimDiff<D, nalgebra::U1>>
         + Allocator<T, D, D>
         + Allocator<T, D>,
     OMatrix<T, D, D>: Clone,
@@ -277,17 +277,20 @@ where
 /// assert_eq_matrix!(m, create_matrix_from_2_vector(v1, v2), 0.000_000_1_f64);
 /// ```
 pub fn create_matrix_from_2_vector(
-    v1: na::Vector3<Complex>,
-    v2: na::Vector3<Complex>,
-) -> na::Matrix3<Complex> {
+    v1: nalgebra::Vector3<Complex>,
+    v2: nalgebra::Vector3<Complex>,
+) -> nalgebra::Matrix3<Complex> {
     // TODO find a better way
-    let cross_vec: na::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
+    let cross_vec: nalgebra::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
     let iter = v1.iter().chain(v2.iter()).chain(cross_vec.iter()).copied();
-    na::Matrix3::<Complex>::from_iterator(iter)
+    nalgebra::Matrix3::<Complex>::from_iterator(iter)
 }
 
 /// get an orthonormalize matrix from two vector.
-fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
+fn ortho_matrix_from_2_vector(
+    v1: nalgebra::Vector3<Complex>,
+    v2: nalgebra::Vector3<Complex>,
+) -> CMatrix3 {
     let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
@@ -297,8 +300,8 @@ fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>
 /// Try orthonormalize the given matrix.
 // TODO example
 pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
-    let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
-    let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
+    let v1 = nalgebra::Vector3::from_iterator(matrix.column(0).iter().copied());
+    let v2 = nalgebra::Vector3::from_iterator(matrix.column(1).iter().copied());
     ortho_matrix_from_2_vector(v1, v2)
 }
 
@@ -347,11 +350,14 @@ where
 }
 
 /// get a random [`na::Vector3<Complex>`].
-fn random_vec_3<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex>
+fn random_vec_3<Rng>(
+    rng: &mut Rng,
+    d: &impl rand_distr::Distribution<Real>,
+) -> nalgebra::Vector3<Complex>
 where
     Rng: rand::Rng + ?Sized,
 {
-    na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+    nalgebra::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
 /// Get a radom SU(3) matrix close to `[get_r] (+/- 1) * [get_s] (+/- 1) * [get_t] (+/- 1)`.

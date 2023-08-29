@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs-procedural_macro/0.3.0")]
 //
 #![allow(clippy::needless_return)]
 #![warn(clippy::cast_sign_loss)]
@@ -29,7 +30,7 @@
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs-procedural_macro/0.2.1")]
+
 
 /// Only contains the version test.
 #[cfg(test)]

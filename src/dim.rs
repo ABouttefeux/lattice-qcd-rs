@@ -6,12 +6,12 @@
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {
         $(
-            pub use na::base::dimension::$i;
+            pub use nalgebra::base::dimension::$i;
         )*
     }
 }
 
-pub use na::base::dimension::DimName;
+pub use nalgebra::base::dimension::DimName;
 reexport_name_dim!(
     U0, U1, U2, U3, U4, U5, U6, U7, U8, U9, U10, U11, U12, U13, U14, U15, U16, U17, U18, U19, U20,
     U21, U22, U23, U24, U25, U26, U27, U28, U29, U30, U31, U32, U33, U34, U35, U36, U37, U38, U39,

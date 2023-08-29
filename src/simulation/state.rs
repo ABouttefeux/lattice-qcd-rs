@@ -13,7 +13,7 @@
 //! See item documentation for more details.
 
 use crossbeam::thread;
-use na::{ComplexField, SVector};
+use nalgebra::{ComplexField, SVector};
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]

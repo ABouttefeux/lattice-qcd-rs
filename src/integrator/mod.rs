@@ -65,7 +65,7 @@
 //! ```
 //! See [`SimulationStateSynchronous`] for more convenient methods.
 
-use na::SVector;
+use nalgebra::SVector;
 
 use super::{
     field::{EField, LinkMatrix, Su3Adjoint},

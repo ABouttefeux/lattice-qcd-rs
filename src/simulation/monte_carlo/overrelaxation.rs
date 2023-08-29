@@ -86,13 +86,13 @@ impl OverrelaxationSweepRotation {
     fn get_modif<const D: usize>(
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())
             .unwrap();
         let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
-        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
+        let svd = nalgebra::SVD::<Complex, nalgebra::U3, nalgebra::U3>::new(a, true, true);
         let rot = svd.u.unwrap() * svd.v_t.unwrap();
         rot * link_matrix.adjoint() * rot
     }
@@ -158,13 +158,13 @@ impl OverrelaxationSweepReverse {
     fn get_modif<const D: usize>(
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())
             .unwrap();
         let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
-        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
+        let svd = nalgebra::SVD::<Complex, nalgebra::U3, nalgebra::U3>::new(a, true, true);
         svd.u.unwrap()
             * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint())
             * svd.v_t.unwrap()

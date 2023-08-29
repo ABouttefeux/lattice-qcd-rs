@@ -3,7 +3,7 @@
 //! # Example
 //! see [`HeatBathSweep`].
 
-use na::ComplexField;
+use nalgebra::ComplexField;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +91,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         &mut self,
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())

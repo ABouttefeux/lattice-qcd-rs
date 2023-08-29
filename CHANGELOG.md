@@ -1,4 +1,9 @@
 
+# v0.3.0
+
+- update dependencies
+- remove the extern crate declaration in lib.rs
+
 # v0.2.1
 
 - add const on multiple functions where applicable

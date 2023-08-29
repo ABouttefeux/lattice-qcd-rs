@@ -3,7 +3,7 @@
 use std::f64;
 
 use approx::*;
-use na::ComplexField;
+use nalgebra::ComplexField;
 use rand::SeedableRng;
 
 use super::{
@@ -503,7 +503,7 @@ fn othonomralization() {
     );
     assert_eq!(
         orthonormalize_matrix(&m),
-        CMatrix3::from_diagonal(&na::Vector3::new(
+        CMatrix3::from_diagonal(&nalgebra::Vector3::new(
             Complex::i(),
             Complex::i(),
             Complex::new(-1_f64, 0_f64)

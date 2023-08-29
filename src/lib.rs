@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs/0.3.0")]
 //
 //#![warn(clippy::as_conversions)]
 #![warn(clippy::cast_sign_loss)]
@@ -29,20 +30,8 @@
 #![warn(clippy::missing_errors_doc)]
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
-#![doc(html_root_url = "https://docs.rs/lattice_qcd_rs/0.2.1")]
 
-extern crate approx;
-extern crate crossbeam;
-extern crate lattice_qcd_rs_procedural_macro;
-extern crate nalgebra as na;
-extern crate num_traits;
-extern crate rand;
-extern crate rand_distr;
-extern crate rayon;
-#[cfg(feature = "serde-serialize")]
-extern crate serde;
-
-pub use na::ComplexField;
+pub use nalgebra::ComplexField;
 pub use rand::{Rng, SeedableRng};
 pub use rand_distr::Distribution;
 
@@ -68,13 +57,13 @@ mod test;
 /// alias for [`f64`]
 pub type Real = f64;
 /// easy to use alias for [`nalgebra::Complex::<Real>`]
-pub type Complex = na::Complex<Real>;
+pub type Complex = nalgebra::Complex<Real>;
 /// alias for [`nalgebra::SVector::<N, nalgebra::U8>`]
-pub type Vector8<N> = na::SVector<N, 8>;
+pub type Vector8<N> = nalgebra::SVector<N, 8>;
 /// alias for [`nalgebra::Matrix3<nalgebra::Complex>`]
-pub type CMatrix3 = na::Matrix3<Complex>;
+pub type CMatrix3 = nalgebra::Matrix3<Complex>;
 /// alias for [`nalgebra::Matrix2<nalgebra::Complex>`]
-pub type CMatrix2 = na::Matrix2<Complex>;
+pub type CMatrix2 = nalgebra::Matrix2<Complex>;
 
 /// Complex 1
 const ONE: Complex = Complex::new(1_f64, 0_f64);

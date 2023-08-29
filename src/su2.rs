@@ -82,7 +82,7 @@ where
     R: rand::Rng + ?Sized,
 {
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
-    let r = na::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
+    let r = nalgebra::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
     let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
     // always exists, unwrap is safe
     let d_sign = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
@@ -131,7 +131,7 @@ where
 ///     + PAULI_1 * nalgebra::Complex::new(0_f64, 1_f64);
 /// assert_eq_matrix!(m, m2, f64::EPSILON);
 /// ```
-pub fn complex_matrix_from_vec(x0: Real, x: na::Vector3<Real>) -> CMatrix2 {
+pub fn complex_matrix_from_vec(x0: Real, x: nalgebra::Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0)
         + x.iter()
             .enumerate()
@@ -202,9 +202,9 @@ where
     Rng: rand::Rng + ?Sized,
 {
     let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
-    let mut random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
+    let mut random_vector = nalgebra::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     while !random_vector.norm().is_normal() {
-        random_vector = na::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
+        random_vector = nalgebra::Vector2::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)));
     }
     let vector_normalize = random_vector / Complex::from(random_vector.norm());
     CMatrix2::new(

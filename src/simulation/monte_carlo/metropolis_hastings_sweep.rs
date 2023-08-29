@@ -113,7 +113,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclic<D>,
         link: &LatticeLinkCanonical<D>,
-        new_link: &na::Matrix3<Complex>,
+        new_link: &nalgebra::Matrix3<Complex>,
         beta: Real,
     ) -> Real {
         let old_matrix = link_matrix
@@ -127,7 +127,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         &mut self,
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let index = link.to_index(state.lattice());
         let old_link_m = state.link_matrix()[index];
         let mut new_link = old_link_m;

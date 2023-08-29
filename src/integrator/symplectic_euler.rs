@@ -4,7 +4,7 @@
 
 use std::vec::Vec;
 
-use na::SVector;
+use nalgebra::SVector;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 

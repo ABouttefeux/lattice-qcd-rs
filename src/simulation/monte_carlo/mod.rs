@@ -7,7 +7,7 @@
 
 use std::marker::PhantomData;
 
-use na::ComplexField;
+use nalgebra::ComplexField;
 use rand_distr::Distribution;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -325,9 +325,9 @@ fn delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
-    new_link: &na::Matrix3<Complex>,
+    new_link: &nalgebra::Matrix3<Complex>,
     beta: Real,
-    old_matrix: &na::Matrix3<Complex>,
+    old_matrix: &nalgebra::Matrix3<Complex>,
 ) -> Real {
     let a = staple(link_matrix, lattice, link);
     -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::<D>::CA
@@ -340,7 +340,7 @@ fn staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
-) -> na::Matrix3<Complex> {
+) -> nalgebra::Matrix3<Complex> {
     let dir_j = link.dir();
     Direction::<D>::positive_directions()
         .iter()

@@ -15,7 +15,7 @@ use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut, Neg};
 
 use lattice_qcd_rs_procedural_macro::{implement_direction_from, implement_direction_list};
-use na::{SVector, Vector4};
+use nalgebra::{SVector, Vector4};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -726,7 +726,7 @@ impl<'a, const D: usize> ExactSizeIterator for IteratorLatticePoint<'a, D> {}
 #[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint<const D: usize> {
-    data: na::SVector<usize, D>,
+    data: nalgebra::SVector<usize, D>,
 }
 
 impl<const D: usize> LatticePoint<D> {

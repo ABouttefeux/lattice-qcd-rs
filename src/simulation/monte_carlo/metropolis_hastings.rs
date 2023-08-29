@@ -361,7 +361,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclic<D>,
         link: &LatticeLinkCanonical<D>,
-        new_link: &na::Matrix3<Complex>,
+        new_link: &nalgebra::Matrix3<Complex>,
         beta: Real,
     ) -> Real {
         let old_matrix = link_matrix
@@ -374,7 +374,7 @@ impl<Rng: rand::Rng> MetropolisHastingsDeltaDiagnostic<Rng> {
     fn potential_modif<const D: usize>(
         &mut self,
         state: &LatticeStateDefault<D>,
-    ) -> (LatticeLinkCanonical<D>, na::Matrix3<Complex>) {
+    ) -> (LatticeLinkCanonical<D>, nalgebra::Matrix3<Complex>) {
         let d_p = rand::distributions::Uniform::new(0, state.lattice().dim());
         let d_d = rand::distributions::Uniform::new(0, LatticeCyclic::<D>::dim_st());
 

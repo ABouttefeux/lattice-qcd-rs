@@ -207,9 +207,9 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
         // unreachable because self.param_exp() > 0 which Create the distribution
         let x0: f64 = rng.sample(&distr_norm);
         let uniform = Uniform::new(-1_f64, 1_f64);
-        let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+        let mut x_unorm = nalgebra::Vector3::from_fn(|_, _| rng.sample(&uniform));
         while x_unorm.norm() <= f64::EPSILON {
-            x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+            x_unorm = nalgebra::Vector3::from_fn(|_, _| rng.sample(&uniform));
         }
         let x =
             x_unorm.try_normalize(f64::EPSILON).expect("unreachable") * (1_f64 - x0 * x0).sqrt();

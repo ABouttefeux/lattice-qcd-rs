@@ -6,7 +6,7 @@ use std::{
     vec::Vec,
 };
 
-use na::{ComplexField, Matrix3, SVector};
+use nalgebra::{ComplexField, Matrix3, SVector};
 use rayon::iter::FromParallelIterator;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
@@ -103,11 +103,11 @@ impl Su3Adjoint {
     /// assert_eq!(su3.to_matrix(), *lattice_qcd_rs::su3::GENERATORS[0]);
     /// ```
     // TODO self non consumed ?? passé en &self ? TODO bench
-    pub fn to_matrix(self) -> Matrix3<na::Complex<Real>> {
+    pub fn to_matrix(self) -> Matrix3<nalgebra::Complex<Real>> {
         self.data
             .into_iter()
             .enumerate()
-            .map(|(pos, el)| *GENERATORS[pos] * na::Complex::<Real>::from(el))
+            .map(|(pos, el)| *GENERATORS[pos] * nalgebra::Complex::<Real>::from(el))
             .sum()
     }
 
@@ -120,7 +120,7 @@ impl Su3Adjoint {
     /// let su3 = Su3Adjoint::new_from_array([1_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64, 0_f64]);
     /// assert_eq!(su3.to_su3().determinant(), nalgebra::Complex::from(1_f64));
     /// ```
-    pub fn to_su3(self) -> Matrix3<na::Complex<Real>> {
+    pub fn to_su3(self) -> Matrix3<nalgebra::Complex<Real>> {
         // NOTE: should it consume ? the user can manually clone and there is use because
         // where the value is not necessary anymore.
         su3::su3_exp_i(self)
@@ -128,7 +128,7 @@ impl Su3Adjoint {
 
     /// Return exp( T^a v^a) where v is self.
     /// Note that the function consume self.
-    pub fn exp(self) -> Matrix3<na::Complex<Real>> {
+    pub fn exp(self) -> Matrix3<nalgebra::Complex<Real>> {
         su3::su3_exp_r(self)
     }
 
@@ -200,7 +200,7 @@ impl Su3Adjoint {
     /// );
     /// ```
     #[inline]
-    pub fn d(&self) -> na::Complex<Real> {
+    pub fn d(&self) -> nalgebra::Complex<Real> {
         self.to_matrix().determinant() * I
     }
 
@@ -582,42 +582,42 @@ impl From<[Real; 8]> for Su3Adjoint {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LinkMatrix {
-    data: Vec<Matrix3<na::Complex<Real>>>,
+    data: Vec<Matrix3<nalgebra::Complex<Real>>>,
 }
 
 impl LinkMatrix {
     /// Create a new link matrix field from preexisting data.
-    pub const fn new(data: Vec<Matrix3<na::Complex<Real>>>) -> Self {
+    pub const fn new(data: Vec<Matrix3<nalgebra::Complex<Real>>>) -> Self {
         Self { data }
     }
 
     /// Get the raw data.
-    pub const fn data(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
+    pub const fn data(&self) -> &Vec<Matrix3<nalgebra::Complex<Real>>> {
         &self.data
     }
 
     /// Get a mutable reference to the data
-    pub fn data_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+    pub fn data_mut(&mut self) -> &mut Vec<Matrix3<nalgebra::Complex<Real>>> {
         &mut self.data
     }
 
     /// Get the link_matrix as a [`Vec`].
-    pub const fn as_vec(&self) -> &Vec<Matrix3<na::Complex<Real>>> {
+    pub const fn as_vec(&self) -> &Vec<Matrix3<nalgebra::Complex<Real>>> {
         self.data()
     }
 
     /// Get the link_matrix as a mutable [`Vec`].
-    pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<na::Complex<Real>>> {
+    pub fn as_vec_mut(&mut self) -> &mut Vec<Matrix3<nalgebra::Complex<Real>>> {
         self.data_mut()
     }
 
     /// Get the link_matrix as a slice.
-    pub fn as_slice(&self) -> &[Matrix3<na::Complex<Real>>] {
+    pub fn as_slice(&self) -> &[Matrix3<nalgebra::Complex<Real>>] {
         self.data()
     }
 
     /// Get the link_matrix as a mut ref to a slice
-    pub fn as_slice_mut(&mut self) -> &mut [Matrix3<na::Complex<Real>>] {
+    pub fn as_slice_mut(&mut self) -> &mut [Matrix3<nalgebra::Complex<Real>>] {
         &mut self.data
     }
 
@@ -727,7 +727,7 @@ impl LinkMatrix {
         &self,
         link: &LatticeLink<D>,
         l: &LatticeCyclic<D>,
-    ) -> Option<Matrix3<na::Complex<Real>>> {
+    ) -> Option<Matrix3<nalgebra::Complex<Real>>> {
         let link_c = l.into_canonical(*link);
         let matrix = self.data.get(link_c.to_index(l))?;
         if link.is_dir_negative() {
@@ -746,7 +746,7 @@ impl LinkMatrix {
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
         lattice: &LatticeCyclic<D>,
-    ) -> Option<Matrix3<na::Complex<Real>>> {
+    ) -> Option<Matrix3<nalgebra::Complex<Real>>> {
         let u_j = self.matrix(&LatticeLink::new(*point, *dir_j), lattice)?;
         let point_pj = lattice.add_point_direction(*point, dir_j);
         let u_i_p_j = self.matrix(&LatticeLink::new(point_pj, *dir_i), lattice)?;
@@ -764,7 +764,7 @@ impl LinkMatrix {
         dir_i: &Direction<D>,
         dir_j: &Direction<D>,
         lattice: &LatticeCyclic<D>,
-    ) -> Option<Matrix3<na::Complex<Real>>> {
+    ) -> Option<Matrix3<nalgebra::Complex<Real>>> {
         let s_ij = self.sij(point, dir_i, dir_j, lattice)?;
         let u_i = self.matrix(&LatticeLink::new(*point, *dir_i), lattice)?;
         Some(u_i * s_ij.adjoint())
@@ -775,7 +775,7 @@ impl LinkMatrix {
     pub fn average_trace_plaquette<const D: usize>(
         &self,
         lattice: &LatticeCyclic<D>,
-    ) -> Option<na::Complex<Real>> {
+    ) -> Option<nalgebra::Complex<Real>> {
         if lattice.number_of_canonical_links_space() != self.len() {
             return None;
         }
@@ -793,11 +793,11 @@ impl LinkMatrix {
                             .map(|dir_j| {
                                 self.pij(&point, dir_i, dir_j, lattice).map(|el| el.trace())
                             })
-                            .sum::<Option<na::Complex<Real>>>()
+                            .sum::<Option<nalgebra::Complex<Real>>>()
                     })
-                    .sum::<Option<na::Complex<Real>>>()
+                    .sum::<Option<nalgebra::Complex<Real>>>()
             })
-            .sum::<Option<na::Complex<Real>>>()?;
+            .sum::<Option<nalgebra::Complex<Real>>>()?;
         let number_of_directions = (D * (D - 1)) / 2;
         let number_of_plaquette = (lattice.number_of_points() * number_of_directions) as f64;
         Some(sum / number_of_plaquette)
@@ -877,7 +877,7 @@ impl LinkMatrix {
         &self,
         link: &LatticeLink<D>,
         lattice: &LatticeCyclic<D>,
-    ) -> Option<Matrix3<na::Complex<Real>>> {
+    ) -> Option<Matrix3<nalgebra::Complex<Real>>> {
         self.magnetic_field(link.pos(), link.dir(), lattice)
     }
 
@@ -1301,7 +1301,7 @@ impl<const D: usize> EField<D> {
     fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclic<D>) -> Self {
         /// see <https://arxiv.org/pdf/1512.02374.pdf>
         // TODO verify
-        const K: na::Complex<f64> = na::Complex::new(0.12_f64, 0_f64);
+        const K: nalgebra::Complex<f64> = nalgebra::Complex::new(0.12_f64, 0_f64);
         let data = lattice
             .get_points()
             .collect::<Vec<LatticePoint<D>>>()
@@ -1326,7 +1326,7 @@ impl<const D: usize> EField<D> {
                             * (su3::GENERATORS[index]
                                 * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
                                     + su3::GENERATORS[index]
-                                        * na::Complex::from(e[dir.index()][index])))
+                                        * nalgebra::Complex::from(e[dir.index()][index])))
                             .trace()
                             .real()
                     }))
