@@ -2,12 +2,14 @@
 //!
 //! module to represent numbers.
 
+use num_traits::{Signed, Unsigned};
+
 /// Fix point number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FixedPointNumber<I, D>
 where
-    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    I: Signed + Ord + Copy,
+    D: Unsigned + Ord + Copy,
 {
     integer: I,
     decimal: D,
@@ -15,15 +17,19 @@ where
 
 impl<I, D> FixedPointNumber<I, D>
 where
-    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    I: Signed + Ord + Copy,
+    D: Unsigned + Ord + Copy,
 {
     /// Get tje integer part of the number
+    #[inline]
+    #[must_use]
     pub const fn integer(&self) -> I {
         self.integer
     }
 
     /// Get the decimal part of the number as it is stored (as raw data)
+    #[inline]
+    #[must_use]
     pub const fn decimal(&self) -> D {
         self.decimal
     }
@@ -34,8 +40,8 @@ pub type I32U128 = FixedPointNumber<i32, u128>;
 
 /*
 impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
     type Output = Self;
 
@@ -52,15 +58,15 @@ impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
 
 /*
 impl<I, D> num_traits::Num for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
 
 }
 
 impl<I, D> num_traits::real::Real for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
     fn min_value() -> Self {
         Self {

@@ -1,8 +1,14 @@
 
 # v0.3.0
 
+## breaking changes
+- [`SymplecticEulerError`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/integrator/symplectic_euler/enum.SymplecticEulerError.html) is now marked `#[non_exhaustive]`
+- change the feature "no-overflow-test" to "overflow-test" and enabling "overflow-test" by default
+
+## non breaking
 - update dependencies
 - remove the extern crate declaration in lib.rs
+- correct documentation
 
 # v0.2.1
 

@@ -33,7 +33,7 @@
 
 use std::marker::PhantomData;
 
-use rand_distr::Distribution;
+use rand_distr::{Bernoulli, Distribution};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -52,8 +52,8 @@ use super::{
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
 /// This conjugated momenta is also refed as the "Electric" field
-/// or `e_field` with distribution N(0, 1 / beta). And to solve the equation of motion.
-/// The new state is accepted with probability Exp( -H_old + H_new) where the Hamiltonian has an extra term Tr(E_i ^ 2).
+/// or `e_field` with distribution `N(0, 1 / beta)`. And to solve the equation of motion.
+/// The new state is accepted with probability `Exp( -H_old + H_new)` where the Hamiltonian has an extra term `Tr(E_i ^ 2)`.
 /// The advantage is that the simulation can be done in a symplectic way i.e. it conserved the Hamiltonian.
 /// Which means that the method has a high acceptance rate.
 ///
@@ -89,34 +89,46 @@ where
 {
     getter!(
         /// Get a ref to the rng.
+        #[inline]
+        #[must_use]
         pub const rng() -> Rng
     );
 
     project!(
         /// Get the integrator.
+        #[inline]
+        #[must_use]
         pub const internal.integrator() -> &I
     );
 
     project_mut!(
         /// Get a mut ref to the integrator.
+        #[inline]
+        #[must_use]
         pub internal.integrator_mut() -> &mut I
     );
 
     project!(
         /// Get `delta_t`.
+        #[inline]
+        #[must_use]
         pub const internal.delta_t() -> Real
     );
 
     project!(
         /// Get the number of steps.
+        #[inline]
+        #[must_use]
         pub const internal.number_of_steps() -> usize
     );
 
     /// gives the following parameter for the HCM :
-    /// - delta_t is the step size per integration of the equation of motion
-    /// - number_of_steps is the number of time
-    /// - integrator is the methods to solve the equation of motion
-    /// - rng, a random number generator
+    /// - `delta_t` is the step size per integration of the equation of motion
+    /// - `number_of_steps` is the number of time
+    /// - `integrator` is the methods to solve the equation of motion
+    /// - `rng`, a random number generator
+    #[inline]
+    #[must_use]
     pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
             internal: HybridMonteCarloInternal::<LatticeStateEFSyncDefault<State, D>, I, D>::new(
@@ -129,12 +141,15 @@ where
     }
 
     /// Get a mutable reference to the rng.
+    #[inline]
+    #[must_use]
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
     /// Get the last probably of acceptance of the random change.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -151,6 +166,7 @@ where
     >,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_ref(&self) -> &Rng {
         self.rng()
     }
@@ -167,6 +183,7 @@ where
     >,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Rng {
         self.rng_mut()
     }
@@ -185,16 +202,17 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
+    #[inline]
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal =
             LatticeStateEFSyncDefault::<State, D>::new_random_e_state(state, self.rng_mut());
         self.internal
             .next_element_default(state_internal, &mut self.rng)
-            .map(|el| el.state_owned())
+            .map(LatticeStateEFSyncDefault::state_owned)
     }
 }
 
-/// internal structure for HybridMonteCarlo using [`LatticeStateWithEField`]
+/// internal structure for [`HybridMonteCarlo`] using [`LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, const D: usize>
@@ -206,7 +224,7 @@ where
     delta_t: Real,
     /// number of steps to do.
     number_of_steps: usize,
-    //// integrator used by the internal method
+    /// integrator used by the internal method
     integrator: I,
     /// The phantom data such that State can be a generic parameter without being stored.
     #[cfg_attr(feature = "serde-serialize", serde(skip))]
@@ -220,6 +238,8 @@ where
 {
     getter!(
         /// Get the integrator.
+        #[inline]
+        #[must_use]
         pub const,
         integrator,
         I
@@ -227,6 +247,8 @@ where
 
     getter_copy!(
         /// Get `delta_t`.
+        #[inline]
+        #[must_use]
         pub const,
         delta_t,
         Real
@@ -234,12 +256,16 @@ where
 
     getter_copy!(
         /// Get the number of steps.
+        #[inline]
+        #[must_use]
         pub const,
         number_of_steps,
         usize
     );
 
-    /// see [HybridMonteCarlo::new]
+    /// see [`HybridMonteCarlo::new`]
+    #[inline]
+    #[must_use]
     pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
             delta_t,
@@ -249,6 +275,8 @@ where
         }
     }
 
+    #[inline]
+    #[must_use]
     pub fn integrator_mut(&mut self) -> &mut I {
         &mut self.integrator
     }
@@ -259,6 +287,7 @@ where
     State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    #[inline]
     fn as_ref(&self) -> &I {
         self.integrator()
     }
@@ -269,6 +298,7 @@ where
     State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut I {
         self.integrator_mut()
     }
@@ -281,6 +311,7 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
+    #[inline]
     fn potential_next_element<Rng>(
         &mut self,
         state: &State,
@@ -292,11 +323,11 @@ where
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
+    #[inline]
     fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
         (old_state.hamiltonian_total() - new_state.hamiltonian_total())
             .exp()
-            .min(1_f64)
-            .max(0_f64)
+            .clamp(0_f64, 1_f64)
     }
 }
 
@@ -304,8 +335,8 @@ where
 ///
 /// The idea of HCM is to generate a random set on conjugate momenta to the link matrices.
 /// This conjugated momenta is also refed as the "Electric" field
-/// or `e_field` with distribution N(0, 1 / beta). And to solve the equation of motion.
-/// The new state is accepted with probability Exp( -H_old + H_new) where the Hamiltonian has an extra term Tr(E_i ^ 2).
+/// or `e_field` with distribution `N(0, 1 / beta)`. And to solve the equation of motion.
+/// The new state is accepted with probability `Exp( -H_old + H_new)` where the Hamiltonian has an extra term `Tr(E_i ^ 2)`.
 /// The advantage is that the simulation can be done in a symplectic way i.e. it conserved the Hamiltonian.
 /// Which means that the method has a high acceptance rate.
 ///
@@ -341,6 +372,8 @@ where
 {
     getter!(
         /// Get a ref to the rng.
+        #[inline]
+        #[must_use]
         pub const,
         rng,
         Rng
@@ -348,6 +381,8 @@ where
 
     project!(
         /// Get the integrator.
+        #[inline]
+        #[must_use]
         pub const,
         integrator,
         internal,
@@ -356,6 +391,8 @@ where
 
     project_mut!(
         /// Get a mut ref to the integrator.
+        #[inline]
+        #[must_use]
         pub,
         integrator_mut,
         internal,
@@ -364,6 +401,8 @@ where
 
     project!(
         /// Get `delta_t`.
+        #[inline]
+        #[must_use]
         pub const,
         delta_t,
         internal,
@@ -372,6 +411,8 @@ where
 
     project!(
         /// Get the number of steps.
+        #[inline]
+        #[must_use]
         pub const,
         number_of_steps,
         internal,
@@ -379,10 +420,12 @@ where
     );
 
     /// gives the following parameter for the HCM :
-    /// - delta_t is the step size per integration of the equation of motion
-    /// - number_of_steps is the number of time
-    /// - integrator is the method to solve the equation of motion
-    /// - rng, a random number generator
+    /// - `delta_t` is the step size per integration of the equation of motion
+    /// - `number_of_steps` is the number of time
+    /// - `integrator` is the method to solve the equation of motion
+    /// - `rng`, a random number generator
+    #[inline]
+    #[must_use]
     pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I, rng: Rng) -> Self {
         Self {
             internal: HybridMonteCarloInternalDiagnostics::<
@@ -395,22 +438,29 @@ where
     }
 
     /// Get a mutable reference to the rng.
+    #[inline]
+    #[must_use]
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
     /// Get the last probably of acceptance of the random change.
+    #[inline]
+    #[must_use]
     pub const fn prob_replace_last(&self) -> Real {
         self.internal.prob_replace_last()
     }
 
     /// Get if last step has accepted the replacement.
+    #[inline]
+    #[must_use]
     pub const fn has_replace_last(&self) -> bool {
         self.internal.has_replace_last()
     }
 
     /// Get the last probably of acceptance of the random change.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
@@ -427,6 +477,7 @@ where
     >,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_ref(&self) -> &Rng {
         self.rng()
     }
@@ -443,6 +494,7 @@ where
     >,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Rng {
         self.rng_mut()
     }
@@ -462,16 +514,17 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
+    #[inline]
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
         let state_internal =
             LatticeStateEFSyncDefault::<State, D>::new_random_e_state(state, self.rng_mut());
         self.internal
             .next_element_default(state_internal, &mut self.rng)
-            .map(|el| el.state_owned())
+            .map(LatticeStateEFSyncDefault::state_owned)
     }
 }
 
-/// internal structure for HybridMonteCarlo using [`LatticeStateWithEField`]
+/// internal structure for [`HybridMonteCarlo`] using [`LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>
@@ -495,6 +548,8 @@ where
 {
     getter!(
         /// Get the integrator.
+        #[inline]
+        #[must_use]
         pub const,
         integrator,
         I
@@ -502,6 +557,8 @@ where
 
     getter_copy!(
         /// Get `delta_t`.
+        #[inline]
+        #[must_use]
         pub const,
         delta_t,
         Real
@@ -509,12 +566,16 @@ where
 
     getter_copy!(
         /// Get the number of steps.
+        #[inline]
+        #[must_use]
         pub const,
         number_of_steps,
         usize
     );
 
-    /// see [HybridMonteCarlo::new]
+    /// see [`HybridMonteCarlo::new`]
+    #[inline]
+    #[must_use]
     pub const fn new(delta_t: Real, number_of_steps: usize, integrator: I) -> Self {
         Self {
             delta_t,
@@ -527,16 +588,22 @@ where
     }
 
     /// Get the last probably of acceptance of the random change.
+    #[inline]
+    #[must_use]
     pub const fn prob_replace_last(&self) -> Real {
         self.prob_replace_last
     }
 
     /// Get if last step has accepted the replacement.
+    #[inline]
+    #[must_use]
     pub const fn has_replace_last(&self) -> bool {
         self.has_replace_last
     }
 
     /// get the integrator as a mutable reference.
+    #[inline]
+    #[must_use]
     pub fn integrator_mut(&mut self) -> &mut I {
         &mut self.integrator
     }
@@ -547,6 +614,7 @@ where
     State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    #[inline]
     fn as_ref(&self) -> &I {
         self.integrator()
     }
@@ -557,6 +625,7 @@ where
     State: SimulationStateSynchronous<D> + ?Sized,
     I: SymplecticIntegrator<State, SimulationStateLeap<State, D>, D>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut I {
         self.integrator_mut()
     }
@@ -570,6 +639,7 @@ where
 {
     type Error = MultiIntegrationError<I::Error>;
 
+    #[inline]
     fn potential_next_element<Rng>(
         &mut self,
         state: &State,
@@ -581,13 +651,15 @@ where
         state.simulate_symplectic_n_auto(&self.integrator, self.delta_t, self.number_of_steps)
     }
 
+    #[inline]
     fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
         (old_state.hamiltonian_total() - new_state.hamiltonian_total())
             .exp()
-            .min(1_f64)
-            .max(0_f64)
+            .clamp(0_f64, 1_f64)
     }
 
+    #[allow(clippy::unwrap_in_result)] // the expect should never panic
+    #[inline]
     fn next_element_default<Rng>(
         &mut self,
         state: State,
@@ -597,16 +669,13 @@ where
         Rng: rand::Rng + ?Sized,
     {
         let potential_next = self.potential_next_element(&state, rng)?;
-        let proba = Self::probability_of_replacement(&state, &potential_next)
-            .min(1_f64)
-            .max(0_f64);
+        let proba = Self::probability_of_replacement(&state, &potential_next).clamp(0_f64, 1_f64); // cspell: ignore proba
         self.prob_replace_last = proba;
-        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        let d = Bernoulli::new(proba).expect("always exist because of the clamp");
         if d.sample(rng) {
             self.has_replace_last = true;
             Ok(potential_next)
-        }
-        else {
+        } else {
             self.has_replace_last = false;
             Ok(state)
         }

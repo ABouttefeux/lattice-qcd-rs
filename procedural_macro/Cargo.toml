@@ -3,10 +3,13 @@ name = "lattice_qcd_rs-procedural_macro"
 version = "0.3.0"
 authors = ["Aliénore Bouttefeux <alienore.bouttefeux@gmail.com>"]
 edition = "2021"
-description = "Set of procedural macro for the main library lattice_qcd_rs"
+readme = "README.md"
 repository = "https://github.com/ABouttefeux/lattice-qcd-rs/"
-license = "MIT OR Apache-2.0"
+categories = ["Science", "Simulation"]
+description = "Set of procedural macro for the main library lattice_qcd_rs"
+keywords = ["QCD", "Lattice", "Monte-Carlo", "chromodynamics", "macro"]
 publish = true
+license = "MIT OR Apache-2.0"
 
 [lib]
 proc-macro = true

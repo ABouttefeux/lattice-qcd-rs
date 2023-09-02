@@ -1,6 +1,9 @@
 //! Basic symplectic Euler integrator using [`Rayon`](https://docs.rs/rayon/1.5.1/rayon/).
 
-use std::vec::Vec;
+use std::{
+    fmt::{self, Display},
+    vec::Vec,
+};
 
 use nalgebra::SVector;
 #[cfg(feature = "serde-serialize")]
@@ -52,16 +55,20 @@ use super::{
 pub struct SymplecticEulerRayon;
 
 impl SymplecticEulerRayon {
-    /// Create a new SymplecticEulerRayon
+    /// Create a new [`SymplecticEulerRayon`]
+    #[must_use]
+    #[inline]
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 
     /// Get all the integrated links
     /// # Panics
-    /// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
-    /// In debug panic if the lattice has not the same number link as link_matrix
-    /// or not the same number of point as e_field.
+    /// panics if the lattice has fewer link than `link_matrix` has or it has fewer point than `e_field` has.
+    /// In debug panic if the lattice has not the same number link as `link_matrix`
+    /// or not the same number of point as `e_field`.
+    #[must_use]
+    #[inline]
     fn link_matrix_integrate<State, const D: usize>(
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -82,9 +89,11 @@ impl SymplecticEulerRayon {
 
     /// Get all the integrated e field
     /// # Panics
-    /// panics if the lattice has fewer link than link_matrix has or it has fewer point than e_field has.
-    /// In debug panic if the lattice has not the same number link as link_matrix
-    /// or not the same number of point as e_field.
+    /// panics if the lattice has fewer link than `link_matrix` has or it has fewer point than `e_field` has.
+    /// In debug panic if the lattice has not the same number link as `link_matrix`
+    /// or not the same number of point as `e_field`.
+    #[must_use]
+    #[inline]
     fn e_field_integrate<State, const D: usize>(
         link_matrix: &LinkMatrix,
         e_field: &EField<D>,
@@ -106,13 +115,15 @@ impl SymplecticEulerRayon {
 
 impl Default for SymplecticEulerRayon {
     /// Identical to [`SymplecticEulerRayon::new`].
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl std::fmt::Display for SymplecticEulerRayon {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for SymplecticEulerRayon {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Euler integrator using rayon")
     }
 }
@@ -124,6 +135,7 @@ where
 {
     type Error = State::Error;
 
+    #[inline]
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
         let link_matrix = Self::link_matrix_integrate::<State, D>(
             l.link_matrix(),
@@ -143,6 +155,7 @@ where
         )
     }
 
+    #[inline]
     fn integrate_leap_leap(
         &self,
         l: &SimulationStateLeap<State, D>,
@@ -170,6 +183,7 @@ where
         )
     }
 
+    #[inline]
     fn integrate_sync_leap(
         &self,
         l: &State,
@@ -192,6 +206,7 @@ where
         )
     }
 
+    #[inline]
     fn integrate_leap_sync(
         &self,
         l: &SimulationStateLeap<State, D>,
@@ -219,6 +234,7 @@ where
         )
     }
 
+    #[inline]
     fn integrate_symplectic(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
         // override for optimization.
         // This remove a clone operation.

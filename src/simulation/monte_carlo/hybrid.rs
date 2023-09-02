@@ -27,10 +27,12 @@
 //! # }
 //! ```
 
-use core::fmt::{Debug, Display};
-use std::error::Error;
 use std::marker::PhantomData;
 use std::vec::Vec;
+use std::{
+    error::Error,
+    fmt::{self, Debug, Display},
+};
 
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -51,17 +53,19 @@ pub enum HybridMethodVecError<Error> {
 }
 
 impl<Error: Display> Display for HybridMethodVecError<Error> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoMethod => write!(f, "no monte carlo method"),
             Self::Error(index, error) => {
-                write!(f, "error during integration step {}: {}", index, error)
+                write!(f, "error during integration step {index}: {error}")
             }
         }
     }
 }
 
 impl<E: Display + Debug + Error + 'static> Error for HybridMethodVecError<E> {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::NoMethod => None,
@@ -90,6 +94,8 @@ where
     State: LatticeState<D>,
 {
     /// Create the Self using a mutable reference.
+    #[inline]
+    #[must_use]
     pub fn new(data: &'a mut MC) -> Self {
         Self {
             data,
@@ -98,11 +104,15 @@ where
     }
 
     /// Getter for the reference hold by self.
+    #[inline]
+    #[must_use]
     pub fn data_mut(&mut self) -> &mut MC {
         self.data
     }
 
     /// Getter for the reference hold by self.
+    #[inline]
+    #[must_use]
     pub const fn data(&self) -> &MC {
         self.data
     }
@@ -115,6 +125,7 @@ where
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut MC {
         self.data_mut()
     }
@@ -127,6 +138,7 @@ where
     ErrorBase: Into<Error>,
     State: LatticeState<D>,
 {
+    #[inline]
     fn as_ref(&self) -> &MC {
         self.data()
     }
@@ -143,7 +155,7 @@ where
 
     #[inline]
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
-        self.data.next_element(state).map_err(|err| err.into())
+        self.data.next_element(state).map_err(Into::into)
     }
 }
 
@@ -166,12 +178,16 @@ where
 {
     getter!(
         /// get the methods
+        #[inline]
+        #[must_use]
         pub,
         methods,
         Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>
     );
 
     /// Create an empty Self.
+    #[inline]
+    #[must_use]
     pub fn new_empty() -> Self {
         Self {
             methods: Vec::new(),
@@ -179,6 +195,8 @@ where
     }
 
     /// Create an empty Self where the vector is preallocated for `capacity` element.
+    #[inline]
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             methods: Vec::with_capacity(capacity),
@@ -186,31 +204,42 @@ where
     }
 
     /// Create a new Self from a list of [`MonteCarlo`]
+    #[inline]
+    #[must_use]
     pub fn new(methods: Vec<&'a mut dyn MonteCarlo<State, D, Error = E>>) -> Self {
         Self { methods }
     }
 
     /// Get a mutable reference to the methods used,
+    #[inline]
+    #[must_use]
     pub fn methods_mut(&mut self) -> &mut Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         &mut self.methods
     }
 
     /// Add a method at the end.
+    #[inline]
     pub fn push_method(&mut self, mc_ref: &'a mut dyn MonteCarlo<State, D, Error = E>) {
         self.methods.push(mc_ref);
     }
 
     /// Remove a method at the end an returns it. Return None if the methods is empty.
+    #[inline]
+    #[must_use]
     pub fn pop_method(&mut self) -> Option<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         self.methods.pop()
     }
 
     /// Get the number of methods
+    #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.methods.len()
     }
 
     /// Return wether the number is zero.
+    #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.methods.is_empty()
     }
@@ -221,6 +250,7 @@ impl<'a, State, E, const D: usize> AsRef<Vec<&'a mut dyn MonteCarlo<State, D, Er
 where
     State: LatticeState<D>,
 {
+    #[inline]
     fn as_ref(&self) -> &Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         self.methods()
     }
@@ -231,6 +261,7 @@ impl<'a, State, E, const D: usize> AsMut<Vec<&'a mut dyn MonteCarlo<State, D, Er
 where
     State: LatticeState<D>,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Vec<&'a mut dyn MonteCarlo<State, D, Error = E>> {
         self.methods_mut()
     }
@@ -240,6 +271,7 @@ impl<'a, State, E, const D: usize> Default for HybridMethodVec<'a, State, E, D>
 where
     State: LatticeState<D>,
 {
+    #[inline]
     fn default() -> Self {
         Self::new_empty()
     }
@@ -268,6 +300,7 @@ where
 }
 
 /// Error given by [`HybridMethodCouple`]
+#[allow(clippy::exhaustive_enums)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum HybridMethodCoupleError<Error1, Error2> {
@@ -278,10 +311,11 @@ pub enum HybridMethodCoupleError<Error1, Error2> {
 }
 
 impl<Error1: Display, Error2: Display> Display for HybridMethodCoupleError<Error1, Error2> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ErrorFirst(error) => write!(f, "error during integration step 1: {}", error),
-            Self::ErrorSecond(error) => write!(f, "error during integration step 2: {}", error),
+            Self::ErrorFirst(error) => write!(f, "error during integration step 1: {error}"),
+            Self::ErrorSecond(error) => write!(f, "error during integration step 2: {error}"),
         }
     }
 }
@@ -289,6 +323,7 @@ impl<Error1: Display, Error2: Display> Display for HybridMethodCoupleError<Error
 impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
     for HybridMethodCoupleError<Error1, Error2>
 {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::ErrorFirst(error) => Some(error),
@@ -297,6 +332,7 @@ impl<Error1: Display + Error + 'static, Error2: Display + Error + 'static> Error
     }
 }
 
+// cspell: ignore overrelax
 /// This method can combine any two methods. The down side is that it can be very verbose to write
 /// Couples for a large number of methods.
 ///
@@ -344,6 +380,8 @@ where
 {
     getter!(
         /// get the first method
+        #[inline]
+        #[must_use]
         pub const,
         method_1,
         MC1
@@ -351,12 +389,16 @@ where
 
     getter!(
         /// get the second method
+        #[inline]
+        #[must_use]
         pub const,
         method_2,
         MC2
     );
 
     /// Create a new Self from two methods
+    #[inline]
+    #[must_use]
     pub const fn new(method_1: MC1, method_2: MC2) -> Self {
         Self {
             method_1,
@@ -366,7 +408,8 @@ where
     }
 
     /// Deconstruct the structure ang gives back both methods
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn deconstruct(self) -> (MC1, MC2) {
         (self.method_1, self.method_2)
     }

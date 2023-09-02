@@ -10,19 +10,23 @@ description = "Lattice QCD simulation"
 keywords = ["QCD", "Lattice", "Monte-Carlo", "chromodynamics"]
 publish = true
 license = "MIT OR Apache-2.0"
-rust-version = "1.61"
+rust-version = "1.72"
+
 
 [lib]
 path = "src/lib.rs"
 crate-type = ["lib"]
 
+
 [features]
 serde-serialize = ["dep:serde", "nalgebra/serde-serialize"]
-no-overflow-test = []
-default = ["serde-serialize"]
+overflow-test = []
+default = ["serde-serialize", "overflow-test"]
+
 
 [workspace]
 members = ["procedural_macro"]
+
 
 [dependencies]
 nalgebra = { version = "0.32", features = ["serde-serialize"] }
@@ -35,14 +39,17 @@ rayon = "1.7"
 serde = { version = "1.0", features = ["derive"], optional = true }
 lattice_qcd_rs-procedural_macro = { path = "procedural_macro", version = "0.3.0" }
 
+
 [dev-dependencies]
 criterion = "0.5.1"
 version-sync = "0.9.4"
+
 
 [[bench]]
 name = "bench"
 path = "benches/bench.rs"
 harness = false
+
 
 [profile.test]
 opt-level = 2 # in order to have resonable test time

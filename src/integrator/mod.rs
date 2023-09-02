@@ -85,8 +85,8 @@ pub use symplectic_euler_rayon::SymplecticEulerRayon;
 /// The integrator evolve the state in time.
 ///
 /// The integrator should be capable of switching between Sync state
-/// (q (or link matrices) at time T , p (or e_field) at time T )
-/// and leap frog (a at time T, p at time T + 1/2)
+/// (`q` (or link matrices) at time `T` , `p` (or `e_field`) at time `T` )
+/// and leap frog (a at time `T`, `p` at time `T + 1/2`)
 ///
 /// # Example
 /// For an example see the module level documentation [`super::integrator`].
@@ -202,6 +202,7 @@ where
     ///
     /// # Errors
     /// Return an error if the integration encounter a problem
+    #[inline]
     fn integrate_symplectic(&self, l: &StateSync, delta_t: Real) -> Result<StateSync, Self::Error> {
         self.integrate_leap_sync(&self.integrate_sync_leap(l, delta_t)?, delta_t)
     }

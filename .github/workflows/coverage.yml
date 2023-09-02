@@ -29,8 +29,8 @@ jobs:
         run: |
           export RUSTFLAGS="-Zinstrument-coverage"
           export RUSTDOCFLAGS="-Zinstrument-coverage -Zunstable-options --persist-doctests target/debug/doctestbins"
-          cargo +nightly build --verbose --all --features="no-overflow-test","serde-serialize"
-          LLVM_PROFILE_FILE="lattice_qcd_rs-%p-%m.profraw" cargo +nightly test --verbose --features="no-overflow-test","serde-serialize" --workspace --exclude lattice_qcd_rs-procedural_macro
+          cargo +nightly build --verbose --all --no-default-features --features="serde-serialize"
+          LLVM_PROFILE_FILE="lattice_qcd_rs-%p-%m.profraw" cargo +nightly test --verbose --no-default-features --features="serde-serialize" --workspace --exclude lattice_qcd_rs-procedural_macro
 
       - name: parse code coverage
         run: ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info

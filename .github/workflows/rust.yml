@@ -32,7 +32,7 @@ jobs:
       run: cargo test --all --verbose --features serde-serialize
     
     - name: Build no features
-      run: cargo build --all --verbose --no-default-features
+      run: cargo build --all --verbose --no-default-features --features overflow-test
       
     - name: Run tests no features
-      run: cargo test --all --verbose --no-default-features
+      run: cargo test --all --verbose --no-default-features --features overflow-test

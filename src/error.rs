@@ -42,13 +42,16 @@ use crate::thread::ThreadError;
 /// assert_eq!(std::mem::size_of::<Result<(), Never>>(), 0);
 /// assert_eq!(std::mem::size_of::<Result<u8, Never>>(), 1);
 /// ```
+#[allow(clippy::exhaustive_enums)] // never type will never have a variant
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum Never {}
 
 impl Display for Never {
+    #[inline]
+    #[allow(clippy::use_debug)]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -71,12 +74,13 @@ pub enum ImplementationError {
 }
 
 impl Display for ImplementationError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ImplementationError::Unreachable => {
+            Self::Unreachable => {
                 write!(f, "internal error: entered unreachable code")
             }
-            ImplementationError::OptionWithUnexpectedNone => {
+            Self::OptionWithUnexpectedNone => {
                 write!(f, "an option contained an unexpected None value")
             }
         }
@@ -98,21 +102,23 @@ pub enum MultiIntegrationError<Error> {
 }
 
 impl<Error: Display> Display for MultiIntegrationError<Error> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            MultiIntegrationError::ZeroIntegration => write!(f, "no integration steps"),
-            MultiIntegrationError::IntegrationError(index, error) => {
-                write!(f, "error during integration step {}: {}", index, error)
+            Self::ZeroIntegration => write!(f, "no integration steps"),
+            Self::IntegrationError(index, error) => {
+                write!(f, "error during integration step {index}: {error}")
             }
         }
     }
 }
 
 impl<E: Display + Debug + Error + 'static> Error for MultiIntegrationError<E> {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            MultiIntegrationError::ZeroIntegration => None,
-            MultiIntegrationError::IntegrationError(_, error) => Some(error),
+            Self::ZeroIntegration => None,
+            Self::IntegrationError(_, error) => Some(error),
         }
     }
 }
@@ -133,26 +139,29 @@ pub enum StateInitializationError {
 }
 
 impl From<rand_distr::NormalError> for StateInitializationError {
+    #[inline]
     fn from(err: rand_distr::NormalError) -> Self {
         Self::InvalidParameterNormalDistribution(err)
     }
 }
 
 impl From<LatticeInitializationError> for StateInitializationError {
+    #[inline]
     fn from(err: LatticeInitializationError) -> Self {
         Self::LatticeInitializationError(err)
     }
 }
 
 impl Display for StateInitializationError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidParameterNormalDistribution(error) => {
-                write!(f, "normal distribution error: {}", error)
+                write!(f, "normal distribution error: {error}")
             }
             Self::IncompatibleSize => write!(f, "size of lattice and data are incompatible"),
             Self::LatticeInitializationError(err) => {
-                write!(f, "lattice Initialization error: {}", err)
+                write!(f, "lattice Initialization error: {err}")
             }
             Self::GaussProjectionError => write!(f, "gauss projection could not finish"),
         }
@@ -160,12 +169,12 @@ impl Display for StateInitializationError {
 }
 
 impl Error for StateInitializationError {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::InvalidParameterNormalDistribution(error) => Some(error),
-            Self::IncompatibleSize => None,
+            Self::IncompatibleSize | Self::GaussProjectionError => None,
             Self::LatticeInitializationError(err) => Some(err),
-            Self::GaussProjectionError => None,
         }
     }
 }
@@ -182,27 +191,31 @@ pub enum ThreadedStateInitializationError {
 }
 
 impl From<ThreadError> for ThreadedStateInitializationError {
+    #[inline]
     fn from(err: ThreadError) -> Self {
         Self::ThreadingError(err)
     }
 }
 
 impl From<StateInitializationError> for ThreadedStateInitializationError {
+    #[inline]
     fn from(err: StateInitializationError) -> Self {
         Self::StateInitializationError(err)
     }
 }
 
 impl Display for ThreadedStateInitializationError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) => write!(f, "{}", error),
+            Self::ThreadingError(error) => write!(f, "thread error: {error}",),
+            Self::StateInitializationError(error) => write!(f, "{error}"),
         }
     }
 }
 
 impl Error for ThreadedStateInitializationError {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::ThreadingError(error) => Some(error),
@@ -226,6 +239,7 @@ pub enum LatticeInitializationError {
 }
 
 impl Display for LatticeInitializationError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::NonPositiveSize => write!(
@@ -252,39 +266,49 @@ pub struct ErrorWithOwnedValue<Error, State> {
 impl<Error, State> ErrorWithOwnedValue<Error, State> {
     getter!(
         /// Getter on the error.
+        #[inline]
+        #[must_use]
         pub const error() -> Error
     );
 
     getter!(
         /// Getter on the owned value.
+        #[inline]
+        #[must_use]
         pub const owned() -> State
     );
 
     /// Create a new Self with an error and an owned value
+    #[inline]
+    #[must_use]
     pub const fn new(error: Error, owned: State) -> Self {
         Self { error, owned }
     }
 
     /// Deconstruct the structure.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn deconstruct(self) -> (Error, State) {
         (self.error, self.owned)
     }
 
     /// Deconstruct the structure returning the error and discarding the owned value.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn error_owned(self) -> Error {
         self.error
     }
 }
 
 impl<Error, State> From<(Error, State)> for ErrorWithOwnedValue<Error, State> {
+    #[inline]
     fn from(data: (Error, State)) -> Self {
         Self::new(data.0, data.1)
     }
 }
 
 impl<Error: Display, State: Display> Display for ErrorWithOwnedValue<Error, State> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "error {} with data {}", self.error, self.owned)
     }
@@ -293,15 +317,15 @@ impl<Error: Display, State: Display> Display for ErrorWithOwnedValue<Error, Stat
 impl<E: Display + Error + Debug + 'static, State: Display + Debug> Error
     for ErrorWithOwnedValue<E, State>
 {
+    #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.error)
     }
 }
 
-impl<State> From<ErrorWithOwnedValue<StateInitializationError, State>>
-    for StateInitializationError
-{
-    fn from(data: ErrorWithOwnedValue<StateInitializationError, State>) -> Self {
+impl<State> From<ErrorWithOwnedValue<Self, State>> for StateInitializationError {
+    #[inline]
+    fn from(data: ErrorWithOwnedValue<Self, State>) -> Self {
         data.error
     }
 }
@@ -309,6 +333,7 @@ impl<State> From<ErrorWithOwnedValue<StateInitializationError, State>>
 impl<Error, Data1, Data2> From<ErrorWithOwnedValue<Error, (Data1, Data2)>>
     for ErrorWithOwnedValue<Error, Data1>
 {
+    #[inline]
     fn from(data: ErrorWithOwnedValue<Error, (Data1, Data2)>) -> Self {
         Self::new(data.error, data.owned.0)
     }
@@ -342,13 +367,14 @@ mod test {
         let e2 = MultiIntegrationError::IntegrationError(index, error);
         assert_eq!(
             e2.to_string(),
-            format!("error during integration step {}: {}", index, error)
+            format!("error during integration step {index}: {error}")
         );
         assert!(e1.source().is_none());
         assert!(e2.source().is_some());
     }
 
     #[allow(clippy::missing_const_for_fn)] // cannot test const function
+    #[allow(clippy::absolute_paths)]
     #[test]
     fn never_size() {
         assert_eq!(std::mem::size_of::<Never>(), 0);

@@ -11,6 +11,7 @@
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::fmt::{self, Display};
 use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut, Neg};
 
@@ -52,18 +53,20 @@ impl<const D: usize> LatticeCyclic<D> {
     /// Number space + time dimension, this is the `D` parameter.
     ///
     /// Not to confuse with [`LatticeCyclic::dim`] which is the number of point per dimension.
+    #[must_use]
+    #[inline]
     pub const fn dim_st() -> usize {
         D
     }
 
     /// see [`LatticeLinkCanonical`], a conical link is a link whose direction is always positive.
     /// That means that a link form `[x, y, z, t]` with direction `-x`
-    /// the link return is `[x - 1, y, z, t]` (modulo the `lattice::dim()``) with direction `+x`
+    /// the link return is `[x - 1, y, z, t]` (modulo the `lattice::dim()`) with direction `+x`
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{LatticeCyclic, DirectionEnum, LatticePoint, LatticeLinkCanonical};
     /// # use lattice_qcd_rs::error::ImplementationError;
-    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let lattice = LatticeCyclic::<4>::new(1_f64, 4)?;
     /// let point = LatticePoint::<4>::new([1, 0, 2, 0].into());
     /// assert_eq!(
@@ -81,6 +84,9 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[allow(clippy::missing_panics_doc)] // does not panic
+    #[must_use]
+    #[inline]
     pub fn link_canonical(
         &self,
         pos: LatticePoint<D>,
@@ -93,7 +99,7 @@ impl<const D: usize> LatticeCyclic<D> {
         for i in 0..pos.len() {
             pos_link[i] %= self.dim();
         }
-        LatticeLinkCanonical::new(pos_link, dir.to_positive()).unwrap()
+        LatticeLinkCanonical::new(pos_link, dir.to_positive()).expect("exist")
     }
 
     /// Return a link build from `pos` and `dir`.
@@ -116,6 +122,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn link(&self, pos: LatticePoint<D>, dir: Direction<D>) -> LatticeLink<D> {
         let mut pos_link = LatticePoint::new_zero();
         for i in 0..pos.len() {
@@ -127,6 +135,9 @@ impl<const D: usize> LatticeCyclic<D> {
     /// Transform a [`LatticeLink`] into a [`LatticeLinkCanonical`].
     ///
     /// See [`LatticeCyclic::link_canonical`] and [`LatticeLinkCanonical`].
+    #[allow(clippy::wrong_self_convention)] // this is not the self which is converted but the LatticeLink
+    #[must_use]
+    #[inline]
     pub fn into_canonical(&self, l: LatticeLink<D>) -> LatticeLinkCanonical<D> {
         self.link_canonical(*l.pos(), *l.dir())
     }
@@ -135,6 +146,8 @@ impl<const D: usize> LatticeCyclic<D> {
     ///
     /// use [`LatticeCyclic::number_of_points`] for the total number of points.
     /// Not to confuse with [`LatticeCyclic::dim_st`] which is the dimension of space-time.
+    #[must_use]
+    #[inline]
     pub const fn dim(&self) -> usize {
         self.dim
     }
@@ -152,6 +165,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn get_points(&self) -> IteratorLatticePoint<'_, D> {
         IteratorLatticePoint::new(self, LatticePoint::new_zero())
     }
@@ -172,12 +187,14 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
         return IteratorLatticeLinkCanonical::new(
             self,
             self.link_canonical(
                 LatticePoint::new_zero(),
-                *Direction::positive_directions().first().unwrap(),
+                Direction::positive_directions()[0],
             ),
         );
     }
@@ -187,6 +204,7 @@ impl<const D: usize> LatticeCyclic<D> {
     ///
     /// # Errors
     /// Size should be greater than 0 and dim greater or equal to 2, otherwise return an error.
+    #[inline]
     pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError> {
         if D == 0 {
             return Err(LatticeInitializationError::ZeroDimension);
@@ -219,6 +237,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn number_of_canonical_links_space(&self) -> usize {
         self.number_of_points() * D
     }
@@ -240,11 +260,17 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    /// # Panics
+    /// Panics if the dimensions D is bigger than [`u32::MAX`]
+    #[must_use]
+    #[inline]
     pub fn number_of_points(&self) -> usize {
-        self.dim().pow(D.try_into().unwrap())
+        self.dim().pow(D.try_into().expect("conversion error"))
     }
 
     /// Return the lattice size factor.
+    #[must_use]
+    #[inline]
     pub const fn size(&self) -> Real {
         self.size
     }
@@ -270,6 +296,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn add_point_direction(
         &self,
         point: LatticePoint<D>,
@@ -300,6 +328,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub fn add_point_direction_n(
         &self,
         mut point: LatticePoint<D>,
@@ -309,13 +339,11 @@ impl<const D: usize> LatticeCyclic<D> {
         let shift_number = shift_number % self.dim(); // we ensure that shift_number < % self.dim()
         if dir.is_positive() {
             point[dir.index()] = (point[dir.index()] + shift_number) % self.dim();
-        }
-        else {
+        } else {
             let dir_pos = dir.to_positive();
             if point[dir_pos.index()] < shift_number {
                 point[dir_pos.index()] = self.dim() - (shift_number - point[dir_pos.index()]);
-            }
-            else {
+            } else {
                 point[dir_pos.index()] = (point[dir_pos.index()] - shift_number) % self.dim();
             }
         }
@@ -323,24 +351,31 @@ impl<const D: usize> LatticeCyclic<D> {
     }
 
     /// Returns whether the number of canonical link is the same as the length of `links`.
+    #[must_use]
+    #[inline]
     pub fn has_compatible_length_links(&self, links: &LinkMatrix) -> bool {
         self.number_of_canonical_links_space() == links.len()
     }
 
     /// Returns wether the number of point is the same as the length of `e_field`.
+    #[must_use]
+    #[inline]
     pub fn has_compatible_length_e_field(&self, e_field: &EField<D>) -> bool {
         self.number_of_points() == e_field.len()
     }
 
     /// Returns the length is compatible for both `links` and `e_field`.
     /// See [`Self::has_compatible_length_links`] and [`Self::has_compatible_length_e_field`].
+    #[must_use]
+    #[inline]
     pub fn has_compatible_length(&self, links: &LinkMatrix, e_field: &EField<D>) -> bool {
         self.has_compatible_length_links(links) && self.has_compatible_length_e_field(e_field)
     }
 }
 
-impl<const D: usize> std::fmt::Display for LatticeCyclic<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<const D: usize> Display for LatticeCyclic<D> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Cyclic lattice with {}^{} points and spacing {}",
@@ -370,6 +405,8 @@ impl<'a, const D: usize> IteratorLatticeLinkCanonical<'a, D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn new(lattice: &'a LatticeCyclic<D>, first_el: LatticeLinkCanonical<D>) -> Self {
         Self {
             lattice,
@@ -382,39 +419,36 @@ impl<'a, const D: usize> Iterator for IteratorLatticeLinkCanonical<'a, D> {
     type Item = LatticeLinkCanonical<D>;
 
     // TODO improve
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let previous_el = self.element;
         if let Some(ref mut element) = self.element {
-            let mut iter_dir = IteratorDirection::<D, true>::new(Some(element.dir)).unwrap();
+            let mut iter_dir = IteratorDirection::<D, true>::new(Some(element.dir))?; // always exist
             let new_dir = iter_dir.next();
-            match new_dir {
-                Some(dir) => element.set_dir(dir),
-                None => {
-                    element.set_dir(Direction::new(0, true).unwrap());
-                    let mut iter = IteratorLatticePoint::new(self.lattice, *element.pos());
-                    match iter.nth(1) {
-                        // get the second element
-                        Some(array) => *element.pos_mut() = array,
-                        None => {
-                            self.element = None;
-                            return previous_el;
-                        }
-                    }
+            if let Some(dir) = new_dir {
+                element.set_dir(dir);
+            } else {
+                element.set_dir(Direction::new(0, true)?); // always exist
+                let mut iter = IteratorLatticePoint::new(self.lattice, *element.pos());
+                if let Some(array) = iter.nth(1) {
+                    // get the second element
+                    *element.pos_mut() = array;
+                } else {
+                    self.element = None;
+                    return previous_el;
                 }
             }
         }
         previous_el
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.element {
-            None => (0, Some(0)),
-            Some(element) => {
-                let val =
-                    self.lattice.number_of_canonical_links_space() - element.to_index(self.lattice);
-                (val, Some(val))
-            }
-        }
+        self.element.map_or((0, Some(0)), |element| {
+            let val =
+                self.lattice.number_of_canonical_links_space() - element.to_index(self.lattice);
+            (val, Some(val))
+        })
     }
 }
 
@@ -423,6 +457,7 @@ impl<'a, const D: usize> FusedIterator for IteratorLatticeLinkCanonical<'a, D> {
 impl<'a, const D: usize> ExactSizeIterator for IteratorLatticeLinkCanonical<'a, D> {}
 
 /// Enum for internal use of iterator. It store the previous element returned by `next`
+#[allow(clippy::exhaustive_enums)]
 #[derive(Clone, Debug, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum IteratorElement<T> {
@@ -434,23 +469,26 @@ pub enum IteratorElement<T> {
     LastElement,
 }
 
-impl<T: std::fmt::Display> std::fmt::Display for IteratorElement<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T: Display> Display for IteratorElement<T> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::FirstElement => write!(f, "first element"),
-            Self::Element(t) => write!(f, "element {}", t),
+            Self::Element(t) => write!(f, "element {t}"),
             Self::LastElement => write!(f, "last element"),
         }
     }
 }
 
 impl<T> Default for IteratorElement<T> {
+    #[inline]
     fn default() -> Self {
         Self::FirstElement
     }
 }
 
 impl<T> From<IteratorElement<T>> for Option<T> {
+    #[inline]
     fn from(element: IteratorElement<T>) -> Self {
         match element {
             IteratorElement::Element(el) => Some(el),
@@ -552,6 +590,8 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool>
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn new(element: Option<Direction<D>>) -> Option<Self> {
         match element {
             None => Self::new_from_element(IteratorElement::FirstElement),
@@ -596,6 +636,8 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool>
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn new_from_element(element: IteratorElement<Direction<D>>) -> Option<Self> {
         if D == 0 {
             return None;
@@ -614,18 +656,17 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator
 {
     type Item = Direction<D>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let next_element = match self.element {
             IteratorElement::FirstElement => {
-                IteratorElement::Element(Direction::new(0, IS_POSITIVE_DIRECTION).unwrap())
+                IteratorElement::Element(Direction::new(0, IS_POSITIVE_DIRECTION)?)
             }
             IteratorElement::Element(ref dir) => {
-                if let Some(dir) = Direction::new(dir.index() + 1, IS_POSITIVE_DIRECTION) {
-                    IteratorElement::Element(dir)
-                }
-                else {
-                    IteratorElement::LastElement
-                }
+                Direction::new(dir.index() + 1, IS_POSITIVE_DIRECTION)
+                    .map_or(IteratorElement::LastElement, |dir| {
+                        IteratorElement::Element(dir)
+                    })
             }
             IteratorElement::LastElement => IteratorElement::LastElement,
         };
@@ -633,6 +674,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Iterator
         next_element.into()
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = match self.element {
             IteratorElement::FirstElement => D,
@@ -674,6 +716,8 @@ impl<'a, const D: usize> IteratorLatticePoint<'a, D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn new(lattice: &'a LatticeCyclic<D>, first_el: LatticePoint<D>) -> Self {
         Self {
             lattice,
@@ -686,6 +730,7 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
     type Item = LatticePoint<D>;
 
     // TODO improve
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let previous_el = self.element;
         if let Some(ref mut el) = &mut self.element {
@@ -695,8 +740,7 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
                     if i < el.len() - 1 {
                         // every element except the last one
                         el[i + 1] += 1;
-                    }
-                    else {
+                    } else {
                         self.element = None;
                         return previous_el;
                     }
@@ -707,14 +751,12 @@ impl<'a, const D: usize> Iterator for IteratorLatticePoint<'a, D> {
         previous_el
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match self.element {
-            None => (0, Some(0)),
-            Some(element) => {
-                let val = self.lattice.number_of_points() - element.to_index(self.lattice);
-                (val, Some(val))
-            }
-        }
+        self.element.map_or((0, Some(0)), |element| {
+            let val = self.lattice.number_of_points() - element.to_index(self.lattice);
+            (val, Some(val))
+        })
     }
 }
 
@@ -733,11 +775,15 @@ impl<const D: usize> LatticePoint<D> {
     /// Create a new lattice point.
     ///
     /// It can be outside a lattice.
+    #[must_use]
+    #[inline]
     pub const fn new(data: SVector<usize, D>) -> Self {
         Self { data }
     }
 
     /// Create a point at the origin
+    #[must_use]
+    #[inline]
     pub fn new_zero() -> Self {
         Self {
             data: SVector::zeros(),
@@ -747,6 +793,8 @@ impl<const D: usize> LatticePoint<D> {
     /// Create a point using the closure generate elements with the index as input.
     ///
     /// See [`nalgebra::base::Matrix::from_fn`].
+    #[must_use]
+    #[inline]
     pub fn from_fn<F>(mut f: F) -> Self
     where
         F: FnMut(usize) -> usize,
@@ -756,24 +804,30 @@ impl<const D: usize> LatticePoint<D> {
 
     /// Number of elements in [`LatticePoint`]. This is `D`.
     #[allow(clippy::unused_self)]
+    #[must_use]
+    #[inline]
     pub const fn len(&self) -> usize {
         // this is in order to have a const function.
         // we could have called self.data.len()
         D
     }
 
-    /// Return if LatticePoint contain no data. True when the dimension is 0, false otherwise.
+    /// Return if [`LatticePoint`] contain no data. True when the dimension is 0, false otherwise.
     #[allow(clippy::unused_self)]
+    #[must_use]
+    #[inline]
     pub const fn is_empty(&self) -> bool {
         D == 0
     }
 
     /// Get an iterator on the data.
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &usize> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Get an iterator on the data as mutable.
+    #[inline]
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut usize> + ExactSizeIterator + FusedIterator {
@@ -789,6 +843,8 @@ impl<const D: usize> LatticePoint<D> {
     /// let max = point.as_svector().max();
     /// let min = point.as_ref().min();
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn as_svector(&self) -> &SVector<usize, D> {
         &self.data
     }
@@ -802,19 +858,23 @@ impl<const D: usize> LatticePoint<D> {
     /// point.as_svector_mut()[2] = 2;
     /// point.as_mut()[0] = 1;
     /// ```
+    #[must_use]
+    #[inline]
     pub fn as_svector_mut(&mut self) -> &mut SVector<usize, D> {
         &mut self.data
     }
 }
 
 impl<const D: usize> Default for LatticePoint<D> {
+    #[inline]
     fn default() -> Self {
         Self::new_zero()
     }
 }
 
-impl<const D: usize> std::fmt::Display for LatticePoint<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<const D: usize> Display for LatticePoint<D> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.data)
     }
 }
@@ -823,6 +883,7 @@ impl<'a, const D: usize> IntoIterator for &'a LatticePoint<D> {
     type IntoIter = <&'a SVector<usize, D> as IntoIterator>::IntoIter;
     type Item = &'a usize;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter()
     }
@@ -832,6 +893,7 @@ impl<'a, const D: usize> IntoIterator for &'a mut LatticePoint<D> {
     type IntoIter = <&'a mut SVector<usize, D> as IntoIterator>::IntoIter;
     type Item = &'a mut usize;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.data.iter_mut()
     }
@@ -848,6 +910,7 @@ impl<const D: usize> Index<usize> for LatticePoint<D> {
     /// let point = LatticePoint::new([0; 4].into());
     /// let _ = point[4];
     /// ```
+    #[inline]
     fn index(&self, pos: usize) -> &Self::Output {
         &self.data[pos]
     }
@@ -862,6 +925,7 @@ impl<const D: usize> IndexMut<usize> for LatticePoint<D> {
     /// let mut point = LatticePoint::new([0; 4].into());
     /// point[4] += 1;
     /// ```
+    #[inline]
     fn index_mut(&mut self, pos: usize) -> &mut Self::Output {
         &mut self.data[pos]
     }
@@ -871,8 +935,9 @@ impl<T, const D: usize> From<T> for LatticePoint<D>
 where
     SVector<usize, D>: From<T>,
 {
+    #[inline]
     fn from(data: T) -> Self {
-        LatticePoint::new(SVector::from(data))
+        Self::new(SVector::from(data))
     }
 }
 
@@ -880,18 +945,21 @@ impl<const D: usize> From<LatticePoint<D>> for [usize; D]
 where
     SVector<usize, D>: Into<[usize; D]>,
 {
+    #[inline]
     fn from(data: LatticePoint<D>) -> [usize; D] {
         data.data.into()
     }
 }
 
 impl<const D: usize> AsRef<SVector<usize, D>> for LatticePoint<D> {
+    #[inline]
     fn as_ref(&self) -> &SVector<usize, D> {
         self.as_svector()
     }
 }
 
 impl<const D: usize> AsMut<SVector<usize, D>> for LatticePoint<D> {
+    #[inline]
     fn as_mut(&mut self) -> &mut SVector<usize, D> {
         self.as_svector_mut()
     }
@@ -903,26 +971,32 @@ impl<const D: usize> AsMut<SVector<usize, D>> for LatticePoint<D> {
 // TODO change name ? make it less confusing
 pub trait LatticeElementToIndex<const D: usize> {
     /// Given a lattice return an index from the element
+    #[must_use]
     fn to_index(&self, l: &LatticeCyclic<D>) -> usize;
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D> {
+    #[inline]
     fn to_index(&self, l: &LatticeCyclic<D>) -> usize {
         self.iter()
             .enumerate()
-            .map(|(index, pos)| (pos % l.dim()) * l.dim().pow(index.try_into().unwrap()))
+            .map(|(index, pos)| {
+                (pos % l.dim()) * l.dim().pow(index.try_into().expect("conversion error"))
+            })
             .sum()
     }
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for Direction<D> {
     /// equivalent to [`Direction::to_index()`]
+    #[inline]
     fn to_index(&self, _: &LatticeCyclic<D>) -> usize {
         self.index()
     }
 }
 
 impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
+    #[inline]
     fn to_index(&self, l: &LatticeCyclic<D>) -> usize {
         self.pos().to_index(l) * D + self.dir().index()
     }
@@ -934,6 +1008,7 @@ impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
 /// such that function that require a [`LatticeElementToIndex`] can also accept [`usize`].
 impl<const D: usize> LatticeElementToIndex<D> for usize {
     /// return self
+    #[inline]
     fn to_index(&self, _l: &LatticeCyclic<D>) -> usize {
         *self
     }
@@ -955,9 +1030,9 @@ pub struct LatticeLinkCanonical<const D: usize> {
 }
 
 impl<const D: usize> LatticeLinkCanonical<D> {
-    /// Try create a LatticeLinkCanonical. If the dir is negative it fails.
+    /// Try create a [`LatticeLinkCanonical`]. If the dir is negative it fails.
     ///
-    /// To guaranty creating an element see [LatticeCyclic::link_canonical].
+    /// To guaranty creating an element see [`LatticeCyclic::link_canonical`].
     /// The creation of an element this ways does not guaranties that the element is inside a lattice.
     ///
     /// # Example
@@ -969,6 +1044,8 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     /// let l = LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into());
     /// assert!(l.is_some());
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn new(from: LatticePoint<D>, dir: Direction<D>) -> Option<Self> {
         if dir.is_negative() {
             return None;
@@ -977,16 +1054,22 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     }
 
     /// Position of the link.
+    #[must_use]
+    #[inline]
     pub const fn pos(&self) -> &LatticePoint<D> {
         &self.from
     }
 
     /// Get a mutable reference on the position of the link.
+    #[must_use]
+    #[inline]
     pub fn pos_mut(&mut self) -> &mut LatticePoint<D> {
         &mut self.from
     }
 
     /// Direction of the link.
+    #[must_use]
+    #[inline]
     pub const fn dir(&self) -> &Direction<D> {
         &self.dir
     }
@@ -1007,7 +1090,7 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     /// # }
     /// ```
     ///
-    /// # Panic
+    /// # Panics
     /// panic if a negative direction is given.
     /// ```should_panic
     /// # use lattice_qcd_rs::lattice::{LatticeLinkCanonical, LatticePoint, DirectionEnum};
@@ -1018,10 +1101,12 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn set_dir(&mut self, dir: Direction<D>) {
-        if dir.is_negative() {
-            panic!("Cannot set a negative direction to a canonical link.");
-        }
+        assert!(
+            !dir.is_negative(),
+            "Cannot set a negative direction to a canonical link."
+        );
         self.dir = dir;
     }
 
@@ -1029,13 +1114,15 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     /// the direction assigned will be `+x`.
     ///
     /// This is equivalent to `link.set_dir(dir.to_positive())`.
+    #[inline]
     pub fn set_dir_positive(&mut self, dir: Direction<D>) {
         self.dir = dir.to_positive();
     }
 }
 
-impl<const D: usize> std::fmt::Display for LatticeLinkCanonical<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<const D: usize> Display for LatticeLinkCanonical<D> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "canonical link [position {}, direction {}]",
@@ -1045,14 +1132,16 @@ impl<const D: usize> std::fmt::Display for LatticeLinkCanonical<D> {
 }
 
 impl<const D: usize> From<LatticeLinkCanonical<D>> for LatticeLink<D> {
+    #[inline]
     fn from(l: LatticeLinkCanonical<D>) -> Self {
-        LatticeLink::new(l.from, l.dir)
+        Self::new(l.from, l.dir)
     }
 }
 
 impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D> {
+    #[inline]
     fn from(l: &LatticeLinkCanonical<D>) -> Self {
-        LatticeLink::new(l.from, l.dir)
+        Self::new(l.from, l.dir)
     }
 }
 
@@ -1073,43 +1162,58 @@ pub struct LatticeLink<const D: usize> {
 
 impl<const D: usize> LatticeLink<D> {
     /// Create a link from position `from` and direction `dir`.
+    #[must_use]
+    #[inline]
     pub const fn new(from: LatticePoint<D>, dir: Direction<D>) -> Self {
         Self { from, dir }
     }
 
     /// Get the position of the link.
+    #[must_use]
+    #[inline]
     pub const fn pos(&self) -> &LatticePoint<D> {
         &self.from
     }
 
     /// Get a mutable reference to the position of the link.
+    #[must_use]
+    #[inline]
     pub fn pos_mut(&mut self) -> &mut LatticePoint<D> {
         &mut self.from
     }
 
     /// Get the direction of the link.
+    #[must_use]
+    #[inline]
     pub const fn dir(&self) -> &Direction<D> {
         &self.dir
     }
 
     /// Get a mutable reference to the direction of the link.
+    #[must_use]
+    #[inline]
     pub fn dir_mut(&mut self) -> &mut Direction<D> {
         &mut self.dir
     }
 
     /// Get if the direction of the link is positive.
+    #[must_use]
+    #[inline]
     pub const fn is_dir_positive(&self) -> bool {
         self.dir.is_positive()
     }
 
     /// Get if the direction of the link is negative.
+    #[must_use]
+    #[inline]
     pub const fn is_dir_negative(&self) -> bool {
         self.dir.is_negative()
     }
 }
 
-impl<const D: usize> std::fmt::Display for LatticeLink<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<const D: usize> Display for LatticeLink<D> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "link [position {}, direction {}]", self.from, self.dir)
     }
 }
@@ -1124,6 +1228,8 @@ pub struct Direction<const D: usize> {
 
 impl<const D: usize> Direction<D> {
     /// New direction from a direction as an idex and wether it is in the positive direction.
+    #[must_use]
+    #[inline]
     pub const fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
         if index_dir >= D {
             return None;
@@ -1136,36 +1242,44 @@ impl<const D: usize> Direction<D> {
 
     /// List of all positives directions.
     /// This is very slow use [`Self::positive_directions`] instead.
+    #[allow(clippy::missing_panics_doc)] // it nevers panic
+    #[must_use]
+    #[inline]
     pub fn positives_vec() -> Vec<Self> {
         let mut x = Vec::with_capacity(D);
         for i in 0..D {
-            x.push(Self::new(i, true).unwrap());
+            x.push(Self::new(i, true).expect("unreachable"));
         }
         x
     }
 
     /// List all directions.
     /// This is very slow use [`DirectionList::directions`] instead.
+    #[allow(clippy::missing_panics_doc)] // it nevers panic
+    #[must_use]
+    #[inline]
     pub fn directions_vec() -> Vec<Self> {
         let mut x = Vec::with_capacity(2 * D);
         for i in 0..D {
-            x.push(Self::new(i, true).unwrap());
-            x.push(Self::new(i, false).unwrap());
+            x.push(Self::new(i, true).expect("unreachable"));
+            x.push(Self::new(i, false).expect("unreachable"));
         }
         x
     }
 
     // TODO add const function for all direction once operation on const generic are added
     /// Get all direction with the sign `IS_POSITIVE`.
+    #[must_use]
+    #[inline]
     pub const fn directions_array<const IS_POSITIVE: bool>() -> [Self; D] {
         // TODO use unsafe code to avoid the allocation
         let mut i = 0_usize;
-        let mut array = [Direction {
+        let mut array = [Self {
             index_dir: 0,
             is_positive: IS_POSITIVE,
         }; D];
         while i < D {
-            array[i] = Direction {
+            array[i] = Self {
                 index_dir: i,
                 is_positive: IS_POSITIVE,
             };
@@ -1175,21 +1289,30 @@ impl<const D: usize> Direction<D> {
     }
 
     /// Get all negative direction
+    #[must_use]
+    #[inline]
     pub const fn negative_directions() -> [Self; D] {
         Self::directions_array::<false>()
     }
 
     /// Get all positive direction
+    #[allow(clippy::same_name_method)]
+    #[must_use]
+    #[inline]
     pub const fn positive_directions() -> [Self; D] {
         Self::directions_array::<true>()
     }
 
     /// Get if the position is positive.
+    #[must_use]
+    #[inline]
     pub const fn is_positive(&self) -> bool {
         self.is_positive
     }
 
     /// Get if the position is Negative. see [`Direction::is_positive`]
+    #[must_use]
+    #[inline]
     pub const fn is_negative(&self) -> bool {
         !self.is_positive()
     }
@@ -1208,6 +1331,8 @@ impl<const D: usize> Direction<D> {
     ///     Direction::<4>::new(1, true).unwrap()
     /// );
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn to_positive(mut self) -> Self {
         self.is_positive = true;
         self
@@ -1219,21 +1344,29 @@ impl<const D: usize> Direction<D> {
     /// # use lattice_qcd_rs::lattice::Direction;
     /// assert_eq!(Direction::<4>::new(1, false).unwrap().index(), 1);
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn index(&self) -> usize {
         self.index_dir
     }
 
     /// Convert the direction into a vector of norm `a`;
+    #[must_use]
+    #[inline]
     pub fn to_vector(self, a: f64) -> SVector<Real, D> {
         self.to_unit_vector() * a
     }
 
     /// Returns the dimension
+    #[must_use]
+    #[inline]
     pub const fn dim() -> usize {
         D
     }
 
     /// Convert the direction into a vector of norm `1`;
+    #[must_use]
+    #[inline]
     pub fn to_unit_vector(self) -> SVector<Real, D> {
         let mut v = SVector::zeros();
         v[self.index_dir] = 1_f64;
@@ -1262,6 +1395,9 @@ impl<const D: usize> Direction<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[allow(clippy::missing_panics_doc)] // it nevers panic
+    #[must_use]
+    #[inline]
     pub fn from_vector(v: &SVector<Real, D>) -> Self {
         let mut max = 0_f64;
         let mut index_max: usize = 0;
@@ -1306,8 +1442,9 @@ where
 }
 */
 
-impl<const D: usize> std::fmt::Display for Direction<D> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<const D: usize> Display for Direction<D> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "[index {}, is positive {}]",
@@ -1320,8 +1457,10 @@ impl<const D: usize> std::fmt::Display for Direction<D> {
 /// List all possible direction
 pub trait DirectionList: Sized {
     /// List all directions.
+    #[must_use]
     fn directions() -> &'static [Self];
     /// List all positive directions.
+    #[must_use]
     fn positive_directions() -> &'static [Self];
 }
 
@@ -1368,17 +1507,15 @@ implement_direction_from!();
 /// # }
 /// ```
 impl<const D: usize> PartialOrd for Direction<D> {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self == other {
             Some(Ordering::Equal)
-        }
-        else if self.is_positive() == other.is_positive() {
+        } else if self.is_positive() == other.is_positive() {
             self.index().partial_cmp(&other.index())
-        }
-        else if self.index() == other.index() {
+        } else if self.index() == other.index() {
             self.is_positive().partial_cmp(&other.is_positive())
-        }
-        else {
+        } else {
             None
         }
     }
@@ -1387,6 +1524,7 @@ impl<const D: usize> PartialOrd for Direction<D> {
 impl<const D: usize> Neg for Direction<D> {
     type Output = Self;
 
+    #[inline]
     fn neg(mut self) -> Self::Output {
         self.is_positive = !self.is_positive;
         self
@@ -1396,6 +1534,7 @@ impl<const D: usize> Neg for Direction<D> {
 impl<const D: usize> Neg for &Direction<D> {
     type Output = Direction<D>;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         -*self
     }
@@ -1403,6 +1542,7 @@ impl<const D: usize> Neg for &Direction<D> {
 
 /// Return [`Direction::to_index`].
 impl<const D: usize> From<Direction<D>> for usize {
+    #[inline]
     fn from(d: Direction<D>) -> Self {
         d.index()
     }
@@ -1410,6 +1550,7 @@ impl<const D: usize> From<Direction<D>> for usize {
 
 /// Return [`Direction::to_index`].
 impl<const D: usize> From<&Direction<D>> for usize {
+    #[inline]
     fn from(d: &Direction<D>) -> Self {
         d.index()
     }
@@ -1417,20 +1558,23 @@ impl<const D: usize> From<&Direction<D>> for usize {
 
 /// Return [`DirectionEnum::from_vector`].
 impl<const D: usize> From<SVector<Real, D>> for Direction<D> {
+    #[inline]
     fn from(v: SVector<Real, D>) -> Self {
-        Direction::from_vector(&v)
+        Self::from_vector(&v)
     }
 }
 
 /// Return [`DirectionEnum::from_vector`].
 impl<const D: usize> From<&SVector<Real, D>> for Direction<D> {
+    #[inline]
     fn from(v: &SVector<Real, D>) -> Self {
-        Direction::<D>::from_vector(v)
+        Self::from_vector(v)
     }
 }
 
 /// Return [`Direction::to_unit_vector`].
 impl<const D: usize> From<Direction<D>> for SVector<Real, D> {
+    #[inline]
     fn from(d: Direction<D>) -> Self {
         d.to_unit_vector()
     }
@@ -1438,24 +1582,28 @@ impl<const D: usize> From<Direction<D>> for SVector<Real, D> {
 
 /// Return [`Direction::to_unit_vector`].
 impl<const D: usize> From<&Direction<D>> for SVector<Real, D> {
+    #[inline]
     fn from(d: &Direction<D>) -> Self {
         d.to_unit_vector()
     }
 }
 
 impl From<DirectionEnum> for Direction<4> {
+    #[inline]
     fn from(d: DirectionEnum) -> Self {
         Self::new(d.to_index(), d.is_positive()).expect("unreachable")
     }
 }
 
 impl From<&DirectionEnum> for Direction<4> {
+    #[inline]
     fn from(d: &DirectionEnum) -> Self {
         Self::new(d.to_index(), d.is_positive()).expect("unreachable")
     }
 }
 
 /// Represent a cardinal direction
+#[allow(clippy::exhaustive_enums)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum DirectionEnum {
@@ -1480,54 +1628,49 @@ pub enum DirectionEnum {
 impl DirectionEnum {
     /// List all directions.
     pub const DIRECTIONS: [Self; 8] = [
-        DirectionEnum::XPos,
-        DirectionEnum::YPos,
-        DirectionEnum::ZPos,
-        DirectionEnum::TPos,
-        DirectionEnum::XNeg,
-        DirectionEnum::YNeg,
-        DirectionEnum::ZNeg,
-        DirectionEnum::TNeg,
+        Self::XPos,
+        Self::YPos,
+        Self::ZPos,
+        Self::TPos,
+        Self::XNeg,
+        Self::YNeg,
+        Self::ZNeg,
+        Self::TNeg,
     ];
     /// List all spatial directions.
     pub const DIRECTIONS_SPACE: [Self; 6] = [
-        DirectionEnum::XPos,
-        DirectionEnum::YPos,
-        DirectionEnum::ZPos,
-        DirectionEnum::XNeg,
-        DirectionEnum::YNeg,
-        DirectionEnum::ZNeg,
+        Self::XPos,
+        Self::YPos,
+        Self::ZPos,
+        Self::XNeg,
+        Self::YNeg,
+        Self::ZNeg,
     ];
     /// List of all positives directions.
-    pub const POSITIVES: [Self; 4] = [
-        DirectionEnum::XPos,
-        DirectionEnum::YPos,
-        DirectionEnum::ZPos,
-        DirectionEnum::TPos,
-    ];
+    pub const POSITIVES: [Self; 4] = [Self::XPos, Self::YPos, Self::ZPos, Self::TPos];
     /// List spatial positive direction.
-    pub const POSITIVES_SPACE: [Self; 3] = [
-        DirectionEnum::XPos,
-        DirectionEnum::YPos,
-        DirectionEnum::ZPos,
-    ];
+    pub const POSITIVES_SPACE: [Self; 3] = [Self::XPos, Self::YPos, Self::ZPos];
 
     /// Convert the direction into a vector of norm `a`;
+    #[must_use]
+    #[inline]
     pub fn to_vector(self, a: f64) -> Vector4<Real> {
         self.to_unit_vector() * a
     }
 
     /// Convert the direction into a vector of norm `1`;
+    #[must_use]
+    #[inline]
     pub const fn to_unit_vector(self) -> Vector4<Real> {
         match self {
-            DirectionEnum::XPos => Vector4::<Real>::new(1_f64, 0_f64, 0_f64, 0_f64),
-            DirectionEnum::XNeg => Vector4::<Real>::new(-1_f64, 0_f64, 0_f64, 0_f64),
-            DirectionEnum::YPos => Vector4::<Real>::new(0_f64, 1_f64, 0_f64, 0_f64),
-            DirectionEnum::YNeg => Vector4::<Real>::new(0_f64, -1_f64, 0_f64, 0_f64),
-            DirectionEnum::ZPos => Vector4::<Real>::new(0_f64, 0_f64, 1_f64, 0_f64),
-            DirectionEnum::ZNeg => Vector4::<Real>::new(0_f64, 0_f64, -1_f64, 0_f64),
-            DirectionEnum::TPos => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, 1_f64),
-            DirectionEnum::TNeg => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, -1_f64),
+            Self::XPos => Vector4::<Real>::new(1_f64, 0_f64, 0_f64, 0_f64),
+            Self::XNeg => Vector4::<Real>::new(-1_f64, 0_f64, 0_f64, 0_f64),
+            Self::YPos => Vector4::<Real>::new(0_f64, 1_f64, 0_f64, 0_f64),
+            Self::YNeg => Vector4::<Real>::new(0_f64, -1_f64, 0_f64, 0_f64),
+            Self::ZPos => Vector4::<Real>::new(0_f64, 0_f64, 1_f64, 0_f64),
+            Self::ZNeg => Vector4::<Real>::new(0_f64, 0_f64, -1_f64, 0_f64),
+            Self::TPos => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, 1_f64),
+            Self::TNeg => Vector4::<Real>::new(0_f64, 0_f64, 0_f64, -1_f64),
         }
     }
 
@@ -1539,20 +1682,18 @@ impl DirectionEnum {
     /// assert_eq!(DirectionEnum::TPos.is_positive(), true);
     /// assert_eq!(DirectionEnum::YNeg.is_positive(), false);
     /// ```
+    #[must_use]
+    #[inline]
     pub const fn is_positive(self) -> bool {
         match self {
-            DirectionEnum::XPos
-            | DirectionEnum::YPos
-            | DirectionEnum::ZPos
-            | DirectionEnum::TPos => true,
-            DirectionEnum::XNeg
-            | DirectionEnum::YNeg
-            | DirectionEnum::ZNeg
-            | DirectionEnum::TNeg => false,
+            Self::XPos | Self::YPos | Self::ZPos | Self::TPos => true,
+            Self::XNeg | Self::YNeg | Self::ZNeg | Self::TNeg => false,
         }
     }
 
     /// Get if the position is Negative. see [`DirectionEnum::is_positive`]
+    #[must_use]
+    #[inline]
     pub const fn is_negative(self) -> bool {
         !self.is_positive()
     }
@@ -1576,13 +1717,14 @@ impl DirectionEnum {
     ///     DirectionEnum::TPos
     /// );
     /// ```
-    #[allow(clippy::needless_return)] // for readability
+    #[inline]
+    #[must_use]
     pub fn from_vector(v: &Vector4<Real>) -> Self {
         let mut max = 0_f64;
         let mut index_max: usize = 0;
         let mut is_positive = true;
-        for i in 0..DirectionEnum::POSITIVES.len() {
-            let scalar_prod = v.dot(&DirectionEnum::POSITIVES[i].to_vector(1_f64));
+        for i in 0..Self::POSITIVES.len() {
+            let scalar_prod = v.dot(&Self::POSITIVES[i].to_vector(1_f64));
             if scalar_prod.abs() > max {
                 max = scalar_prod.abs();
                 index_max = i;
@@ -1592,34 +1734,30 @@ impl DirectionEnum {
         match index_max {
             0 => {
                 if is_positive {
-                    return DirectionEnum::XPos;
-                }
-                else {
-                    return DirectionEnum::XNeg;
+                    Self::XPos
+                } else {
+                    Self::XNeg
                 }
             }
             1 => {
                 if is_positive {
-                    return DirectionEnum::YPos;
-                }
-                else {
-                    return DirectionEnum::YNeg;
+                    Self::YPos
+                } else {
+                    Self::YNeg
                 }
             }
             2 => {
                 if is_positive {
-                    return DirectionEnum::ZPos;
-                }
-                else {
-                    return DirectionEnum::ZNeg;
+                    Self::ZPos
+                } else {
+                    Self::ZNeg
                 }
             }
             3 => {
                 if is_positive {
-                    return DirectionEnum::TPos;
-                }
-                else {
-                    return DirectionEnum::TNeg;
+                    Self::TPos
+                } else {
+                    Self::TNeg
                 }
             }
             _ => {
@@ -1637,12 +1775,14 @@ impl DirectionEnum {
     /// assert_eq!(DirectionEnum::XNeg.to_positive(), DirectionEnum::XPos);
     /// assert_eq!(DirectionEnum::YPos.to_positive(), DirectionEnum::YPos);
     /// ```
+    #[inline]
+    #[must_use]
     pub const fn to_positive(self) -> Self {
         match self {
-            DirectionEnum::XNeg => DirectionEnum::XPos,
-            DirectionEnum::YNeg => DirectionEnum::YPos,
-            DirectionEnum::ZNeg => DirectionEnum::ZPos,
-            DirectionEnum::TNeg => DirectionEnum::TPos,
+            Self::XNeg => Self::XPos,
+            Self::YNeg => Self::YPos,
+            Self::ZNeg => Self::ZPos,
+            Self::TNeg => Self::TPos,
             _ => self,
         }
     }
@@ -1660,12 +1800,14 @@ impl DirectionEnum {
     /// assert_eq!(DirectionEnum::TPos.to_index(), 3);
     /// assert_eq!(DirectionEnum::TNeg.to_index(), 3);
     /// ```
+    #[inline]
+    #[must_use]
     pub const fn to_index(self) -> usize {
         match self {
-            DirectionEnum::XPos | DirectionEnum::XNeg => 0,
-            DirectionEnum::YPos | DirectionEnum::YNeg => 1,
-            DirectionEnum::ZPos | DirectionEnum::ZNeg => 2,
-            DirectionEnum::TPos | DirectionEnum::TNeg => 3,
+            Self::XPos | Self::XNeg => 0,
+            Self::YPos | Self::YNeg => 1,
+            Self::ZPos | Self::ZNeg => 2,
+            Self::TPos | Self::TNeg => 3,
         }
     }
 }
@@ -1673,37 +1815,42 @@ impl DirectionEnum {
 /// Return [`DirectionEnum::XPos`]
 impl Default for DirectionEnum {
     ///Return [`DirectionEnum::XPos`]
+    #[inline]
     fn default() -> Self {
         Self::XPos
     }
 }
 
-impl std::fmt::Display for DirectionEnum {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for DirectionEnum {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DirectionEnum::XPos => write!(f, "positive X direction"),
-            DirectionEnum::XNeg => write!(f, "negative X direction"),
-            DirectionEnum::YPos => write!(f, "positive Y direction"),
-            DirectionEnum::YNeg => write!(f, "negative Y direction"),
-            DirectionEnum::ZPos => write!(f, "positive Z direction"),
-            DirectionEnum::ZNeg => write!(f, "negative Z direction"),
-            DirectionEnum::TPos => write!(f, "positive T direction"),
-            DirectionEnum::TNeg => write!(f, "negative T direction"),
+            Self::XPos => write!(f, "positive X direction"),
+            Self::XNeg => write!(f, "negative X direction"),
+            Self::YPos => write!(f, "positive Y direction"),
+            Self::YNeg => write!(f, "negative Y direction"),
+            Self::ZPos => write!(f, "positive Z direction"),
+            Self::ZNeg => write!(f, "negative Z direction"),
+            Self::TPos => write!(f, "positive T direction"),
+            Self::TNeg => write!(f, "negative T direction"),
         }
     }
 }
 
 impl DirectionList for DirectionEnum {
+    #[inline]
     fn directions() -> &'static [Self] {
         &Self::DIRECTIONS
     }
 
+    #[inline]
     fn positive_directions() -> &'static [Self] {
         &Self::POSITIVES
     }
 }
 
 impl PartialOrd for DirectionEnum {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Direction::<4>::from(self).partial_cmp(&other.into())
     }
@@ -1719,16 +1866,17 @@ impl PartialOrd for DirectionEnum {
 impl Neg for DirectionEnum {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         match self {
-            DirectionEnum::XPos => DirectionEnum::XNeg,
-            DirectionEnum::XNeg => DirectionEnum::XPos,
-            DirectionEnum::YPos => DirectionEnum::YNeg,
-            DirectionEnum::YNeg => DirectionEnum::YPos,
-            DirectionEnum::ZPos => DirectionEnum::ZNeg,
-            DirectionEnum::ZNeg => DirectionEnum::ZPos,
-            DirectionEnum::TPos => DirectionEnum::TNeg,
-            DirectionEnum::TNeg => DirectionEnum::TPos,
+            Self::XPos => Self::XNeg,
+            Self::XNeg => Self::XPos,
+            Self::YPos => Self::YNeg,
+            Self::YNeg => Self::YPos,
+            Self::ZPos => Self::ZNeg,
+            Self::ZNeg => Self::ZPos,
+            Self::TPos => Self::TNeg,
+            Self::TNeg => Self::TPos,
         }
     }
 }
@@ -1736,6 +1884,7 @@ impl Neg for DirectionEnum {
 impl Neg for &DirectionEnum {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         match self {
             DirectionEnum::XPos => &DirectionEnum::XNeg,
@@ -1752,6 +1901,7 @@ impl Neg for &DirectionEnum {
 
 /// Return [`DirectionEnum::to_index`].
 impl From<DirectionEnum> for usize {
+    #[inline]
     fn from(d: DirectionEnum) -> Self {
         d.to_index()
     }
@@ -1759,6 +1909,7 @@ impl From<DirectionEnum> for usize {
 
 /// Return [`DirectionEnum::to_index`].
 impl From<&DirectionEnum> for usize {
+    #[inline]
     fn from(d: &DirectionEnum) -> Self {
         d.to_index()
     }
@@ -1766,20 +1917,23 @@ impl From<&DirectionEnum> for usize {
 
 /// Return [`DirectionEnum::from_vector`].
 impl From<Vector4<Real>> for DirectionEnum {
+    #[inline]
     fn from(v: Vector4<Real>) -> Self {
-        DirectionEnum::from_vector(&v)
+        Self::from_vector(&v)
     }
 }
 
 /// Return [`DirectionEnum::from_vector`].
 impl From<&Vector4<Real>> for DirectionEnum {
+    #[inline]
     fn from(v: &Vector4<Real>) -> Self {
-        DirectionEnum::from_vector(v)
+        Self::from_vector(v)
     }
 }
 
 /// Return [`DirectionEnum::to_unit_vector`].
 impl From<DirectionEnum> for Vector4<Real> {
+    #[inline]
     fn from(d: DirectionEnum) -> Self {
         d.to_unit_vector()
     }
@@ -1787,6 +1941,7 @@ impl From<DirectionEnum> for Vector4<Real> {
 
 /// Return [`DirectionEnum::to_unit_vector`].
 impl From<&DirectionEnum> for Vector4<Real> {
+    #[inline]
     fn from(d: &DirectionEnum) -> Self {
         d.to_unit_vector()
     }
@@ -1800,20 +1955,20 @@ mod test {
     fn directions_list_cst() {
         let dirs = Direction::<3>::positive_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, true).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, true));
         }
         let dirs = Direction::<3>::negative_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, false).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, false));
         }
 
         let dirs = Direction::<8>::positive_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, true).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, true));
         }
         let dirs = Direction::<8>::negative_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, false).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, false));
         }
 
         let dirs = Direction::<0>::positive_directions();
@@ -1823,11 +1978,11 @@ mod test {
 
         let dirs = Direction::<128>::positive_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, true).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, true));
         }
         let dirs = Direction::<128>::negative_directions();
         for (index, dir) in dirs.iter().enumerate() {
-            assert_eq!(*dir, Direction::new(index, false).unwrap());
+            assert_eq!(Some(*dir), Direction::new(index, false));
         }
 
         let dirs = Direction::<128>::positive_directions();
@@ -1881,7 +2036,7 @@ mod test {
     fn set_dir_neg() {
         let mut lattice_link_canonical =
             LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into())
-                .unwrap();
+                .expect("it is made to exist");
 
         lattice_link_canonical.set_dir(DirectionEnum::XNeg.into());
     }
@@ -1923,7 +2078,7 @@ mod test {
         assert_eq!(Direction::<4>::directions().len(), 8);
         assert_eq!(Direction::<4>::positive_directions().len(), 4);
 
-        let l = LatticeCyclic::new(1_f64, 4).unwrap();
+        let l = LatticeCyclic::new(1_f64, 4).expect("lattice has an error");
         for dir in Direction::<3>::directions() {
             assert_eq!(
                 <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
@@ -1945,12 +2100,10 @@ mod test {
     fn lattice_link() {
         let pt = [0, 0, 0, 0].into();
         let dir = DirectionEnum::XNeg.into();
-        let mut link = LatticeLinkCanonical::new(pt, DirectionEnum::YPos.into()).unwrap();
+        let mut link =
+            LatticeLinkCanonical::new(pt, DirectionEnum::YPos.into()).expect("link has an error");
         link.set_dir_positive(dir);
-        assert_eq!(
-            link,
-            LatticeLinkCanonical::new(pt, dir.to_positive()).unwrap()
-        );
+        assert_eq!(Some(link), LatticeLinkCanonical::new(pt, dir.to_positive()));
 
         let mut link = LatticeLink::new(pt, DirectionEnum::YPos.into());
         let pos = *link.pos();
@@ -1972,23 +2125,20 @@ mod test {
         let vector = SVector::<usize, 5>::from([1, 0, 0, 0, 0]);
         let canonical_link = LatticeLinkCanonical::<5>::new(
             LatticePoint::new(vector),
-            Direction::new(0, true).unwrap(),
+            Direction::new(0, true).expect("direction cannot be constructed"),
         )
-        .unwrap();
-        println!("{}", canonical_link);
+        .expect("link cannot be constructed");
+        println!("{canonical_link}");
         assert_eq!(
             canonical_link.to_string(),
-            format!(
-                "canonical link [position {}, direction [index 0, is positive true]]",
-                vector
-            )
+            format!("canonical link [position {vector}, direction [index 0, is positive true]]")
         );
     }
 
     #[allow(clippy::cognitive_complexity)]
     #[test]
     fn iterator() {
-        let l = LatticeCyclic::<2>::new(1_f64, 4).unwrap();
+        let l = LatticeCyclic::<2>::new(1_f64, 4).expect("lattice has an error");
         let mut iterator = l.get_points();
         assert_eq!(
             iterator.size_hint(),
@@ -2034,7 +2184,8 @@ mod test {
         assert!(iterator.next().is_none());
         assert_eq!(iterator.size_hint(), (0, Some(0)));
 
-        let mut iterator = IteratorDirection::<2, true>::new(None).unwrap();
+        let mut iterator =
+            IteratorDirection::<2, true>::new(None).expect("iterator cannot be constructed");
         assert_eq!(iterator.size_hint(), (2, Some(2)));
         assert!(iterator.next().is_some());
         assert_eq!(iterator.size_hint(), (1, Some(1)));
@@ -2062,7 +2213,7 @@ mod test {
 
     #[test]
     fn lattice() {
-        let lattice = LatticeCyclic::<3>::new(1_f64, 8).unwrap();
+        let lattice = LatticeCyclic::<3>::new(1_f64, 8).expect("lattice has an error");
         assert_eq!(
             lattice.to_string(),
             "Cyclic lattice with 8^3 points and spacing 1"
