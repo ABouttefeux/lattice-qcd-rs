@@ -9,6 +9,7 @@
 - update dependencies
 - remove the extern crate declaration in lib.rs
 - correct documentation
+- add `#[inline]` to a all public facing function
 
 # v0.2.1
 
