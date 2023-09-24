@@ -1,3 +1,7 @@
+# v0.3.0
+
+- update version-sync to 0.9.5
+- added doc on direction const item
 
 # v0.2.1
 

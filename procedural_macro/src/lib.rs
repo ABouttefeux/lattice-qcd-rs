@@ -131,7 +131,9 @@
 mod test;
 
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::quote;
+use syn::Ident;
 
 /// Maximum dimension to impl [`Direction`] for.
 const MAX_DIM: usize = 127;
@@ -157,25 +159,34 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
                 Direction{index_dir: #j, is_positive: true}
             });
         }
-        //let u_ident = syn::Ident::new(&format!("U{}", i), proc_macro2::Span::call_site());
-        let u_dir_ident = syn::Ident::new(&format!("U{i}_DIR"), proc_macro2::Span::call_site());
-        let u_dir_pos_ident =
-            syn::Ident::new(&format!("U{i}_DIR_POS"), proc_macro2::Span::call_site());
+
+        let u_dir_ident = Ident::new(&format!("U{i}_DIR"), Span::call_site());
+        let u_dir_pos_ident = Ident::new(&format!("U{i}_DIR_POS"), Span::call_site());
         // we store the values in array so we can access them as fast as possible.
+        let comment_all = format!(
+            "Array of all [`Direction`] in dimension {i}. Added automatically by procedural macro."
+        );
+        let comment_pos = format!("Array of positive [`Direction`] in dimension {i}. Added automatically by procedural macro.");
+
         let s = quote! {
+            #[doc=#comment_all]
             const #u_dir_ident: [Direction<#i>; #i * 2] = [ #(#array_direction),* ];
+            #[doc=#comment_pos]
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
+
             impl DirectionList for Direction<#i> {
                 #[inline]
-                fn directions() -> & 'static [Self] {
+                fn directions() -> &'static [Self] {
                     &#u_dir_ident
                 }
+
                 #[inline]
-                fn positive_directions() -> & 'static [Self] {
+                fn positive_directions() -> &'static [Self] {
                     &#u_dir_pos_ident
                 }
             }
         };
+
         implem.push(s);
     }
     // We need to concat the final implems togethers.
@@ -195,7 +206,8 @@ const MAX_DIM_FROM_IMPLEM: usize = 10;
 #[proc_macro]
 pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     // implementation of the error returned by the TryFrom trait.
-    let mut implem = vec![quote! {
+    let mut implem = Vec::with_capacity(MAX_DIM_FROM_IMPLEM * (MAX_DIM_FROM_IMPLEM - 1) / 2 + 1);
+    implem.push(quote! {
         use std::convert::TryFrom;
 
         /// Error return by [`TryFrom`] for Directions.
@@ -216,7 +228,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
         }
 
         impl std::error::Error for DirectionConversionError {}
-    }];
+    });
 
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
         for j in i + 1..=MAX_DIM_FROM_IMPLEM {
@@ -239,6 +251,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
 
                 impl TryFrom<Direction<#j>> for Direction<#i> {
                     type Error = DirectionConversionError;
+
                     fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.index(), from.is_positive())
                             .ok_or(DirectionConversionError::IndexOutOfBound)
@@ -247,6 +260,7 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
 
                 impl TryFrom<&Direction<#j>> for Direction<#i> {
                     type Error = DirectionConversionError;
+
                     fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.index(), from.is_positive())
                             .ok_or(DirectionConversionError::IndexOutOfBound)
@@ -256,9 +270,9 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
         }
     }
 
+    // We need to concat the final implems togethers.
     let final_stream = quote! {
         #(#implem)*
     };
-    // We need to concat the final implems togethers.
     final_stream.into()
 }
