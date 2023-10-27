@@ -293,7 +293,7 @@ fn test_thread() -> Result<(), ThreadAnyError> {
 #[test]
 fn test_thread_error_zero_thread() {
     let iter = 1_i32..10000_i32;
-    let result = run_pool_parallel(iter, &(), &|i, _| i * i, 0, 10000);
+    let result = run_pool_parallel(iter, &(), &|i, ()| i * i, 0, 10000);
     result.expect_err("zero thread request should give an error");
 }
 
@@ -324,7 +324,7 @@ fn test_thread_vec() -> Result<(), Box<dyn Error>> {
 fn test_thread_vec_error_zero_thread() -> Result<(), LatticeInitializationError> {
     let l = LatticeCyclic::<4>::new(1_f64, 10)?;
     let iter = 0..10000;
-    let result = run_pool_parallel_vec(iter, &(), &|i, _| i * i, 0, 10000, &l, &0);
+    let result = run_pool_parallel_vec(iter, &(), &|i, ()| i * i, 0, 10000, &l, &0);
     result.expect_err("zero thread should give an error");
     Ok(())
 }

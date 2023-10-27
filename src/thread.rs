@@ -1,5 +1,7 @@
 //! Tool for easy use of multi threading.
 
+// TODO review all of this
+
 use std::{
     any::Any,
     collections::HashMap,
@@ -200,7 +202,7 @@ impl From<ThreadError> for ThreadAnyError {
 /// ```should_panic
 /// # use lattice_qcd_rs::thread::{run_pool_parallel, ThreadAnyError};
 /// let iter = 0..10;
-/// let result = run_pool_parallel(iter, &(), &|_, _| panic!("{}", "panic message"), 4, 10);
+/// let result = run_pool_parallel(iter, &(), &|_, ()| panic!("{}", "panic message"), 4, 10);
 /// match result {
 ///     Ok(_) => {}
 ///     Err(err) => panic!("{}", err),
@@ -234,7 +236,7 @@ where
     run_pool_parallel_with_initializations_mutable(
         iter,
         common_data,
-        &|_, key, common| closure(key, common),
+        &|(), key, common| closure(key, common),
         || (),
         number_of_thread,
         capacity,
@@ -444,7 +446,7 @@ where
     run_pool_parallel_vec_with_initializations_mutable(
         iter,
         common_data,
-        &|_, key, common| closure(key, common),
+        &|(), key, common| closure(key, common),
         || (),
         number_of_thread,
         capacity,

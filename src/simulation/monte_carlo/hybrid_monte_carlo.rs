@@ -212,7 +212,8 @@ where
     }
 }
 
-/// internal structure for [`HybridMonteCarlo`] using [`LatticeStateWithEField`]
+/// internal structure for [`HybridMonteCarlo`] using
+/// [`crate::simulation::state::LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternal<State, I, const D: usize>
@@ -524,7 +525,8 @@ where
     }
 }
 
-/// internal structure for [`HybridMonteCarlo`] using [`LatticeStateWithEField`]
+/// internal structure for [`HybridMonteCarlo`] using
+/// [`crate::simulation::state::LatticeStateWithEField`]
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 struct HybridMonteCarloInternalDiagnostics<State, I, const D: usize>

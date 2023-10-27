@@ -10,13 +10,13 @@ env:
 
 jobs:
   bench:
-    name: Run checks for Lattice QCD rs
+    name: Run benches for Lattice QCD rs
     runs-on: ubuntu-latest
     # env:
     #   CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:

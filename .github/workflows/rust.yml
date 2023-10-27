@@ -2,7 +2,6 @@ name: Rust
 
 on:
   push:
-    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
@@ -16,23 +15,51 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        profile: [test, release]
+        exclude:
+          - os: windows-latest
+            profile: release
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     
     - name: Install Rust stable toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+        default: true
     
-    - name: Build with serd
-      run: cargo build --all --verbose --features serde-serialize
-      
     - name: Run tests with serd
-      run: cargo test --all --verbose --features serde-serialize
+      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize"
     
-    - name: Build no features
-      run: cargo build --all --verbose --no-default-features --features overflow-test
-      
+    - name: Run examples tests with serd
+      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize" --examples
+    
+    # it is faster to keep the going and reuse previous compilation artefact than using
+    # a matrix strategy and starting all over again
     - name: Run tests no features
-      run: cargo test --all --verbose --no-default-features --features overflow-test
+      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test"
+
+    - name: Run examples tests no features
+      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test" --examples
+
+  linter:
+    name: lint code on nightly release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install Rust nightly toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        components: clippy
+        default: true
+    
+    - name: Linter
+      run: cargo +nightly clippy --all --verbose --tests --all-features -- --no-deps --deny warnings
+    
+    - name: Linter release
+      run: cargo +nightly clippy --all --verbose --tests --release --all-features -- --no-deps --deny warnings

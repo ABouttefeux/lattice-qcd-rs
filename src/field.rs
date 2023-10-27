@@ -8,6 +8,7 @@ use std::{
 };
 
 use nalgebra::{ComplexField, Matrix3, SVector};
+use rand_distr::Distribution;
 use rayon::iter::FromParallelIterator;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
@@ -162,9 +163,10 @@ impl Su3Adjoint {
     /// ```
     #[inline]
     #[must_use]
-    pub fn random<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> Self
+    pub fn random<Rng, D>(rng: &mut Rng, d: &D) -> Self
     where
         Rng: rand::Rng + ?Sized,
+        D: Distribution<Real> + ?Sized,
     {
         Self {
             data: Vector8::<Real>::from_fn(|_, _| d.sample(rng)),
@@ -776,7 +778,7 @@ impl LinkMatrix {
         let data = run_pool_parallel_vec_with_initializations_mutable(
             l.get_links(),
             &(),
-            &|rng, _, _| su3::random_su3(rng),
+            &|rng, _, ()| su3::random_su3(rng),
             rand::thread_rng,
             number_of_thread,
             l.number_of_canonical_links_space(),
@@ -1014,16 +1016,20 @@ impl LinkMatrix {
 
     /// Iter on the data.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator {
-        self.data.iter()
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator + DoubleEndedIterator
+    {
+        self.into_iter()
     }
 
     /// Iter mutably on the data.
     #[inline]
     pub fn iter_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator {
-        self.data.iter_mut()
+    ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator + DoubleEndedIterator
+    {
+        self.into_iter()
     }
 }
 
@@ -1225,11 +1231,11 @@ impl<const D: usize> EField<D> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn new_determinist<Rng: rand::Rng + ?Sized>(
-        l: &LatticeCyclic<D>,
-        rng: &mut Rng,
-        d: &impl rand_distr::Distribution<Real>,
-    ) -> Self {
+    pub fn new_determinist<Rng, Dist>(l: &LatticeCyclic<D>, rng: &mut Rng, d: &Dist) -> Self
+    where
+        Rng: rand::Rng + ?Sized,
+        Dist: Distribution<Real> + ?Sized,
+    {
         let mut data = Vec::with_capacity(l.number_of_points());
         for _ in l.get_points() {
             // iterator *should* be ordered
@@ -1258,7 +1264,10 @@ impl<const D: usize> EField<D> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn new_random(l: &LatticeCyclic<D>, d: &impl rand_distr::Distribution<Real>) -> Self {
+    pub fn new_random<Dist>(l: &LatticeCyclic<D>, d: &Dist) -> Self
+    where
+        Dist: Distribution<Real> + ?Sized,
+    {
         let mut rng = rand::thread_rng();
         Self::new_determinist(l, &mut rng, d)
     }
@@ -1490,6 +1499,31 @@ impl<const D: usize> EField<D> {
             .collect();
         Self::new(data)
     }
+
+    // TODO test
+    /// Gives an iterator over the [`SVector`] in the order they are stored in
+    /// the underlying vector.
+    #[inline]
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = &SVector<Su3Adjoint, D>>
+           + ExactSizeIterator
+           + FusedIterator
+           + DoubleEndedIterator {
+        self.into_iter()
+    }
+
+    /// Gives an iterator over a mutable reference of the [`SVector`] in the order
+    /// they are stored in the underlying vector.
+    #[inline]
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut SVector<Su3Adjoint, D>>
+           + ExactSizeIterator
+           + FusedIterator
+           + DoubleEndedIterator {
+        self.into_iter()
+    }
 }
 
 impl<const D: usize> AsRef<Vec<SVector<Su3Adjoint, D>>> for EField<D> {
@@ -1519,6 +1553,8 @@ impl<const D: usize> AsMut<[SVector<Su3Adjoint, D>]> for EField<D> {
         self.as_slice_mut()
     }
 }
+
+// TODO into iter and par iter
 
 impl<'a, const D: usize> IntoIterator for &'a EField<D> {
     type IntoIter = <&'a Vec<SVector<Su3Adjoint, D>> as IntoIterator>::IntoIter;
@@ -1708,6 +1744,7 @@ mod test {
         }
     }
 
+    // FIXME
     #[test]
     fn link_matrix() -> Result<(), Box<dyn Error>> {
         let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;
@@ -1737,6 +1774,7 @@ mod test {
         Ok(())
     }
 
+    // FIXME
     #[test]
     fn e_field() -> Result<(), Box<dyn Error>> {
         let lattice = LatticeCyclic::<3>::new(1_f64, 4)?;

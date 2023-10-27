@@ -116,12 +116,20 @@
 #![warn(clippy::use_self)] // style
 #![warn(clippy::useless_let_if_seq)] // style
 #![warn(clippy::verbose_file_reads)]
+#![deny(unsafe_code)]
 //
 //---------------
 // doc
 #![warn(missing_docs)] // doc
 #![warn(clippy::missing_docs_in_private_items)] // doc
-#![deny(unsafe_code)]
+#![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
+#![deny(rustdoc::private_intra_doc_links)]
+#![deny(rustdoc::invalid_codeblock_attributes)]
+#![deny(rustdoc::invalid_html_tags)]
+#![deny(rustdoc::invalid_rust_codeblocks)]
+#![deny(rustdoc::bare_urls)]
+#![deny(rustdoc::unescaped_backticks)]
+#![deny(rustdoc::redundant_explicit_links)]
 //---------------
 // allow
 #![allow(clippy::module_name_repetitions)]
@@ -135,7 +143,7 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::Ident;
 
-/// Maximum dimension to impl [`Direction`] for.
+/// Maximum dimension to impl [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html) for.
 const MAX_DIM: usize = 127;
 
 /// Implement [`DirectionList`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/trait.DirectionList.html)
@@ -152,11 +160,11 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let mut array_direction_positives = Vec::with_capacity(MAX_DIM);
         for j in 0..i {
             array_direction.push(quote! {
-                Direction{index_dir: #j, is_positive: true},
-                Direction{index_dir: #j, is_positive: false}
+                Direction { index_dir: #j, is_positive: true },
+                Direction { index_dir: #j, is_positive: false }
             });
             array_direction_positives.push(quote! {
-                Direction{index_dir: #j, is_positive: true}
+                Direction { index_dir: #j, is_positive: true }
             });
         }
 
@@ -164,9 +172,9 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let u_dir_pos_ident = Ident::new(&format!("U{i}_DIR_POS"), Span::call_site());
         // we store the values in array so we can access them as fast as possible.
         let comment_all = format!(
-            "Array of all [`Direction`] in dimension {i}. Added automatically by procedural macro."
+            "Array of all [`Direction`] in dimension {i}. Added automatically by a procedural macro."
         );
-        let comment_pos = format!("Array of positive [`Direction`] in dimension {i}. Added automatically by procedural macro.");
+        let comment_pos = format!("Array of positive [`Direction`] in dimension {i}. Added automatically by a procedural macro.");
 
         let s = quote! {
             #[doc=#comment_all]
@@ -206,29 +214,7 @@ const MAX_DIM_FROM_IMPLEM: usize = 10;
 #[proc_macro]
 pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
     // implementation of the error returned by the TryFrom trait.
-    let mut implem = Vec::with_capacity(MAX_DIM_FROM_IMPLEM * (MAX_DIM_FROM_IMPLEM - 1) / 2 + 1);
-    implem.push(quote! {
-        use std::convert::TryFrom;
-
-        /// Error return by [`TryFrom`] for Directions.
-        #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-        #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
-        #[non_exhaustive]
-        pub enum DirectionConversionError {
-            /// The index is out of bound, i.e. the direction axis does not exist in the lower space dimension.
-            IndexOutOfBound,
-        }
-
-        impl std::fmt::Display for DirectionConversionError{
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    Self::IndexOutOfBound => write!(f, "the index is out of bound, the direction axis does not exist in the lower space dimension"),
-                }
-            }
-        }
-
-        impl std::error::Error for DirectionConversionError {}
-    });
+    let mut implem = Vec::with_capacity(MAX_DIM_FROM_IMPLEM * (MAX_DIM_FROM_IMPLEM - 1) / 2);
 
     for i in 1_usize..MAX_DIM_FROM_IMPLEM {
         for j in i + 1..=MAX_DIM_FROM_IMPLEM {
@@ -236,34 +222,38 @@ pub fn implement_direction_from(_item: TokenStream) -> TokenStream {
             //let u_ident_to = syn::Ident::new(&format!("U{}", j), proc_macro2::Span::call_site());
             implem.push(quote! {
                 impl From<Direction<#i>> for Direction<#j> {
+                    #[inline]
                     fn from(from: Direction<#i>) -> Self {
                         // i > j so so it is always Some.
-                        Self::new(from.index(), from.is_positive()).unwrap()
+                        Self::new(from.index(), from.is_positive()).expect("index is always within bounds")
                     }
                 }
 
                 impl From<&Direction<#i>> for Direction<#j> {
+                    #[inline]
                     fn from(from: &Direction<#i>) -> Self {
-                        // i > j so so it is always Some.
-                        Self::new(from.index(), from.is_positive()).unwrap()
+                        (*from).into()
                     }
                 }
 
-                impl TryFrom<Direction<#j>> for Direction<#i> {
-                    type Error = DirectionConversionError;
+                #[allow(clippy::absolute_paths)]
+                impl std::convert::TryFrom<Direction<#j>> for Direction<#i> {
+                    type Error = crate::lattice::DirectionConversionError;
 
+                    #[inline]
                     fn try_from(from: Direction<#j>) -> Result<Self, Self::Error> {
                         Self::new(from.index(), from.is_positive())
-                            .ok_or(DirectionConversionError::IndexOutOfBound)
+                            .ok_or(Self::Error::IndexOutOfBound)
                     }
                 }
 
-                impl TryFrom<&Direction<#j>> for Direction<#i> {
-                    type Error = DirectionConversionError;
+                #[allow(clippy::absolute_paths)]
+                impl std::convert::TryFrom<&Direction<#j>> for Direction<#i> {
+                    type Error = <Self as TryFrom<Direction<#j>>>::Error;
 
+                    #[inline]
                     fn try_from(from: &Direction<#j>) -> Result<Self, Self::Error> {
-                        Self::new(from.index(), from.is_positive())
-                            .ok_or(DirectionConversionError::IndexOutOfBound)
+                        (*from).try_into()
                     }
                 }
             });

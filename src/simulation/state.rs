@@ -16,6 +16,7 @@ use std::fmt::{self, Display};
 
 use crossbeam::thread;
 use nalgebra::{ComplexField, SVector};
+use rand_distr::Distribution;
 use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
@@ -722,23 +723,28 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// # Example
     /// This example demonstrate how to reproduce the same configuration
     /// ```
-    /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclic, dim};
+    /// use lattice_qcd_rs::{
+    ///     error::StateInitializationError, lattice::LatticeCyclic, simulation::LatticeStateDefault,
+    /// };
     /// use rand::{rngs::StdRng, SeedableRng};
     ///
+    /// # fn main() -> Result<(), StateInitializationError> {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// assert_eq!(
-    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
-    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_2).unwrap()
+    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_1)?,
+    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_2)?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     #[inline]
-    pub fn new_determinist(
+    pub fn new_determinist<Rng: rand::Rng + ?Sized>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
     ) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclic::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_determinist(&lattice, rng);
@@ -1169,9 +1175,10 @@ where
     /// Panics if the field could not be projected to the Gauss law.
     #[inline]
     #[must_use]
-    pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self
+    pub fn new_random_e_state<Rng>(lattice_state: State, rng: &mut Rng) -> Self
     where
         State: Sized,
+        Rng: rand::Rng + ?Sized,
     {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / lattice_state.beta())
             .expect("Distribution not valid, check Beta.");
@@ -1258,15 +1265,16 @@ where
     /// );
     /// ```
     #[inline]
-    pub fn new_determinist<R>(
+    pub fn new_determinist<R, Dist>(
         size: Real,
         beta: Real,
         number_of_points: usize,
         rng: &mut R,
-        d: &impl rand_distr::Distribution<Real>,
+        d: &Dist,
     ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error>
     where
         R: rand::Rng + ?Sized,
+        Dist: Distribution<Real> + ?Sized,
     {
         let lattice = LatticeCyclic::new(size, number_of_points)?;
         let e_field = EField::new_determinist(&lattice, rng, d);
@@ -1335,15 +1343,15 @@ where
     /// Return [`ThreadError::ThreadNumberIncorrect`] if `number_of_points = 0`.
     /// Returns an error if a thread panicked. Finally, propagates the error form [`Self::new`].
     #[inline] // REVIEW
-    pub fn new_random_threaded<Distribution>(
+    pub fn new_random_threaded<Dist>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        d: &Distribution,
+        d: &Dist,
         number_of_thread: usize,
     ) -> Result<Self, ThreadedStateInitializationError>
     where
-        Distribution: rand_distr::Distribution<Real> + Sync,
+        Dist: Distribution<Real> + Sync + ?Sized,
     {
         if number_of_thread == 0 {
             return Err(ThreadedStateInitializationError::ThreadingError(

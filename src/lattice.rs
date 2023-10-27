@@ -11,6 +11,7 @@
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::error::Error;
 use std::fmt::{self, Display};
 use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut, Neg};
@@ -1231,6 +1232,7 @@ impl<const D: usize> Direction<D> {
     #[must_use]
     #[inline]
     pub const fn new(index_dir: usize, is_positive: bool) -> Option<Self> {
+        // TODO return error ?
         if index_dir >= D {
             return None;
         }
@@ -1462,6 +1464,33 @@ pub trait DirectionList: Sized {
     /// List all positive directions.
     #[must_use]
     fn positive_directions() -> &'static [Self];
+}
+
+/// Error return by [`TryFrom`] for [`Direction`].
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+#[non_exhaustive]
+pub enum DirectionConversionError {
+    /// The index is out of bound, i.e. the direction axis does not exist in the lower space dimension.
+    IndexOutOfBound, // more error info like dim and index
+}
+
+impl Display for DirectionConversionError {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::IndexOutOfBound => write!(f, "the index is out of bound, the direction axis does not exist in the lower space dimension"),
+        }
+    }
+}
+
+impl Error for DirectionConversionError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::IndexOutOfBound => None,
+        }
+    }
 }
 
 implement_direction_list!();
@@ -2032,7 +2061,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Cannot set a negative direction to a canonical link.")]
     fn set_dir_neg() {
         let mut lattice_link_canonical =
             LatticeLinkCanonical::new(LatticePoint::new([0; 4].into()), DirectionEnum::XPos.into())
@@ -2094,6 +2123,39 @@ mod test {
                 format!("{} {} direction", array_pos[i / 4], array_dir_name[i % 4])
             );
         }
+    }
+
+    /// In this test we test the trait [`From`] and [`TryFrom`] implemented automatically by
+    /// [`implement_direction_from`].
+    #[test]
+    fn direction_conversion() -> Result<(), DirectionConversionError> {
+        // try into test
+        let dir = Direction::<4>::new(2, true).ok_or(DirectionConversionError::IndexOutOfBound)?;
+        assert_eq!(
+            (&dir).try_into(),
+            Direction::<3>::new(2, true).ok_or(DirectionConversionError::IndexOutOfBound)
+        );
+
+        // failing try into test
+        let dir = Direction::<4>::new(3, true).ok_or(DirectionConversionError::IndexOutOfBound)?;
+        assert_eq!(
+            (&dir).try_into(),
+            Result::<Direction<3>, DirectionConversionError>::Err(
+                DirectionConversionError::IndexOutOfBound,
+            )
+        );
+
+        // into test
+        let dir = Direction::<3>::new(2, true).ok_or(DirectionConversionError::IndexOutOfBound)?;
+        assert_eq!(
+            <&Direction<3> as Into<Direction::<4>>>::into(
+                #[allow(clippy::needless_borrows_for_generic_args)] // false positive
+                &dir
+            ),
+            Direction::<4>::new(2, true).ok_or(DirectionConversionError::IndexOutOfBound)?
+        );
+
+        Ok(())
     }
 
     #[test]

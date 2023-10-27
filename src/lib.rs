@@ -116,12 +116,20 @@
 #![warn(clippy::use_self)] // style
 #![warn(clippy::useless_let_if_seq)] // style
 #![warn(clippy::verbose_file_reads)]
+#![deny(unsafe_code)]
 //
 //---------------
 // doc
 #![warn(missing_docs)] // doc
 //#![warn(clippy::missing_docs_in_private_items)] // doc
-#![deny(unsafe_code)]
+#![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
+#![deny(rustdoc::private_intra_doc_links)]
+#![deny(rustdoc::invalid_codeblock_attributes)]
+#![deny(rustdoc::invalid_html_tags)]
+#![deny(rustdoc::invalid_rust_codeblocks)]
+#![deny(rustdoc::bare_urls)]
+#![deny(rustdoc::unescaped_backticks)]
+#![deny(rustdoc::redundant_explicit_links)]
 //---------------
 // allow
 #![allow(clippy::module_name_repetitions)]

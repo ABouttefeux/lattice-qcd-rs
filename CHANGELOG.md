@@ -2,14 +2,25 @@
 # v0.3.0
 
 ## breaking changes
-- [`SymplecticEulerError`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/integrator/symplectic_euler/enum.SymplecticEulerError.html) is now marked `#[non_exhaustive]`
+- update dependencies
+- [`SymplecticEulerError`](hnew_deterministtps://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/integrator/symplectic_euler/enum.SymplecticEulerError.html) is now marked `#[non_exhaustive]`
 - change the feature "no-overflow-test" to "overflow-test" and enabling "overflow-test" by default
+- [`Su3Adjoint::random`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
+- [`EField::new_random`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
+- [`EField::new_determinist`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
+- [`LatticeStateDefault::new_determinist`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
+- [`LatticeStateEFSyncDefault::new_random_e_state`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
+- [`LatticeStateEFSyncDefault::new_determinist`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
+
 
 ## non breaking
-- update dependencies
 - remove the extern crate declaration in lib.rs
 - correct documentation
 - add `#[inline]` to a all public facing function
+- add methods [`inter`] and [`iter_mut`] to [`EField`]
+- [`LatticeStateEFSyncDefault::new_random_threaded`] now takes unsized distribution.
+- [`LinkMatrix`::iter`] and [`LinkMatrix::iter_mut`] now also implements [`DoubleEndedIterator`]
+- moved the definition of [`DirectionConversionError`] out of the proc macro into lattice.rs
 
 # v0.2.1
 

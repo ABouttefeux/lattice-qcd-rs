@@ -348,8 +348,8 @@ where
 /// Get a random SU3 with the given distribution.
 ///
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
-/// For a matrix Uniformly distributed among SU(3) use [`get_random_su3`].
-/// For a matrix close to unity use [`get_random_su3_close_to_unity`]
+/// For a matrix Uniformly distributed among SU(3) use [`random_su3`].
+/// For a matrix close to unity use [`random_su3_close_to_unity`]
 #[inline]
 #[must_use]
 fn rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
@@ -367,7 +367,7 @@ where
     ortho_matrix_from_2_vector(v1, v2)
 }
 
-/// get a random [`na::Vector3<Complex>`].
+/// get a random [`nalgebra::Vector3<Complex>`].
 #[inline]
 #[must_use]
 fn random_vec_3<Rng>(
@@ -944,7 +944,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
 /// let output = matrix_su3_exp_i(matrix);
 /// // We panic in debug. In release the following asset will fail.
-/// // assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
+/// assert_eq_matrix!(output, (matrix * i).exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
 #[must_use]
@@ -1048,7 +1048,7 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// let matrix = Matrix3::identity(); // this is NOT an su(3)
 /// let output = matrix_su3_exp_r(matrix);
 /// // We panic in debug. In release the following asset will fail.
-/// // assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
+/// assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
 #[must_use]

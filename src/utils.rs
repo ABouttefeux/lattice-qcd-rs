@@ -359,16 +359,16 @@ mod test {
 
     #[allow(clippy::missing_const_for_fn)]
     #[allow(clippy::let_underscore_must_use)]
+    #[cfg(all(feature = "overflow-test", debug_assertions))]
     #[test]
-    #[should_panic]
-    #[cfg(feature = "overflow-test")]
+    #[should_panic(expected = "attempt to multiply with overflow")]
     /// test that the factorial overflow for `MAX_NUMBER_FACTORIAL + 1`
     fn test_factorial_bigger() {
         let _: FactorialNumber = factorial(MAX_NUMBER_FACTORIAL + 1);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "assertion failed: !overflowed")]
     /// test that the factorial overflow for `MAX_NUMBER_FACTORIAL + 1`
     fn test_factorial_overflow() {
         let n = factorial(MAX_NUMBER_FACTORIAL);

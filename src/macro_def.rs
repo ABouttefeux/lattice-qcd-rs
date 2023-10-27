@@ -1,6 +1,6 @@
 //! defines macro
 //!
-//! # [`getter!`]
+//! # `getter!`
 //! getter that return a reference
 //! ## Examples
 //! ```ignore
@@ -15,7 +15,7 @@
 //!     getter!(const, b, usize);
 //! }
 //! ```
-//! # [`getter_copy!`]
+//! # `getter_copy!`
 //! create a getter that copy the value.
 //! ## Examples
 //! ```ignore
@@ -30,7 +30,7 @@
 //!     getter_copy!(const, b, usize);
 //! }
 //! ```
-//! # [`project!`]
+//! # `project!`
 //! project an methods on one of the corposant to the structure.
 //! ## Example
 //! ```ignore
@@ -45,7 +45,7 @@
 //!     project!(pub const, foo, a, Bar, var: f64, var2: &[usize; 5]);
 //! }
 //! ```
-//! # [`project_mut!`]
+//! # `project_mut!`
 //! same as `project!` but with `&mut self` in the signature of the method replacing `&self`
 //! ## Example
 //! ```ignore
