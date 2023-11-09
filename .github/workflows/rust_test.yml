@@ -1,0 +1,81 @@
+name: Rust test
+
+on:
+  workflow_call:
+    inputs:
+      features_flag_1: 
+        description: 'feature flag used on the cargo command for the firts test'
+        required: true
+        default: '--all-features'
+        type: string
+      features_flag_2: 
+        description: 'feature flag used on the cargo command for the second test'
+        required: false
+        type: string
+      toolchain:
+        description: 'rust toolchain'
+        required: false
+        type: string
+        # options:
+        # - stable
+        # - nightly
+        # - beta
+      os:
+        description: 'os to run the CI'
+        required: true
+        default: 'ubuntu-latest'
+        type: string
+      profile:
+        description: 'rust compilation profile'
+        required: true
+        default: 'test'
+        type: string
+        # options:
+        # - test
+        # - debug
+        # - release
+      update:
+        description: 'should we run cargo update'
+        required: false
+        default: false
+        type: boolean
+      ref:
+        description: 'The branch, tag or SHA to checkout.'
+        required: false
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust_test:
+    name: rust test
+    runs-on: ${{ inputs.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        default: true
+
+    - name: cargo update
+      if: ${{ inputs.update }}
+      run: cargo update --verbose
+
+    - name: Run tests 1
+      run: cargo test --verbose --profile ${{ inputs.profile }} --all --all-targets --no-fail-fast ${{ inputs.features_flag_1 }}
+    - name: Run doc tests 1
+      run: cargo test --verbose --profile ${{ inputs.profile }} --all --doc --no-fail-fast ${{ inputs.features_flag_1 }}
+
+    - name: Run tests 2
+      if: ${{ inputs.features_flag_2 != null && inputs.features_flag_2 != '' }}
+      run: cargo test --verbose --profile ${{ inputs.profile }} --all --all-targets --no-fail-fast ${{ inputs.features_flag_2 }}
+    - name: Run doc tests 2
+      if: ${{ inputs.features_flag_2 != null && inputs.features_flag_2 != '' }}
+      run: cargo test --verbose --profile ${{ inputs.profile }} --all --doc --no-fail-fast ${{ inputs.features_flag_2 }}

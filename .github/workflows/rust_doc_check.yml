@@ -1,16 +1,28 @@
-name: Rust Doc check
+name: Rust doc check
 
 on:
-  push:
-  pull_request:
-    branches: [ main, develop ]
-    
+  workflow_call:
+    inputs:
+      toolchain:
+        description: 'rust toolchain'
+        required: false
+        type: string
+        # options:
+        # - stable
+        # - nightly
+        # - beta
+      check_private_items:
+        description: 'wether to check documentation for private item'
+        required: false
+        default: true
+        type: boolean
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   rustdoc-check:
-    
+    name: Rust Doc check
     runs-on: ubuntu-latest
     
     steps:
@@ -20,8 +32,14 @@ jobs:
     - name: Install Rust stable toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: ${{ inputs.toolchain }}
+        components: rust-docs, cargo
         default: true
     
-    - name: Doc
-      run: cargo +stable doc --all --no-deps --document-private-items --all-features
+    - name: Doc check
+      if: ${{ inputs.check_private_items }}
+      run: cargo doc --verbose --all --no-deps --document-private-items --all-features
+
+    - name: Doc check
+      if: ${{ !inputs.check_private_items }}
+      run: cargo doc --verbose --all --no-deps --all-features

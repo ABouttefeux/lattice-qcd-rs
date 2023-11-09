@@ -1,0 +1,45 @@
+name: Rust experimental
+
+on:
+  push:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 12 * * 5'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-beta-push:
+    name: rust experimental tests on push
+    if: ${{ github.event_name == 'push' }}
+    strategy:
+      matrix:
+        profile: [test, release]
+        toolchain: [beta, nightly]
+    
+    uses: ./.github/workflows/rust_test.yml
+    with: 
+      features_flag_1: --features="serde-serialize"
+      features_flag_2: --no-default-features --features="overflow-test"
+      toolchain: ${{ matrix.toolchain }}
+      os: ubuntu-latest
+      profile: ${{ matrix.profile }}
+
+  build-beta-schedule:
+    name: rust experimental tests on schedule
+    if: ${{ github.event_name == 'schedule' }}
+    strategy:
+      matrix:
+        profile: [test, release]
+        toolchain: [beta, nightly]
+        branche: [main, develop]
+
+    uses: ./.github/workflows/rust_test.yml
+    with: 
+      features_flag_1: --features="serde-serialize"
+      features_flag_2: --no-default-features --features="overflow-test"
+      toolchain: ${{ matrix.toolchain }}
+      os: ubuntu-latest
+      profile: ${{ matrix.profile }}
+      ref: ${{ matrix.branche }}

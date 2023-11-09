@@ -3,8 +3,19 @@ name: coverage
 env:
   CARGO_TERM_COLOR: always
 
-on: 
-  push:
+on:
+  workflow_call:
+      inputs:
+        profile_file_name_prefix:
+          description: 'prefix of the LLVM profile file'
+          required: true
+          default: 'profile'
+          type: string
+        features_flag: 
+          description: 'feature flag used on the cargo command'
+          required: true
+          default: '--all-features'
+          type: string
 
 jobs:
   coverage:
@@ -25,12 +36,13 @@ jobs:
         run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
 
       - name: Generate code coverage
+        env:
+          RUSTFLAGS: -Cinstrument-coverage
+          RUSTDOCFLAGS: -Cinstrument-coverage -Zunstable-options --persist-doctests target/debug/doctestbins
+          LLVM_PROFILE_FILE: ${{ inputs.profile_file_name_prefix }}-%p-%m.profraw
         run: |
-          export RUSTFLAGS="-Cinstrument-coverage"
-          export RUSTDOCFLAGS="-Cinstrument-coverage -Zunstable-options --persist-doctests target/debug/doctestbins"
-          export LLVM_PROFILE_FILE="lattice_qcd_rs-%p-%m.profraw" 
-          cargo +nightly test --verbose --all --no-default-features --features="serde-serialize"
-          cargo +nightly test --verbose --all --no-default-features --features="serde-serialize" --examples
+          cargo +nightly test --verbose --all --all-targets ${{ inputs.features_flag }}
+          cargo +nightly test --verbose --all --doc ${{ inputs.features_flag }}
 
       - name: parse code coverage
         run: ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info

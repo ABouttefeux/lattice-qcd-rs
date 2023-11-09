@@ -11,4 +11,3 @@ Cargo.lock
 data/
 .vscode/settings.json
 logo.png
-rust-toolchain.toml

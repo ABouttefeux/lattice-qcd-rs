@@ -1,17 +1,27 @@
-name: Rust
+name: Rust checks
 
 on:
   push:
-  pull_request:
-    branches: [ main, develop ]
+  # pull_request:
+  #   branches: [ main, develop ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    
-    runs-on: ${{ matrix.os }}
+  format:
+    name: check the format of the code
+    uses: ./.github/workflows/fmt.yml
+
+  rustdoc-check:
+    name: rustdoc check
+    uses: ./.github/workflows/rust_doc_check.yml
+    with:
+      toolchain: stable
+
+  rust_test:
+    name: rust test
+    needs: [format]
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -19,47 +29,65 @@ jobs:
         exclude:
           - os: windows-latest
             profile: release
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+
+    uses: ./.github/workflows/rust_test.yml
+    with: 
+      features_flag_1: --features="serde-serialize"
+      features_flag_2: --no-default-features --features="overflow-test"
+      toolchain: stable
+      os: ${{ matrix.os }}
+      profile: ${{ matrix.profile }}
+    # steps:
+    # - name: Checkout repository
+    #   uses: actions/checkout@v4
     
-    - name: Install Rust stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        default: true
+    # - name: Install Rust stable toolchain
+    #   uses: actions-rs/toolchain@v1
+    #   with:
+    #     toolchain: stable
+    #     default: true
     
-    - name: Run tests with serd
-      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize"
+    # - name: Run tests with serd
+    #   run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize"
     
-    - name: Run examples tests with serd
-      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize" --examples
+    # - name: Run examples tests with serd
+    #   run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --features="serde-serialize" --examples
     
     # it is faster to keep the going and reuse previous compilation artefact than using
     # a matrix strategy and starting all over again
-    - name: Run tests no features
-      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test"
+    # - name: Run tests no features
+    #   run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test"
 
-    - name: Run examples tests no features
-      run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test" --examples
+    # - name: Run examples tests no features
+    #   run: cargo +stable test --profile ${{ matrix.profile }} --all --verbose --no-fail-fast --no-default-features --features="overflow-test" --examples
 
   linter:
     name: lint code on nightly release
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Install Rust nightly toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        components: clippy
-        default: true
-    
-    - name: Linter
-      run: cargo +nightly clippy --all --verbose --tests --all-features -- --no-deps --deny warnings
-    
-    - name: Linter release
-      run: cargo +nightly clippy --all --verbose --tests --release --all-features -- --no-deps --deny warnings
+    needs: [format, rustdoc-check]
+    uses: ./.github/workflows/clippy.yml
+    with: 
+      features_flag: --all-features
+      toolchain: nightly
+
+  coverage:
+    name: coverage
+    uses: ./.github/workflows/coverage.yml
+    with: 
+      profile_file_name_prefix: lattice-qcd-rs
+      features_flag: --no-default-features --features="serde-serialize"
+
+  benches:
+    name: benches
+    needs: [format, coverage, rust_test]
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'develop' }}
+    uses: ./.github/workflows/benches.yml
+    with:
+      toolchain: stable
+
+  doc_publish:
+    name: publish rust doc
+    needs: [format, coverage, rust_test, rustdoc-check, linter]
+    if: ${{ github.ref_name == 'main' }}
+    uses: ./.github/workflows/rust_doc_publish.yml
+    with:
+      toolchain: stable

@@ -1,31 +1,41 @@
-name: Benches
+name: Rust benches
 
 on:
-  push:
-    branches: [ main, develop ]
-
+  workflow_call:
+    inputs:
+      toolchain:
+        description: 'rust toolchain'
+        required: false
+        default: 'stable'
+        type: string
+        # options:
+        # - stable
+        # - nightly
+        # - beta
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   bench:
-    name: Run benches for Lattice QCD rs
+    name: Run criterion benches
     runs-on: ubuntu-latest
-    # env:
-    #   CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Rust stable toolchain
+
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ inputs.toolchain }}
+          default: true
+
       - name: Run benchmarks
-        run: |
-          # run benchmarks and save baseline in a directory called "new"
-          cargo bench
+        run: cargo bench --verbose
+
       # - name: Upload benchmarks
+      #   env:
+      #     CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
       #   run: |
       #     # upload the files
       #     bash <(curl -s https://criterion.dev/bash)
