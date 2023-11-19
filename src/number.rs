@@ -5,16 +5,23 @@
 use num_traits::{Signed, Unsigned};
 
 /// Fix point number.
+#[deprecated(
+    since = "0.3.0",
+    note = "Never implemented. Use alternative crate like `fixed` or `fpa`"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FixedPointNumber<I, D>
 where
     I: Signed + Ord + Copy,
     D: Unsigned + Ord + Copy,
 {
+    /// integer part
     integer: I,
+    /// decimal part
     decimal: D,
 }
 
+#[allow(deprecated)]
 impl<I, D> FixedPointNumber<I, D>
 where
     I: Signed + Ord + Copy,
@@ -36,6 +43,8 @@ where
 }
 
 /// Fixe point number represented by i32 for the integer part and 128 bits (16 bytes) as the decimal part
+#[allow(deprecated)]
+#[deprecated(since = "0.3.0", note = "Never implemented.")]
 pub type I32U128 = FixedPointNumber<i32, u128>;
 
 /*

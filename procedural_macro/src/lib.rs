@@ -147,9 +147,11 @@ use syn::Ident;
 const MAX_DIM: usize = 127;
 
 /// Implement [`DirectionList`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/trait.DirectionList.html)
-/// for [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html) of `1` to `127` the value of `MAX_DIM`.
+/// for [`Direction`](https://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/lattice/struct.Direction.html)
+/// of `1` to `127` the value of `MAX_DIM`.
 ///
-/// Using const generics might render this unnecessary. Waiting for stabilization of `feature(generic_const_exprs)`.
+/// Using const generics might render this unnecessary.
+/// Waiting for stabilization of `feature(generic_const_exprs)`.
 #[proc_macro]
 pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
     let mut implem = Vec::with_capacity(MAX_DIM); // cspell: ignore implem implems

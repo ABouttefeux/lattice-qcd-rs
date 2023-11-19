@@ -21,6 +21,7 @@ crate-type = ["lib"]
 [features]
 serde-serialize = ["dep:serde", "nalgebra/serde-serialize"]
 overflow-test = []
+# experimental = []
 default = ["serde-serialize", "overflow-test"]
 
 

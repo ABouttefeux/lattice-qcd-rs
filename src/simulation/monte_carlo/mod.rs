@@ -1,4 +1,4 @@
-//! Module for Monte-Carlo algrorithme, see the trait [`MonteCarlo`].
+//! Module for Monte-Carlo algorithm, see the trait [`MonteCarlo`].
 //!
 //! This is one of the way to carry out simulation. This work by taking a state and progressively changing it (most of the time randomly).
 //!

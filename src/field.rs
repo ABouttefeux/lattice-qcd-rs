@@ -1464,39 +1464,35 @@ impl<const D: usize> EField<D> {
         /// see <https://arxiv.org/pdf/1512.02374.pdf>
         // TODO verify
         const K: nalgebra::Complex<f64> = nalgebra::Complex::new(0.12_f64, 0_f64);
-        let data = lattice
-            .get_points()
-            .collect::<Vec<LatticePoint<D>>>()
-            .par_iter()
-            .map(|point| {
-                let e = self.e_vec(point, lattice).expect("e vec not founc");
-                SVector::<_, D>::from_fn(|index_dir, _| {
-                    let dir = Direction::<D>::positive_directions()[index_dir];
-                    let u = link_matrix
-                        .matrix(&LatticeLink::new(*point, dir), lattice)
-                        .expect("matrix not found");
-                    let gauss = self
-                        .gauss(link_matrix, point, lattice)
-                        .expect("gauss not found");
-                    let gauss_p = self
-                        .gauss(
-                            link_matrix,
-                            &lattice.add_point_direction(*point, &dir),
-                            lattice,
-                        )
-                        .expect("gauss not found");
-                    Su3Adjoint::new(Vector8::from_fn(|index, _| {
-                        2_f64
-                            * (su3::GENERATORS[index]
-                                * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
-                                    + su3::GENERATORS[index]
-                                        * nalgebra::Complex::from(e[dir.index()][index])))
-                            .trace()
-                            .real()
-                    }))
-                })
+        let data = ParallelIterator::map(lattice.get_points(), |point| {
+            let e = self.e_vec(&point, lattice).expect("e vec not founc");
+            SVector::<_, D>::from_fn(|index_dir, _| {
+                let dir = Direction::<D>::positive_directions()[index_dir];
+                let u = link_matrix
+                    .matrix(&LatticeLink::new(point, dir), lattice)
+                    .expect("matrix not found");
+                let gauss = self
+                    .gauss(link_matrix, &point, lattice)
+                    .expect("gauss not found");
+                let gauss_p = self
+                    .gauss(
+                        link_matrix,
+                        &lattice.add_point_direction(point, &dir),
+                        lattice,
+                    )
+                    .expect("gauss not found");
+                Su3Adjoint::new(Vector8::from_fn(|index, _| {
+                    2_f64
+                        * (su3::GENERATORS[index]
+                            * ((u * gauss * u.adjoint() * gauss_p - gauss) * K
+                                + su3::GENERATORS[index]
+                                    * nalgebra::Complex::from(e[dir.index()][index])))
+                        .trace()
+                        .real()
+                }))
             })
-            .collect();
+        })
+        .collect();
         Self::new(data)
     }
 

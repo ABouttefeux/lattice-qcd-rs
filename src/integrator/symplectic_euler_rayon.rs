@@ -78,6 +78,7 @@ impl SymplecticEulerRayon {
     where
         State: LatticeStateWithEField<D>,
     {
+        // TODO improve perf
         run_pool_parallel_rayon(
             lattice.get_links(),
             &(link_matrix, e_field, lattice),
@@ -103,6 +104,7 @@ impl SymplecticEulerRayon {
     where
         State: LatticeStateWithEField<D>,
     {
+        // TODO improve perf
         run_pool_parallel_rayon(
             lattice.get_points(),
             &(link_matrix, e_field, lattice),

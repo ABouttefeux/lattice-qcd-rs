@@ -11,7 +11,9 @@
 - [`LatticeStateDefault::new_determinist`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
 - [`LatticeStateEFSyncDefault::new_random_e_state`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
 - [`LatticeStateEFSyncDefault::new_determinist`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
-
+- possible name collision for [`IteratorDirection`], [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`] for trait method [`Iterator`], [`ExactSizeIterator`], [`rayon::iter::ParallelIterator`] and [`rayon::iter::IndexedParallelIterator`].
+- [`IteratorLatticePoint::new`] is not constant anymore.
+- [`IteratorLatticeLinkCanonical::new`] is not constant anymore.
 
 ## non breaking
 - remove the extern crate declaration in lib.rs
@@ -21,6 +23,11 @@
 - [`LatticeStateEFSyncDefault::new_random_threaded`] now takes unsized distribution.
 - [`LinkMatrix`::iter`] and [`LinkMatrix::iter_mut`] now also implements [`DoubleEndedIterator`]
 - moved the definition of [`DirectionConversionError`] out of the proc macro into lattice.rs
+- add comments on some private items
+- organize internal code in private submodule with reexport
+- depreciate [`random_matrix_2`]
+- depreciate [`FixedPointNumber`] and [`I32U128`] which never implemented
+- implemented the trait [`DoubleEndedIterator`], [`rayon::iter::ParallelIterator`], [`rayon::iter::IndexedParallelIterator`] and [`rayon::iter::plumbing::Producer`] for [`IteratorDirection`], [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`]
 
 # v0.2.1
 

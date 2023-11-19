@@ -3,64 +3,37 @@
 //! # `getter!`
 //! getter that return a reference
 //! ## Examples
-//! ```ignore
-//! struct a {b: usize}
-//! impl a {
-//!     getter!(b, usize);
-//! }
-//! ```
-//! ```ignore
-//! struct a {b: usize}
-//! impl a {
-//!     getter!(const, b, usize);
-//! }
-//! ```
+//! see `getter!`
+//!
 //! # `getter_copy!`
 //! create a getter that copy the value.
 //! ## Examples
-//! ```ignore
-//! struct a {b: usize}
-//! impl a {
-//!     getter_copy!(b, usize);
-//! }
-//! ```
-//! ```ignore
-//! struct a {b: usize}
-//! impl a {
-//!     getter_copy!(const, b, usize);
-//! }
-//! ```
+//! see `getter_copy`
+//!
 //! # `project!`
 //! project an methods on one of the corposant to the structure.
 //! ## Example
-//! ```ignore
-//! struct A{}
-//! struct B{ a: A}
-//! impl A {
-//!     pub const foo(&self, var: f64, var2: &[usize; 5]) -> Bar {
-//!         ...
-//!     }
-//! }
-//! impl B {
-//!     project!(pub const, foo, a, Bar, var: f64, var2: &[usize; 5]);
-//! }
-//! ```
+//! see `project`
+//!
 //! # `project_mut!`
 //! same as `project!` but with `&mut self` in the signature of the method replacing `&self`
 //! ## Example
-//! ```ignore
-//! struct A{}
-//! struct B{ a: A}
-//! impl A {
-//!     pub foo(&mut self, var: f64, var2: &[usize; 5]) -> Bar {
-//!         ...
-//!     }
-//! }
-//! impl B {
-//!     project_mut!(pub, foo, a, Bar, var: f64, var2: &[usize; 5]);
-//! }
-//! ```
+//! see `project_mut`
 
+/// getter that return a reference
+/// ## Examples
+/// ```ignore
+/// struct a {b: usize}
+/// impl a {
+///     getter!(b, usize);
+/// }
+/// ```
+/// ```ignore
+/// struct a {b: usize}
+/// impl a {
+///     getter!(const, b, usize);
+/// }
+/// ```
 macro_rules! getter {
     ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
         getter!($(#[$meta])* $v $i() -> $t);
@@ -82,6 +55,20 @@ macro_rules! getter {
     };
 }
 
+/// create a getter that copy the value.
+/// ## Examples
+/// ```ignore
+/// struct a {b: usize}
+/// impl a {
+///     getter_copy!(b, usize);
+/// }
+/// ```
+/// ```ignore
+/// struct a {b: usize}
+/// impl a {
+///     getter_copy!(const, b, usize);
+/// }
+/// ```
 macro_rules! getter_copy {
     ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $t:ty) => {
         getter_copy!($(#[$meta])* $v $i() -> $t);
@@ -103,6 +90,20 @@ macro_rules! getter_copy {
     };
 }
 
+/// project an methods on one of the corposant to the structure.
+/// ## Example
+/// ```ignore
+/// struct A{}
+/// struct B{ a: A}
+/// impl A {
+///     pub const foo(&self, var: f64, var2: &[usize; 5]) -> Bar {
+///         ...
+///     }
+/// }
+/// impl B {
+///     project!(pub const, foo, a, Bar, var: f64, var2: &[usize; 5]);
+/// }
+/// ```
 macro_rules! project {
     ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
         project!($(#[$meta])* $v $data.$i($( $arg : $type_arg ),*) -> $t);
@@ -124,6 +125,20 @@ macro_rules! project {
     };
 }
 
+/// same as `project!` but with `&mut self` in the signature of the method replacing `&self`
+/// ## Example
+/// ```ignore
+/// struct A{}
+/// struct B{ a: A}
+/// impl A {
+///     pub foo(&mut self, var: f64, var2: &[usize; 5]) -> Bar {
+///         ...
+///     }
+/// }
+/// impl B {
+///     project_mut!(pub, foo, a, Bar, var: f64, var2: &[usize; 5]);
+/// }
+/// ```
 macro_rules! project_mut {
     ($(#[$meta:meta])* $v:vis $(,)? $i:ident, $data:ident, $t:ty $(, $arg:ident : $type_arg:ty )* ) => {
         project_mut!($(#[$meta])* $v $data.$i($( $arg: $type_arg ),*) -> $t);

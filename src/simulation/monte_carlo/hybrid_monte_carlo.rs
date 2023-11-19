@@ -276,6 +276,8 @@ where
         }
     }
 
+    // TODO use getter derive
+    /// mutable getter on the integrator
     #[inline]
     #[must_use]
     pub fn integrator_mut(&mut self) -> &mut I {

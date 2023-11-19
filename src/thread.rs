@@ -1,4 +1,4 @@
-//! Tool for easy use of multi threading.
+//! Tool for easy use of multi threading and parallel job execution.
 
 // TODO review all of this
 
@@ -29,7 +29,7 @@ use super::lattice::{LatticeCyclic, LatticeElementToIndex};
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ThreadAnyError {
-    /// Tried to run some jobs with 0 threads
+    /// Error returned by job with thread number argument being 0.
     ThreadNumberIncorrect,
     /// One or more of the threads panicked. Inside the [`Box`] is the panic message.
     /// see [`run_pool_parallel`] example.
@@ -74,7 +74,14 @@ impl Display for ThreadAnyError {
     }
 }
 
-impl Error for ThreadAnyError {}
+impl Error for ThreadAnyError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ThreadNumberIncorrect | Self::Panic(_) => None,
+        }
+    }
+}
 
 /// Multithreading error with a string panic message.
 ///
@@ -84,7 +91,7 @@ impl Error for ThreadAnyError {}
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum ThreadError {
-    /// Tried to run some jobs with 0 threads
+    /// Error returned by job with thread number argument being 0.
     ThreadNumberIncorrect,
     /// One of the thread panicked with the given messages.
     /// see [`run_pool_parallel`] example.
@@ -127,7 +134,14 @@ impl Display for ThreadError {
     }
 }
 
-impl Error for ThreadError {}
+impl Error for ThreadError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ThreadNumberIncorrect | Self::Panic(_) => None,
+        }
+    }
+}
 
 impl From<ThreadAnyError> for ThreadError {
     #[inline]
@@ -135,15 +149,15 @@ impl From<ThreadAnyError> for ThreadError {
         match f {
             ThreadAnyError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadAnyError::Panic(any) => Self::Panic(
-                any.iter()
+                any.into_iter()
                     .map(|element| {
-                        element.downcast_ref::<String>().map_or_else(
-                            || {
-                                // In case of None we try downcast to str
+                        element.downcast::<String>().map_or_else(
+                            |element| {
+                                // In case of "Error" we try downcast to str
                                 element.downcast_ref::<&str>().map(ToString::to_string)
                             },
                             // if some
-                            |string| Some(string.clone()),
+                            |string| Some(*string),
                         )
                     })
                     .collect(),
@@ -159,11 +173,9 @@ impl From<ThreadError> for ThreadAnyError {
             ThreadError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadError::Panic(strings) => Self::Panic(
                 strings
-                    .iter()
+                    .into_iter()
                     .map(|string| -> Box<dyn Any + Send + 'static> {
-                        string
-                            .as_ref()
-                            .map_or_else(Box::<String>::default, |string| Box::new(string.clone()))
+                        string.map_or_else(Box::<String>::default, Box::new)
                     })
                     .collect(),
             ),
@@ -229,9 +241,9 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 ) -> Result<HashMap<Key, Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Clone + Hash + Send + Sync,
     Data: Send,
-    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
+    F: Clone + Sync + Fn(&Key, &CommonData) -> Data,
 {
     run_pool_parallel_with_initializations_mutable(
         iter,
@@ -318,10 +330,10 @@ pub fn run_pool_parallel_with_initializations_mutable<Key, Data, CommonData, Ini
 ) -> Result<HashMap<Key, Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Clone + Hash + Send + Sync,
     Data: Send,
-    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
-    FInit: Send + Clone + FnOnce() -> InitData,
+    F: Clone + Sync + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Clone + Send + FnOnce() -> InitData,
 {
     if number_of_thread == 0 {
         Err(ThreadAnyError::ThreadNumberIncorrect) // return
@@ -439,9 +451,9 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
-    Data: Send + Clone,
-    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
+    Key: Eq + Clone + LatticeElementToIndex<D> + Send + Sync,
+    Data: Clone + Send,
+    F: Clone + Sync + Fn(&Key, &CommonData) -> Data,
 {
     run_pool_parallel_vec_with_initializations_mutable(
         iter,
@@ -522,7 +534,7 @@ where
 /// # Ok(())
 /// # }
 /// ```
-#[allow(clippy::missing_panics_doc)] // does not panic
+#[allow(clippy::missing_panics_doc)] // should not panic
 #[allow(clippy::impl_trait_in_params)]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::semicolon_if_nothing_returned)] // I actually want to return a never in the future
@@ -547,10 +559,10 @@ pub fn run_pool_parallel_vec_with_initializations_mutable<
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Send + Clone + Sync,
-    Data: Send + Clone,
-    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
-    FInit: Send + Clone + FnOnce() -> InitData,
+    Key: Eq + Clone + Send + Sync,
+    Data: Clone + Send,
+    F: Clone + Sync + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Clone + Send + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
 {
     if number_of_thread == 0 {
@@ -572,6 +584,9 @@ where
         Ok(vec) // return
     } else {
         thread::scope(|s| {
+            // TODO improvements: use crossbeam channel, use channel for the iter, while let loops,
+            // remove a clone for result_tx, merge function
+            //
             // I try to put the thread creation in a function but the life time annotation were a mess.
             // I did not manage to make it working.
             let mutex_iter = Arc::new(Mutex::new(iter));
@@ -652,14 +667,21 @@ where
     if pos < vec.len() {
         vec[pos] = data;
     } else {
-        for _ in vec.len()..pos {
-            vec.push(default_data.clone());
+        if vec.capacity() < pos + 1 {
+            // it reserve base on length and not on capacity
+            vec.reserve(pos + 1 - vec.len());
+        }
+        if pos > vec.len() {
+            vec.resize(pos, default_data.clone());
         }
         vec.push(data);
     }
 }
 
 /// Run a parallel pool using external crate [`rayon`].
+/// There is a significant cost to that function as it will allocate the whole
+/// iterator inside a vector and the use a [`rayon::iter::IndexedParallelIterator`]
+/// to run the closure.
 ///
 /// # Example.
 /// ```
@@ -667,8 +689,8 @@ where
 /// let iter = 0..1000;
 /// let c = 5;
 /// let result = run_pool_parallel_rayon(iter, &c, |i, c1| i * i * c1);
-/// assert_eq!(result[687], 687 * 687 * c);
 /// assert_eq!(result[10], 10 * 10 * c);
+/// assert_eq!(result[687], 687 * 687 * c);
 /// ```
 /// # Panic.
 /// panic if the closure panic at any point during the evaluation
@@ -691,6 +713,7 @@ where
     Data: Send,
     F: Sync + Fn(&Key, &CommonData) -> Data,
 {
+    // TODO avoid allocation
     iter.collect::<Vec<Key>>()
         .into_par_iter()
         .map(|el| closure(&el, common_data))
@@ -770,5 +793,27 @@ mod test {
         assert_eq!(ThreadError::from(error), error2);
         let error = ThreadAnyError::ThreadNumberIncorrect;
         assert_eq!(ThreadAnyError::from(error2).to_string(), error.to_string());
+    }
+
+    #[test]
+    fn test_insert_in_vec() {
+        let mut vec = Vec::<u32>::with_capacity(17);
+        insert_in_vec(&mut vec, 0, 1, &0);
+        assert_eq!(vec, vec![1]);
+        insert_in_vec(&mut vec, 0, 2, &0);
+        assert_eq!(vec, vec![2]);
+        insert_in_vec(&mut vec, 1, 3, &0);
+        assert_eq!(vec, vec![2, 3]);
+        insert_in_vec(&mut vec, 4, 1, &0);
+        assert_eq!(vec, vec![2, 3, 0, 0, 1]);
+        insert_in_vec(&mut vec, 3, 10, &0);
+        assert_eq!(vec, vec![2, 3, 0, 10, 1]);
+        insert_in_vec(&mut vec, 6, 11, &0);
+        assert_eq!(vec, vec![2, 3, 0, 10, 1, 0, 11]);
+        insert_in_vec(&mut vec, 16, 12, &0);
+        assert_eq!(
+            vec,
+            vec![2, 3, 0, 10, 1, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12]
+        );
     }
 }

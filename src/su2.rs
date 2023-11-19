@@ -1,12 +1,14 @@
-//! Module for SU(2) matrix
+//! Module for SU(2) matrices.
 
+use nalgebra::Vector3;
 use rand::Rng;
 use rand_distr::{Bernoulli, Distribution, Uniform};
 
 use super::{CMatrix2, Complex, ComplexField, Real, I, ONE, ZERO};
 
-/// First Pauli matrix.
+/// First Pauli matrix. See [`PAULI_MATRICES`].
 ///
+/// Its value is
 /// ```textrust
 /// 0   1
 /// 1   0
@@ -16,8 +18,9 @@ pub const PAULI_1: CMatrix2 = CMatrix2::new(
     ONE, ZERO,
 );
 
-/// Second Pauli matrix.
+/// Second Pauli matrix. See [`PAULI_MATRICES`].
 ///
+/// Its value is
 /// ```textrust
 /// 0  -i
 /// i   0
@@ -30,8 +33,9 @@ pub const PAULI_2: CMatrix2 = CMatrix2::new(
     ZERO,
 );
 
-/// Third Pauli matrix.
+/// Third Pauli matrix. See [`PAULI_MATRICES`].
 ///
+/// Its value is
 /// ```textrust
 /// 1   0
 /// 0  -1
@@ -45,7 +49,7 @@ pub const PAULI_3: CMatrix2 = CMatrix2::new(
 );
 
 /// List of Pauli matrices, see
-/// [wikipedia](https://en.wikipedia.org/w/index.php?title=Pauli_matrices&oldid=1002053121)
+/// [wikipedia](https://en.wikipedia.org/w/index.php?title=Pauli_matrices&oldid=1002053121).
 pub const PAULI_MATRICES: [&CMatrix2; 3] = [&PAULI_1, &PAULI_2, &PAULI_3];
 
 /// Get a radom SU(2) matrix close the 1 or -1.
@@ -83,9 +87,12 @@ pub fn random_su2_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMat
 where
     R: rand::Rng + ?Sized,
 {
-    let d = Uniform::new(-1_f64, 1_f64);
-    let r = nalgebra::Vector3::<Real>::from_fn(|_, _| d.sample(rng));
-    let x = r.try_normalize(f64::EPSILON).unwrap_or(r) * spread_parameter;
+    let distribution: Uniform<f64> = Uniform::new(-1_f64, 1_f64);
+    let random_vector = Vector3::<Real>::from_fn(|_, _| distribution.sample(rng));
+    let x = random_vector
+        .try_normalize(f64::EPSILON)
+        .unwrap_or(random_vector)
+        * spread_parameter;
     // always exists, unwrap is safe
     let d_sign = Bernoulli::new(0.5_f64).expect("always exist");
     // we could have use the spread_parameter but it is safer to use the norm of x
@@ -109,8 +116,9 @@ where
 ///     su2::{complex_matrix_from_vec, PAULI_1},
 ///     CMatrix2,
 /// };
+/// use nalgebra::Vector3;
 ///
-/// let m = complex_matrix_from_vec(1.0, nalgebra::Vector3::new(0_f64, 0_f64, 0_f64));
+/// let m = complex_matrix_from_vec(1.0, Vector3::new(0_f64, 0_f64, 0_f64));
 /// assert_eq_matrix!(
 ///     m,
 ///     CMatrix2::new(
@@ -122,7 +130,7 @@ where
 ///     f64::EPSILON
 /// );
 ///
-/// let m = complex_matrix_from_vec(0.5_f64, nalgebra::Vector3::new(1_f64, 0_f64, 0_f64));
+/// let m = complex_matrix_from_vec(0.5_f64, Vector3::new(1_f64, 0_f64, 0_f64));
 /// let m2 = CMatrix2::new(
 ///     nalgebra::Complex::new(1_f64, 0_f64),
 ///     nalgebra::Complex::new(0_f64, 0_f64),
@@ -134,16 +142,16 @@ where
 /// ```
 #[inline]
 #[must_use]
-pub fn complex_matrix_from_vec(x0: Real, x: nalgebra::Vector3<Real>) -> CMatrix2 {
+pub fn complex_matrix_from_vec(x0: Real, x: Vector3<Real>) -> CMatrix2 {
     CMatrix2::identity() * Complex::from(x0)
-        + x.iter()
+        + x.into_iter() // no way to move out the content without conversion it ? into_iter is the same as iter (or iter_mut)
             .enumerate()
             .map(|(i, el)| PAULI_MATRICES[i] * Complex::new(0_f64, *el))
             .sum::<CMatrix2>()
 }
 
 /// Take any 2x2 matrix and project it to a matrix `X` such that `X / X.determinant().modulus().sqrt()`
-/// is SU(2).
+/// is SU(2) provided that the matrix's determinant is not zero.
 ///
 /// # Examples
 /// see [`project_to_su2`]
@@ -248,8 +256,12 @@ pub fn is_matrix_su2(m: &CMatrix2, epsilon: f64) -> bool {
         && ((m * m.adjoint() - CMatrix2::identity()).norm() < epsilon)
 }
 
-#[doc(hidden)]
-/// Crate a random 2x2 Matrix
+#[deprecated(
+    since = "0.3.0",
+    note = "the uniform distribution does not represent any meaningful representation of the matrices"
+)]
+#[doc(hidden)] // it does not really have a use
+/// Crate a random 2x2 Matrix with a uniform distribution from `+/- 10 +/- 10 * i`.
 #[inline]
 #[must_use]
 pub fn random_matrix_2<R: Rng + ?Sized>(rng: &mut R) -> CMatrix2 {

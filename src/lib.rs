@@ -68,7 +68,7 @@
 #![warn(clippy::or_fun_call)]
 #![warn(clippy::path_buf_push_overwrite)]
 // #![warn(clippy::pattern_type_mismatch)] // maybe
-// #![warn(clippy::ptr_as_ptr)] // allowed ?
+//#![warn(clippy::ptr_as_ptr)] // allowed ?
 #![warn(clippy::pub_without_shorthand)] // style choice
 #![warn(clippy::rc_buffer)]
 #![warn(clippy::rc_mutex)]
@@ -105,7 +105,6 @@
 #![warn(clippy::unimplemented)] // reminder
 #![warn(clippy::unnecessary_self_imports)] // style
 #![warn(clippy::unnecessary_struct_initialization)] // style , readability
-// cspell: ignore unseparated
 #![warn(clippy::unseparated_literal_suffix)] // style
 // cspell: ignore peekable
 #![warn(clippy::unused_peekable)] // mistake
@@ -121,7 +120,7 @@
 //---------------
 // doc
 #![warn(missing_docs)] // doc
-//#![warn(clippy::missing_docs_in_private_items)] // doc
+#![warn(clippy::missing_docs_in_private_items)] // doc
 #![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
 #![deny(rustdoc::private_intra_doc_links)]
 #![deny(rustdoc::invalid_codeblock_attributes)]
@@ -133,10 +132,8 @@
 //---------------
 // allow
 #![allow(clippy::module_name_repetitions)]
-
-pub use nalgebra::ComplexField;
-pub use rand::{Rng, SeedableRng};
-pub use rand_distr::Distribution;
+//
+// #![cfg_attr(feature = "experimental", feature(is_sorted))]
 
 #[macro_use]
 mod macro_def;
@@ -156,6 +153,10 @@ pub mod utils;
 
 #[cfg(test)]
 mod test;
+
+pub use nalgebra::ComplexField;
+pub use rand::{Rng, SeedableRng};
+pub use rand_distr::Distribution;
 
 /// alias for [`f64`]
 pub type Real = f64;

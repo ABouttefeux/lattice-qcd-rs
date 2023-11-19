@@ -3,6 +3,7 @@
 //! The library use now const generic and not this system anymore. It can be safely ignored.
 //! It a was system used before const generic was introduced.
 
+/// Reexport the nalgebra dimension.
 macro_rules! reexport_name_dim{
     ($($i:ident) ,+) => {
         $(
