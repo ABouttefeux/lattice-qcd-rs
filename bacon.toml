@@ -74,7 +74,7 @@ command = [
     "--all-features",
     "--color",
     "always",
-    # "--no-deps",
+    "--no-deps",
 ]
 need_stdout = false
 
@@ -88,11 +88,23 @@ command = [
     "--all-features",
     "--color",
     "always",
-    # "--no-deps",
+    "--no-deps",
     "--open",
 ]
 need_stdout = false
 on_success = "back" # so that we don't open the browser at each change
+
+[jobs.doc-pub]
+command = [
+    "cargo",
+    "doc",
+    "--all",
+    "--all-features",
+    "--color",
+    "always",
+    "--no-deps",
+]
+need_stdout = false
 
 # You can run your application and have the result displayed in bacon,
 # *if* it makes sense for this crate.
@@ -129,6 +141,10 @@ need_stdout = true
 [jobs.fmt]
 command = ["cargo", "fmt", "--all", "--", "--color", "always"]
 need_stdout = false
+on_success = "back"
+allow_warnings = true
+allow_failures = true
+background = false
 
 # You may define here keybindings that would be specific to
 # a project, for example a shortcut to launch a specific job.
@@ -141,5 +157,6 @@ f = "job:fmt"
 alt-f = "job:fmt-check"
 d = "job:doc"
 alt-d = "job:doc-open"
+shift-d = "job:doc-pub"
 r = "rerun"
 f5 = "rerun"

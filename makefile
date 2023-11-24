@@ -12,6 +12,7 @@ cargo_build := build
 cargo_test := test
 cargo_doc := doc
 cargo_clean := clean
+cargo_fmt := fmt
 # work space
 cargo_all_flag := --all
 cargo_crate_macro := -p $(name)-procedural_macro
@@ -24,8 +25,11 @@ rust_release_flag := --release
 # doc
 rust_doc_flag_private_item := --document-private-items
 rust_doc_flag_no_dep := --no-deps
+# rustfmt
+rustfmt_check_flag := --check
 # target
 rust_all_targets = --all-targets
+rust_doc_targets = --doc
 rust_example_flag := --examples
 # feature
 rust_coverage_feature := --no-default-features --features="serde-serialize"
@@ -55,6 +59,21 @@ build: target/debug/$(lib_name)
 .PHONY: test
 test: $(source_files)
 	$(cargo) $(cargo_test) $(cargo_all_flag) $(rust_all_targets)
+	$(cargo) $(cargo_test) $(cargo_all_flag) $(rust_doc_targets)
+
+
+.PHONY: test_all
+test_all: fmt_check test doc_check | clippy
+
+
+.PHONY: fmt_check
+fmt_check: $(source_files)
+	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
+
+
+.PHONY: fmt_check
+fmt: $(source_files)
+	$(cargo) $(rust_nightly) $(cargo_all_flag) $(cargo_fmt)
 
 
 .PHONY: clippy

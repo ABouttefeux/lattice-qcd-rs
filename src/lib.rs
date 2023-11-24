@@ -115,12 +115,12 @@
 #![warn(clippy::use_self)] // style
 #![warn(clippy::useless_let_if_seq)] // style
 #![warn(clippy::verbose_file_reads)]
-#![deny(unsafe_code)]
+#![warn(unsafe_code)] // there is used of some unsafe code
 //
 //---------------
 // doc
 #![warn(missing_docs)] // doc
-#![warn(clippy::missing_docs_in_private_items)] // doc
+//#![warn(clippy::missing_docs_in_private_items)] // doc
 #![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
 #![deny(rustdoc::private_intra_doc_links)]
 #![deny(rustdoc::invalid_codeblock_attributes)]
@@ -157,6 +157,12 @@ mod test;
 pub use nalgebra::ComplexField;
 pub use rand::{Rng, SeedableRng};
 pub use rand_distr::Distribution;
+use utils_lib::trait_sealed;
+
+// #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord, Default)]
+// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+
+trait_sealed!();
 
 /// alias for [`f64`]
 pub type Real = f64;

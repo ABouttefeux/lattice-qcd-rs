@@ -47,6 +47,7 @@ use super::{super::Direction, IteratorElement};
 /// # Ok(())
 /// # }
 /// ```
+// TODO
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct IteratorDirection<const D: usize, const IS_POSITIVE_DIRECTION: bool> {
@@ -121,8 +122,9 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool>
         }
     }
 
-    /// create a new iterator. The first [`super::IteratorLatticeLinkCanonical::next()`] the element just after the one given
-    /// or the first element if [`IteratorElement::FirstElement`] is given.
+    /// create a new iterator. The first call to [`IteratorDirection::next()`] gives the element
+    /// just after the one given or the first element if [`IteratorElement::FirstElement`]
+    /// is given.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
@@ -176,7 +178,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool>
     }
 
     /// Computes the number of elements left with the given element as the `front`
-    /// of the iterator and the `back` as [`IteratorElement::LastElement`].
+    /// of the iterator and the `end` as [`IteratorElement::LastElement`].
     #[inline]
     #[must_use]
     const fn size_position(element: &IteratorElement<Direction<D>>) -> usize {
@@ -201,6 +203,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool>
     #[inline]
     #[must_use]
     const fn index_to_direction(index: usize) -> IteratorElement<Direction<D>> {
+        // TODO
         if index == 0 {
             IteratorElement::FirstElement
         } else if let Some(dir) = Direction::new(index - 1, IS_POSITIVE_DIRECTION) {
@@ -450,6 +453,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> IndexedParallelIterator
     }
 }
 
+#[doc(hidden)]
 impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Producer
     for IteratorDirection<D, IS_POSITIVE_DIRECTION>
 {

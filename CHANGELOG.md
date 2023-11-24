@@ -11,9 +11,8 @@
 - [`LatticeStateDefault::new_determinist`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
 - [`LatticeStateEFSyncDefault::new_random_e_state`] now takes the rng as a generic parameter instead of an impl trait type and can be unsized
 - [`LatticeStateEFSyncDefault::new_determinist`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
-- possible name collision for [`IteratorDirection`], [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`] for trait method [`Iterator`], [`ExactSizeIterator`], [`rayon::iter::ParallelIterator`] and [`rayon::iter::IndexedParallelIterator`].
-- [`IteratorLatticePoint::new`] is not constant anymore.
-- [`IteratorLatticeLinkCanonical::new`] is not constant anymore.
+- [`IteratorLatticePoint::new`] and [`IteratorLatticeLinkCanonical::new`] are not constant anymore.
+- rename [`IteratorDirection::new`] to [`IteratorDirection::new_with_first_element`] and [`IteratorLatticeLinkCanonical::new`] to [`IteratorLatticeLinkCanonical::new_with_first_element`]. Moreover introduce a function `new` that takes a single argument.
 
 ## non breaking
 - remove the extern crate declaration in lib.rs
@@ -27,7 +26,14 @@
 - organize internal code in private submodule with reexport
 - depreciate [`random_matrix_2`]
 - depreciate [`FixedPointNumber`] and [`I32U128`] which never implemented
-- implemented the trait [`DoubleEndedIterator`], [`rayon::iter::ParallelIterator`], [`rayon::iter::IndexedParallelIterator`] and [`rayon::iter::plumbing::Producer`] for [`IteratorDirection`], [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`]
+- implemented the trait [`DoubleEndedIterator`]for [`IteratorDirection`], [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`],
+- implemented [`LatticeElementToIndex`] for [`DirectionEnum`].
+- introduced a private Sealed trait.
+- introduced sealed trait [`RandomAccessIterator`], [`NumberOfLatticeElement`] and [`IndexToElement`].
+- introduce structure [`LatticeIterator`].
+- [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`] are now aliases for the new structure [`LatticeIterator`] (they should work basically the same way as before).
+- implemented , [`rayon::iter::ParallelIterator`], [`rayon::iter::IndexedParallelIterator`] for [`LatticeParIter`] and [`IteratorDirection`].
+- [`LatticeIterator`] and [`LatticeParIter`] and be easily converted into each other.
 
 # v0.2.1
 

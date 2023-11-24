@@ -157,8 +157,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// ```
     #[must_use]
     #[inline]
-    pub fn get_points(&self) -> IteratorLatticePoint<'_, D> {
-        IteratorLatticePoint::new(self, LatticePoint::new_zero())
+    pub const fn get_points(&self) -> IteratorLatticePoint<'_, D> {
+        IteratorLatticePoint::new(self)
     }
 
     /// Get an Iterator over all canonical link of the lattice.
@@ -179,14 +179,8 @@ impl<const D: usize> LatticeCyclic<D> {
     /// ```
     #[must_use]
     #[inline]
-    pub fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
-        return IteratorLatticeLinkCanonical::new(
-            self,
-            self.link_canonical(
-                LatticePoint::new_zero(),
-                Direction::positive_directions()[0],
-            ),
-        );
+    pub const fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
+        IteratorLatticeLinkCanonical::new(self)
     }
 
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of
@@ -197,15 +191,14 @@ impl<const D: usize> LatticeCyclic<D> {
     #[inline]
     pub fn new(size: Real, dim: usize) -> Result<Self, LatticeInitializationError> {
         if D == 0 {
-            return Err(LatticeInitializationError::ZeroDimension);
+            Err(LatticeInitializationError::ZeroDimension)
+        } else if size <= 0_f64 || size.is_nan() || size.is_infinite() {
+            Err(LatticeInitializationError::NonPositiveSize)
+        } else if dim < 2 {
+            Err(LatticeInitializationError::DimTooSmall)
+        } else {
+            Ok(Self { size, dim })
         }
-        if size <= 0_f64 || size.is_nan() || size.is_infinite() {
-            return Err(LatticeInitializationError::NonPositiveSize);
-        }
-        if dim < 2 {
-            return Err(LatticeInitializationError::DimTooSmall);
-        }
-        Ok(Self { size, dim })
     }
 
     /// Total number of canonical links oriented in space for a set time.

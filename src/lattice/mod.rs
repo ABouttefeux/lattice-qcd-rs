@@ -23,16 +23,19 @@ use lattice_qcd_rs_procedural_macro::{implement_direction_from, implement_direct
 use nalgebra::{SVector, Vector4};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
+use utils_lib::Sealed;
 
 // TODO remove IteratorElement from public interface ?
 pub use self::iterator::{
     IteratorDirection, IteratorElement, IteratorLatticeLinkCanonical, IteratorLatticePoint,
+    LatticeIterator, LatticeParIter,
 };
 pub use self::lattice_cyclic::LatticeCyclic;
 use super::Real;
+use crate::private::Sealed;
 
 /// Represents point on a (any) lattice.
-#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Hash, Sealed)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticePoint<const D: usize> {
     data: nalgebra::SVector<usize, D>,
@@ -242,6 +245,21 @@ impl<const D: usize> AsMut<SVector<usize, D>> for LatticePoint<D> {
     }
 }
 
+impl<const D: usize> NumberOfLatticeElement<D> for LatticePoint<D> {
+    #[inline]
+    fn number_of_elements(lattice: &LatticeCyclic<D>) -> usize {
+        lattice.number_of_points()
+    }
+}
+
+impl<const D: usize> IndexToElement<D> for LatticePoint<D> {
+    // TODO
+    #[inline]
+    fn index_to_element(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
+        Self::index_to_point(lattice, index)
+    }
+}
+
 /// Trait to convert an element on a lattice to an [`usize`].
 ///
 /// Used mainly to index field on the lattice using [`std::vec::Vec`]
@@ -291,6 +309,20 @@ impl<const D: usize> LatticeElementToIndex<D> for usize {
     }
 }
 
+/// A trait to get the number of certain type of item there is on the lattice.
+pub trait NumberOfLatticeElement<const D: usize>: Sealed {
+    /// Returns the number of items there is on the lattice.
+    #[must_use]
+    fn number_of_elements(lattice: &LatticeCyclic<D>) -> usize;
+}
+
+/// A trait to convert an index to a element on a [`LatticeCyclic`].
+pub trait IndexToElement<const D: usize>: Sealed + LatticeElementToIndex<D> + Sized {
+    /// Converts an index into an element.
+    #[must_use]
+    fn index_to_element(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self>;
+}
+
 /// A canonical link of a lattice. It contain a position and a direction.
 ///
 /// The direction should always be positive.
@@ -299,7 +331,7 @@ impl<const D: usize> LatticeElementToIndex<D> for usize {
 /// You can use modulus over the elements to use inside a lattice.
 ///
 /// This object can be used to safely index in a [`std::collections::HashMap`]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Sealed)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLinkCanonical<const D: usize> {
     from: LatticePoint<D>,
@@ -399,7 +431,10 @@ impl<const D: usize> LatticeLinkCanonical<D> {
     #[inline]
     #[must_use]
     fn index_to_canonical_link(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
-        (index < lattice.number_of_canonical_links_space()).then(|| todo!())
+        Self::new(
+            LatticePoint::index_to_element(lattice, index / D)?,
+            Direction::new(index % D, true)?,
+        )
     }
 }
 
@@ -425,6 +460,21 @@ impl<const D: usize> From<&LatticeLinkCanonical<D>> for LatticeLink<D> {
     #[inline]
     fn from(l: &LatticeLinkCanonical<D>) -> Self {
         Self::new(l.from, l.dir)
+    }
+}
+
+impl<const D: usize> NumberOfLatticeElement<D> for LatticeLinkCanonical<D> {
+    #[inline]
+    fn number_of_elements(lattice: &LatticeCyclic<D>) -> usize {
+        lattice.number_of_canonical_links_space()
+    }
+}
+
+impl<const D: usize> IndexToElement<D> for LatticeLinkCanonical<D> {
+    // TODO
+    #[inline]
+    fn index_to_element(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
+        Self::index_to_canonical_link(lattice, index)
     }
 }
 
@@ -502,7 +552,7 @@ impl<const D: usize> Display for LatticeLink<D> {
 }
 
 /// Represent a cardinal direction
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Sealed)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct Direction<const D: usize> {
     index_dir: usize,
@@ -626,7 +676,7 @@ impl<const D: usize> Direction<D> {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::{lattice::Direction, error::ImplementationError};
-    /// # fn main() -> Result<(), ImplementationError>
+    /// # fn main() -> Result<(), ImplementationError> {
     /// assert_eq!(
     ///     Direction::<4>::new(1, false)
     ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
@@ -645,6 +695,8 @@ impl<const D: usize> Direction<D> {
     ///         .index(),
     ///     5
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     #[inline]
@@ -755,6 +807,21 @@ impl<const D: usize> Display for Direction<D> {
         )
     }
 }
+
+// /// TODO impl doc
+// impl<const D: usize> NumberOfLatticeElement<D> for Direction<D> {
+//     #[inline]
+//     fn number_of_elements(_lattice: &LatticeCyclic<D>) -> usize {
+//         D
+//     }
+// }
+
+// // TODO impl doc
+// impl<const D: usize> IndexToElement<D> for Direction<D> {
+//     fn index_to_element(_lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
+//         Self::new(index, true)
+//     }
+// }
 
 /// List all possible direction
 pub trait DirectionList: Sized {
@@ -920,17 +987,42 @@ impl<const D: usize> From<&Direction<D>> for SVector<Real, D> {
 impl From<DirectionEnum> for Direction<4> {
     #[inline]
     fn from(d: DirectionEnum) -> Self {
-        Self::new(d.to_index(), d.is_positive()).expect("unreachable")
+        Self::new(DirectionEnum::to_index(d), d.is_positive()).expect("unreachable")
+    }
+}
+
+impl From<Direction<4>> for DirectionEnum {
+    #[inline]
+    fn from(d: Direction<4>) -> Self {
+        d.into()
+    }
+}
+
+impl From<&Direction<4>> for DirectionEnum {
+    #[inline]
+    fn from(d: &Direction<4>) -> Self {
+        match (d.index(), d.is_positive()) {
+            (0, true) => Self::XPos,
+            (0, false) => Self::XNeg,
+            (1, true) => Self::YPos,
+            (1, false) => Self::YNeg,
+            (2, true) => Self::ZPos,
+            (2, false) => Self::ZNeg,
+            (3, true) => Self::TPos,
+            (3, false) => Self::TNeg,
+            _ => unreachable!(),
+        }
     }
 }
 
 impl From<&DirectionEnum> for Direction<4> {
     #[inline]
     fn from(d: &DirectionEnum) -> Self {
-        Self::new(d.to_index(), d.is_positive()).expect("unreachable")
+        Self::new(DirectionEnum::to_index(*d), d.is_positive()).expect("unreachable")
     }
 }
 
+// TODO depreciate ?
 /// Represent a cardinal direction
 #[allow(clippy::exhaustive_enums)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
@@ -1240,7 +1332,7 @@ impl From<DirectionEnum> for usize {
 impl From<&DirectionEnum> for usize {
     #[inline]
     fn from(d: &DirectionEnum) -> Self {
-        d.to_index()
+        DirectionEnum::to_index(*d)
     }
 }
 
@@ -1275,6 +1367,28 @@ impl From<&DirectionEnum> for Vector4<Real> {
         d.to_unit_vector()
     }
 }
+
+impl LatticeElementToIndex<4> for DirectionEnum {
+    #[inline]
+    fn to_index(&self, l: &LatticeCyclic<4>) -> usize {
+        Direction::<4>::from(self).to_index(l)
+    }
+}
+
+// impl Sealed for DirectionEnum {}
+
+// impl NumberOfLatticeElement<4> for DirectionEnum {
+//     #[inline]
+//     fn number_of_elements(lattice: &LatticeCyclic<4>) -> usize {
+//         Direction::<4>::number_of_elements(lattice)
+//     }
+// }
+
+// impl IndexToElement<4> for DirectionEnum {
+//     fn index_to_element(lattice: &LatticeCyclic<4>, index: usize) -> Option<Self> {
+//         Direction::<4>::index_to_element(lattice, index).map(Into::into)
+//     }
+// }
 
 #[cfg(test)]
 mod test {
