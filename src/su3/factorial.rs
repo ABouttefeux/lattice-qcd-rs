@@ -77,6 +77,7 @@ impl FactorialStorageStatic {
 
     /// Get an iterator over the factorial number form `0!` up to `34!`.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter(
         &self,
     ) -> impl Iterator<Item = &FactorialNumber> + ExactSizeIterator + FusedIterator {

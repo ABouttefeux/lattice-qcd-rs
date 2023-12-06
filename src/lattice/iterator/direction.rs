@@ -453,7 +453,7 @@ impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> IndexedParallelIterator
     }
 }
 
-#[doc(hidden)]
+// #[doc(hidden)]
 impl<const D: usize, const IS_POSITIVE_DIRECTION: bool> Producer
     for IteratorDirection<D, IS_POSITIVE_DIRECTION>
 {

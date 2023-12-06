@@ -1,9 +1,16 @@
 //! Module for [`IteratorLatticePoint`]
+//! # Example
+// TODO
 
-use super::{super::LatticePoint, LatticeIterator};
+use super::{super::LatticePoint, LatticeIterator, LatticeParIter};
 
 /// Iterator over [`LatticePoint`]
+/// # Example
 pub type IteratorLatticePoint<'a, const D: usize> = LatticeIterator<'a, D, LatticePoint<D>>;
+
+/// Parallel iterator over [`LatticePoint`]
+/// # Example
+pub type ParIterLatticePoint<'a, const D: usize> = LatticeParIter<'a, D, LatticePoint<D>>;
 
 #[cfg(test)]
 mod test {

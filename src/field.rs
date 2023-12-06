@@ -263,6 +263,7 @@ impl Su3Adjoint {
     /// let sum_abs = adj.iter().map(|el| el.abs()).sum::<f64>();
     /// ```
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter(&self) -> impl Iterator<Item = &Real> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
@@ -276,6 +277,7 @@ impl Su3Adjoint {
     /// adj.iter_mut().for_each(|el| *el = *el / 2_f64);
     /// ```
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut Real> + ExactSizeIterator + FusedIterator {
@@ -1016,6 +1018,7 @@ impl LinkMatrix {
 
     /// Iter on the data.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter(
         &self,
     ) -> impl Iterator<Item = &CMatrix3> + ExactSizeIterator + FusedIterator + DoubleEndedIterator
@@ -1025,6 +1028,7 @@ impl LinkMatrix {
 
     /// Iter mutably on the data.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut CMatrix3> + ExactSizeIterator + FusedIterator + DoubleEndedIterator
@@ -1503,6 +1507,7 @@ impl<const D: usize> EField<D> {
     /// Gives an iterator over the [`SVector`] in the order they are stored in
     /// the underlying vector.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter(
         &self,
     ) -> impl Iterator<Item = &SVector<Su3Adjoint, D>>
@@ -1515,6 +1520,7 @@ impl<const D: usize> EField<D> {
     /// Gives an iterator over a mutable reference of the [`SVector`] in the order
     /// they are stored in the underlying vector.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SVector<Su3Adjoint, D>>

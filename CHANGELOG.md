@@ -13,6 +13,7 @@
 - [`LatticeStateEFSyncDefault::new_determinist`] now takes the distribution as a generic parameter instead of an impl trait type and can be unsized
 - [`IteratorLatticePoint::new`] and [`IteratorLatticeLinkCanonical::new`] are not constant anymore.
 - rename [`IteratorDirection::new`] to [`IteratorDirection::new_with_first_element`] and [`IteratorLatticeLinkCanonical::new`] to [`IteratorLatticeLinkCanonical::new_with_first_element`]. Moreover introduce a function `new` that takes a single argument.
+- rename [`DirectionEnum::to_index`] to [`DirectionEnum::index`] to avoid name colision with trait [`LatticeElementToIndex`]
 
 ## non breaking
 - remove the extern crate declaration in lib.rs
@@ -34,6 +35,8 @@
 - [`IteratorLatticeLinkCanonical`] and [`IteratorLatticePoint`] are now aliases for the new structure [`LatticeIterator`] (they should work basically the same way as before).
 - implemented , [`rayon::iter::ParallelIterator`], [`rayon::iter::IndexedParallelIterator`] for [`LatticeParIter`] and [`IteratorDirection`].
 - [`LatticeIterator`] and [`LatticeParIter`] and be easily converted into each other.
+- implemented [`LatticeElementToIndex`] for [`DirectionEnum`].
+- added [`LatticeCyclic::par_iter_links`] and [`LatticeCyclic::par_iter_points`] to get parallel iterator on the links and points respectively.
 
 # v0.2.1
 

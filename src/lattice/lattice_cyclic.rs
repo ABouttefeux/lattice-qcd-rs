@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     Direction, IteratorLatticeLinkCanonical, IteratorLatticePoint, LatticeLink,
-    LatticeLinkCanonical, LatticePoint,
+    LatticeLinkCanonical, LatticePoint, ParIterLatticeLinkCanonical, ParIterLatticePoint,
 };
 use crate::{
     error::LatticeInitializationError,
@@ -145,6 +145,7 @@ impl<const D: usize> LatticeCyclic<D> {
     /// Get an Iterator over all points of the lattice.
     ///
     /// # Example
+    /// TODO improve example
     /// ```
     /// # use lattice_qcd_rs::lattice::LatticeCyclic;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -159,6 +160,19 @@ impl<const D: usize> LatticeCyclic<D> {
     #[inline]
     pub const fn get_points(&self) -> IteratorLatticePoint<'_, D> {
         IteratorLatticePoint::new(self)
+    }
+
+    /// Returns a [`rayon::iter::IndexedParallelIterator`] over all the point
+    /// of the lattice.
+    ///
+    /// # Example
+    /// ```
+    /// todo!()
+    /// ```
+    #[must_use]
+    #[inline]
+    pub const fn par_iter_points(&self) -> ParIterLatticePoint<'_, D> {
+        self.get_points().par_iter()
     }
 
     /// Get an Iterator over all canonical link of the lattice.
@@ -181,6 +195,19 @@ impl<const D: usize> LatticeCyclic<D> {
     #[inline]
     pub const fn get_links(&self) -> IteratorLatticeLinkCanonical<'_, D> {
         IteratorLatticeLinkCanonical::new(self)
+    }
+
+    /// returns a [`rayon::iter::IndexedParallelIterator`] over all the canonical
+    /// links of the lattice.
+    ///
+    /// # Example
+    /// ```
+    /// todo!()
+    /// ```
+    #[must_use]
+    #[inline]
+    pub const fn par_iter_links(&self) -> ParIterLatticeLinkCanonical<'_, D> {
+        self.get_links().par_iter()
     }
 
     /// create a new lattice with `size` the lattice size parameter, and `dim` the number of

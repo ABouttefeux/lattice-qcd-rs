@@ -28,7 +28,7 @@ use utils_lib::Sealed;
 // TODO remove IteratorElement from public interface ?
 pub use self::iterator::{
     IteratorDirection, IteratorElement, IteratorLatticeLinkCanonical, IteratorLatticePoint,
-    LatticeIterator, LatticeParIter,
+    LatticeIterator, LatticeParIter, ParIterLatticeLinkCanonical, ParIterLatticePoint,
 };
 pub use self::lattice_cyclic::LatticeCyclic;
 use super::Real;
@@ -92,12 +92,14 @@ impl<const D: usize> LatticePoint<D> {
 
     /// Get an iterator on the data.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter(&self) -> impl Iterator<Item = &usize> + ExactSizeIterator + FusedIterator {
         self.data.iter()
     }
 
     /// Get an iterator on the data as mutable.
     #[inline]
+    #[allow(clippy::implied_bounds_in_impls)] // no way to determine the Item of iterator otherwise
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut usize> + ExactSizeIterator + FusedIterator {
@@ -321,6 +323,30 @@ pub trait IndexToElement<const D: usize>: Sealed + LatticeElementToIndex<D> + Si
     /// Converts an index into an element.
     #[must_use]
     fn index_to_element(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self>;
+}
+
+// #[doc(hidden)]
+impl Sealed for () {}
+
+impl<const D: usize> LatticeElementToIndex<D> for () {
+    #[inline]
+    fn to_index(&self, _l: &LatticeCyclic<D>) -> usize {
+        0
+    }
+}
+
+impl<const D: usize> NumberOfLatticeElement<D> for () {
+    #[inline]
+    fn number_of_elements(_lattice: &LatticeCyclic<D>) -> usize {
+        1
+    }
+}
+
+impl<const D: usize> IndexToElement<D> for () {
+    #[inline]
+    fn index_to_element(_lattice: &LatticeCyclic<D>, index: usize) -> Option<()> {
+        (index == 0).then_some(())
+    }
 }
 
 /// A canonical link of a lattice. It contain a position and a direction.
@@ -987,7 +1013,7 @@ impl<const D: usize> From<&Direction<D>> for SVector<Real, D> {
 impl From<DirectionEnum> for Direction<4> {
     #[inline]
     fn from(d: DirectionEnum) -> Self {
-        Self::new(DirectionEnum::to_index(d), d.is_positive()).expect("unreachable")
+        Self::new(DirectionEnum::index(d), d.is_positive()).expect("unreachable")
     }
 }
 
@@ -1018,7 +1044,7 @@ impl From<&Direction<4>> for DirectionEnum {
 impl From<&DirectionEnum> for Direction<4> {
     #[inline]
     fn from(d: &DirectionEnum) -> Self {
-        Self::new(DirectionEnum::to_index(*d), d.is_positive()).expect("unreachable")
+        Self::new(DirectionEnum::index(*d), d.is_positive()).expect("unreachable")
     }
 }
 
@@ -1212,18 +1238,18 @@ impl DirectionEnum {
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::DirectionEnum;
-    /// assert_eq!(DirectionEnum::XPos.to_index(), 0);
-    /// assert_eq!(DirectionEnum::XNeg.to_index(), 0);
-    /// assert_eq!(DirectionEnum::YPos.to_index(), 1);
-    /// assert_eq!(DirectionEnum::YNeg.to_index(), 1);
-    /// assert_eq!(DirectionEnum::ZPos.to_index(), 2);
-    /// assert_eq!(DirectionEnum::ZNeg.to_index(), 2);
-    /// assert_eq!(DirectionEnum::TPos.to_index(), 3);
-    /// assert_eq!(DirectionEnum::TNeg.to_index(), 3);
+    /// assert_eq!(DirectionEnum::XPos.index(), 0);
+    /// assert_eq!(DirectionEnum::XNeg.index(), 0);
+    /// assert_eq!(DirectionEnum::YPos.index(), 1);
+    /// assert_eq!(DirectionEnum::YNeg.index(), 1);
+    /// assert_eq!(DirectionEnum::ZPos.index(), 2);
+    /// assert_eq!(DirectionEnum::ZNeg.index(), 2);
+    /// assert_eq!(DirectionEnum::TPos.index(), 3);
+    /// assert_eq!(DirectionEnum::TNeg.index(), 3);
     /// ```
     #[inline]
     #[must_use]
-    pub const fn to_index(self) -> usize {
+    pub const fn index(self) -> usize {
         match self {
             Self::XPos | Self::XNeg => 0,
             Self::YPos | Self::YNeg => 1,
@@ -1324,7 +1350,7 @@ impl Neg for &DirectionEnum {
 impl From<DirectionEnum> for usize {
     #[inline]
     fn from(d: DirectionEnum) -> Self {
-        d.to_index()
+        d.index()
     }
 }
 
@@ -1332,7 +1358,7 @@ impl From<DirectionEnum> for usize {
 impl From<&DirectionEnum> for usize {
     #[inline]
     fn from(d: &DirectionEnum) -> Self {
-        DirectionEnum::to_index(*d)
+        DirectionEnum::index(*d)
     }
 }
 
