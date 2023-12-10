@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![doc(html_root_url = "https://docs.rs/lattice_qcd_rs/0.3.0")]
-//
+//---------------------------------------
+// lints
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
 //
@@ -117,8 +118,8 @@
 #![warn(clippy::verbose_file_reads)]
 #![warn(unsafe_code)] // there is used of some unsafe code
 //
-//---------------
-// doc
+//---------------------------------------
+// doc lints
 #![warn(missing_docs)] // doc
 //#![warn(clippy::missing_docs_in_private_items)] // doc
 #![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
@@ -129,12 +130,14 @@
 #![deny(rustdoc::bare_urls)]
 #![deny(rustdoc::unescaped_backticks)]
 #![deny(rustdoc::redundant_explicit_links)]
-//---------------
-// allow
+//---------------------------------------
+// allow lints
 #![allow(clippy::module_name_repetitions)]
-//
+//---------------------------------------
 // #![cfg_attr(feature = "experimental", feature(is_sorted))]
 
+//---------------------------------------
+// module
 #[macro_use]
 mod macro_def;
 pub mod dim;
@@ -154,15 +157,28 @@ pub mod utils;
 #[cfg(test)]
 mod test;
 
+//---------------------------------------
+// uses
+
 pub use nalgebra::ComplexField;
 pub use rand::{Rng, SeedableRng};
 pub use rand_distr::Distribution;
 use utils_lib::trait_sealed;
 
-// #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord, Default)]
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+//---------------------------------------
+//
 
+// #[cfg(feature = "serde-serialize")]
+// use serde::{Deserialize, Serialize};
+// #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord, Default)]
+// #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+
+//---------------------------------------
+// trait
 trait_sealed!();
+
+//---------------------------------------
+// type aliases
 
 /// alias for [`f64`]
 pub type Real = f64;

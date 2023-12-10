@@ -20,6 +20,7 @@ mod point;
 use std::{
     fmt::{self, Display},
     iter::FusedIterator,
+    mem,
 };
 
 use rayon::iter::{
@@ -28,7 +29,7 @@ use rayon::iter::{
 };
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
-use utils_lib::Getter;
+use utils_lib::{Getter, Sealed};
 
 pub use self::direction::IteratorDirection;
 pub use self::link_canonical::{IteratorLatticeLinkCanonical, ParIterLatticeLinkCanonical};
@@ -40,7 +41,7 @@ use crate::private::Sealed;
 ///
 /// It has a notion of dimension as it is link to the notion of lattice element.
 /// And a lattice takes a dimension.
-pub trait RandomAccessIterator<const D: usize>: Sealed {
+pub trait RandomAccessIterator: Sealed {
     /// Type of element return by the iterator
     type Item;
 
@@ -48,26 +49,30 @@ pub trait RandomAccessIterator<const D: usize>: Sealed {
     #[must_use]
     fn iter_len(&self) -> usize;
 
-    /// Increase the given front element by the given number .
+    /// Increase the given front element by the given number and return the result
+    /// without modifying the iterator.
     #[must_use]
-    fn increase_element_by(
-        lattice: &LatticeCyclic<D>,
-        front_element: &IteratorElement<Self::Item>,
-        advance_by: usize,
-    ) -> IteratorElement<Self::Item>;
+    fn increase_front_element_by(&self, advance_by: usize) -> IteratorElement<Self::Item>;
 
-    /// decrease the back element by a given number.
+    /// Decrease the given end element by the given number and return the result
+    /// without modifying the iterator.
     #[must_use]
-    fn decrease_element_by(
-        lattice: &LatticeCyclic<D>,
-        end_element: &IteratorElement<Self::Item>,
-        back_by: usize,
-    ) -> IteratorElement<Self::Item>;
+    fn decrease_end_element_by(&self, back_by: usize) -> IteratorElement<Self::Item>;
+
+    // /// Increase the given front element by the given number and modify the iterator.
+    // fn increase_front_by(&mut self, advance_by: usize) {
+    //     *self.as_mut().front_mut() = self.increase_front_element_by(advance_by);
+    // }
+
+    // /// Decrease the end element by a given number and modify the iterator.
+    // fn decrease_end_by(&mut self, back_by: usize) {
+    //     *self.as_mut().end_mut() = self.decrease_end_element_by(back_by);
+    // }
 }
 
 /// Enum for internal use of iterator. It store the previous element returned by `next`
 #[allow(clippy::exhaustive_enums)]
-#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Sealed, Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub enum IteratorElement<T> {
     /// First element of the iterator
@@ -145,9 +150,6 @@ impl<T> IteratorElement<T> {
     }
 }
 
-//#[doc(hidden)]
-impl<T: Sealed> Sealed for IteratorElement<T> {}
-
 impl<T: Display> Display for IteratorElement<T> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -211,8 +213,8 @@ impl<const D: usize, T: LatticeElementToIndex<D> + NumberOfLatticeElement<D>>
 /// to track the front and the back. [`Iterator`] traits are not (yet ?) implemented
 /// on this type.
 #[derive(Getter, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-struct DoubleEndedCounter<T> {
+#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+pub struct DoubleEndedCounter<T> {
     /// Front element of the iterator. The state need to be increased before
     /// being returned by the next [`Iterator::next`] call.
     #[get(Const)]
@@ -297,7 +299,7 @@ impl<T: Display> Display for DoubleEndedCounter<T> {
 /// todo!()
 /// ```
 // TODO bound explanation
-#[derive(Getter, Debug, Clone, PartialEq)]
+#[derive(Sealed, Getter, Debug, Clone, PartialEq)]
 pub struct LatticeIterator<'a, const D: usize, T> {
     /// ref to the lattice
     #[get(Const, copy)]
@@ -374,7 +376,7 @@ impl<'a, const D: usize, T> LatticeIterator<'a, D, T> {
     #[inline]
     pub const fn new(lattice: &'a LatticeCyclic<D>) -> Self
     where
-        Self: RandomAccessIterator<D, Item = T>,
+        Self: RandomAccessIterator<Item = T>,
         T: Clone,
     {
         Self {
@@ -453,16 +455,28 @@ impl<'a, const D: usize, T> LatticeIterator<'a, D, T> {
     #[inline]
     pub fn new_with_first_element(lattice: &'a LatticeCyclic<D>, first_el: T) -> Self
     where
-        Self: RandomAccessIterator<D, Item = T>,
+        Self: RandomAccessIterator<Item = T>,
         T: Clone,
     {
-        Self {
+        //TODO / FIXME
+
+        // we can't really decrease the first element so we use some trick.
+        let mut s = Self {
             lattice,
             counter: DoubleEndedCounter {
-                front: Self::decrease_element_by(lattice, &IteratorElement::Element(first_el), 1),
-                end: IteratorElement::LastElement,
+                // we define the front and end reversed.
+                // we will swap both value afterward
+                front: IteratorElement::LastElement,
+                end: IteratorElement::Element(first_el),
             },
-        }
+        };
+
+        // Then we decrease `end`. Also this is fine we don't verify both end of
+        // the iterator so we don't care that the iter should produce None.
+        *s.end_mut() = s.decrease_end_element_by(1);
+        // we then swap the value to get a properly define iterator
+        mem::swap(&mut s.counter.front, &mut s.counter.end);
+        s
     }
 
     /// Convert the iterator into an [`IndexedParallelIterator`].
@@ -470,7 +484,7 @@ impl<'a, const D: usize, T> LatticeIterator<'a, D, T> {
     #[inline]
     pub const fn par_iter(self) -> LatticeParIter<'a, D, T>
     where
-        Self: RandomAccessIterator<D, Item = T>,
+        Self: RandomAccessIterator<Item = T>,
     {
         LatticeParIter::new(self)
     }
@@ -505,9 +519,6 @@ impl<'a, const D: usize, T: Display> Display for LatticeIterator<'a, D, T> {
         write!(f, "{}", self.counter())
     }
 }
-
-//#[doc(hidden)]
-impl<'a, const D: usize, T> Sealed for LatticeIterator<'a, D, T> {}
 
 impl<'a, const D: usize, T> AsRef<DoubleEndedCounter<T>> for LatticeIterator<'a, D, T> {
     #[inline]
@@ -544,7 +555,7 @@ impl<'a, const D: usize, T> From<&'a LatticeIterator<'a, D, T>> for &'a LatticeC
     }
 }
 
-impl<'a, const D: usize, T> RandomAccessIterator<D> for LatticeIterator<'a, D, T>
+impl<'a, const D: usize, T> RandomAccessIterator for LatticeIterator<'a, D, T>
 where
     T: LatticeElementToIndex<D> + NumberOfLatticeElement<D> + IndexToElement<D>,
 {
@@ -558,14 +569,10 @@ where
             .saturating_sub(self.end().size_position(self.lattice()))
     }
 
-    fn increase_element_by(
-        lattice: &LatticeCyclic<D>,
-        front_element: &IteratorElement<Self::Item>,
-        advance_by: usize,
-    ) -> IteratorElement<Self::Item> {
-        let index = match front_element {
+    fn increase_front_element_by(&self, advance_by: usize) -> IteratorElement<Self::Item> {
+        let index = match self.front() {
             IteratorElement::FirstElement => 0,
-            IteratorElement::Element(ref element) => element.to_index(lattice) + 1,
+            IteratorElement::Element(ref element) => element.to_index(self.lattice()) + 1,
             IteratorElement::LastElement => {
                 // early return
                 return IteratorElement::LastElement;
@@ -574,27 +581,23 @@ where
 
         let new_index = index + advance_by;
         IteratorElement::index_to_element(new_index, |index| {
-            Self::Item::index_to_element(lattice, index)
+            Self::Item::index_to_element(self.lattice(), index)
         })
     }
 
-    fn decrease_element_by(
-        lattice: &LatticeCyclic<D>,
-        end_element: &IteratorElement<Self::Item>,
-        back_by: usize,
-    ) -> IteratorElement<Self::Item> {
-        let index = match end_element {
+    fn decrease_end_element_by(&self, back_by: usize) -> IteratorElement<Self::Item> {
+        let index = match self.end() {
             IteratorElement::FirstElement => {
                 // early return
                 return IteratorElement::FirstElement;
             }
-            IteratorElement::Element(ref element) => element.to_index(lattice) + 1,
-            IteratorElement::LastElement => lattice.number_of_points() + 1,
+            IteratorElement::Element(ref element) => element.to_index(self.lattice()) + 1,
+            IteratorElement::LastElement => self.lattice().number_of_points() + 1,
         };
 
         let new_index = index.saturating_sub(back_by);
         IteratorElement::index_to_element(new_index, |index| {
-            Self::Item::index_to_element(lattice, index)
+            Self::Item::index_to_element(self.lattice(), index)
         })
     }
 }
@@ -602,7 +605,7 @@ where
 /// TODO DOC
 impl<'a, const D: usize, T> Iterator for LatticeIterator<'a, D, T>
 where
-    Self: RandomAccessIterator<D, Item = T>,
+    Self: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     type Item = T;
@@ -645,7 +648,7 @@ where
             }
             return None;
         }
-        let next_element = Self::increase_element_by(self.lattice(), self.front(), n + 1);
+        let next_element = self.increase_front_element_by(n + 1);
         *self.front_mut() = next_element.clone();
         next_element.into()
     }
@@ -672,7 +675,7 @@ where
 /// TODO DOC
 impl<'a, const D: usize, T> DoubleEndedIterator for LatticeIterator<'a, D, T>
 where
-    Self: RandomAccessIterator<D, Item = T>,
+    Self: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     #[inline]
@@ -691,7 +694,7 @@ where
             }
             return None;
         }
-        let previous_element = Self::decrease_element_by(self.lattice(), self.end(), n + 1);
+        let previous_element = self.decrease_end_element_by(n + 1);
         *self.end_mut() = previous_element.clone();
         previous_element.into()
     }
@@ -699,14 +702,14 @@ where
 
 impl<'a, const D: usize, T> FusedIterator for LatticeIterator<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone,
 {
 }
 
 impl<'a, const D: usize, T> ExactSizeIterator for LatticeIterator<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     #[inline]
@@ -731,7 +734,7 @@ impl<'a, const D: usize, T> From<LatticeProducer<'a, D, T>> for LatticeIterator<
 
 impl<'a, const D: usize, T> IntoParallelIterator for LatticeIterator<'a, D, T>
 where
-    Self: RandomAccessIterator<D, Item = T>,
+    Self: RandomAccessIterator<Item = T>,
     T: Clone + Send,
 {
     type Iter = LatticeParIter<'a, D, T>;
@@ -787,7 +790,7 @@ impl<'a, const D: usize, T> From<LatticeParIter<'a, D, T>> for LatticeProducer<'
 
 impl<'a, const D: usize, T> Producer for LatticeProducer<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone + Send,
 {
     type Item = <Self::IntoIter as Iterator>::Item;
@@ -800,11 +803,7 @@ where
 
     #[inline]
     fn split_at(self, index: usize) -> (Self, Self) {
-        let splinting = Self::IntoIter::increase_element_by(
-            self.as_iter().lattice(),
-            self.as_iter().front(),
-            index,
-        );
+        let splinting = self.as_iter().increase_front_element_by(index);
         (
             Self(Self::IntoIter {
                 lattice: self.0.lattice,
@@ -840,7 +839,7 @@ impl<'a, const D: usize, T> AsMut<LatticeIterator<'a, D, T>> for LatticeProducer
 
 impl<'a, const D: usize, T> IntoIterator for LatticeProducer<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     type Item = <Self::IntoIter as Iterator>::Item;
@@ -900,7 +899,7 @@ impl<'a, const D: usize, T> LatticeParIter<'a, D, T> {
 
 impl<'a, const D: usize, T> ParallelIterator for LatticeParIter<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone + Send,
 {
     type Item = T;
@@ -947,7 +946,7 @@ where
 
 impl<'a, const D: usize, T> IndexedParallelIterator for LatticeParIter<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone + Send,
 {
     #[inline]
@@ -1010,7 +1009,7 @@ impl<'a, const D: usize, T> AsMut<LatticeParIter<'a, D, T>> for LatticeIterator<
 
 impl<'a, const D: usize, T> IntoIterator for LatticeParIter<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<D, Item = T>,
+    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     type Item = <Self::IntoIter as Iterator>::Item;

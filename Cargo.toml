@@ -13,6 +13,24 @@ license = "MIT OR Apache-2.0"
 rust-version = "1.72"
 
 
+[lints.clippy]
+as_ptr_cast_mut = "warn"              # mistake
+derive_partial_eq_without_eq = "warn" # mistake
+future_not_send = "warn"              #async 
+mutex_integer = "warn"                # perf, multithreading 
+needless_pass_by_ref_mut = "warn"     # mistake
+read_zero_byte_vec = "warn"           # mistake
+
+
+[workspace.lints.clippy]
+as_ptr_cast_mut = "warn"              # mistake
+derive_partial_eq_without_eq = "warn" # mistake
+future_not_send = "warn"              # async 
+mutex_integer = "warn"                # perf, multithreading 
+needless_pass_by_ref_mut = "warn"     # mistake
+read_zero_byte_vec = "warn"           # mistake
+
+
 [lib]
 path = "src/lib.rs"
 crate-type = ["lib"]

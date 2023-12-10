@@ -43,6 +43,8 @@
 - [`LatticeIterator`] and [`LatticeParIter`] and be easily converted into each other.
 - implemented [`LatticeElementToIndex`] for [`DirectionEnum`].
 - added [`LatticeCyclic::par_iter_links`] and [`LatticeCyclic::par_iter_points`] to get parallel iterator on the links and points respectively.
+- Added [`CardinalDirection`].
+- Added [`Axis`].
 
 # v0.2.1
 
