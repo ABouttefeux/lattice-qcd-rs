@@ -1,3 +1,5 @@
+//! Contains [`Axis`]
+
 //---------------------------------------
 // uses
 
@@ -5,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use utils_lib::{Getter, Sealed};
 
-use super::DirectionIndexing;
+use super::{DirectionIndexing, DirectionTrait};
 
 //---------------------------------------
 // struct definition
@@ -14,6 +16,7 @@ use super::DirectionIndexing;
 /// [`super::Direction`] and [`super::OrientedDirection`], an [`Axis`]
 /// does not have an orientation.
 #[derive(Sealed, Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
+//#[allow(clippy::unsafe_derive_deserialize)] // I don't think this is necessary
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[derive(Getter)]
 pub struct Axis<const D: usize> {
@@ -56,6 +59,11 @@ impl<const D: usize> Axis<D> {
         }
     }
 
+    /// Create a ne self with the given index. YOU need to check that `index < D`.
+    ///
+    /// # Safety
+    /// index needs to be strictly smaller than D, other wise types that depend of
+    /// [`Axis`] might works erratically while indexing data or cause segmentation fault.
     #[inline]
     #[must_use]
     #[allow(unsafe_code)]
@@ -90,20 +98,22 @@ impl<const D: usize> AsRef<usize> for Axis<D> {
 
 impl<const D: usize> DirectionIndexing for Axis<D> {
     #[inline]
-    fn to_index(&self) -> usize {
+    fn direction_to_index(&self) -> usize {
         self.index()
     }
 
     #[inline]
-    fn from_index(index: usize) -> Option<Self> {
+    fn direction_from_index(index: usize) -> Option<Self> {
         Self::new(index)
     }
 
     #[inline]
-    fn number_of_elements() -> usize {
+    fn number_of_directions() -> usize {
         D
     }
 }
+
+impl<const D: usize> DirectionTrait for Axis<D> {}
 
 #[cfg(test)]
 mod test {

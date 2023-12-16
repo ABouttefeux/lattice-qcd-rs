@@ -284,14 +284,6 @@ impl<const D: usize> LatticeElementToIndex<D> for LatticePoint<D> {
     }
 }
 
-impl<const D: usize> LatticeElementToIndex<D> for Direction<D> {
-    /// equivalent to [`Direction::to_index()`]
-    #[inline]
-    fn to_index(&self, _: &LatticeCyclic<D>) -> usize {
-        self.index()
-    }
-}
-
 impl<const D: usize> LatticeElementToIndex<D> for LatticeLinkCanonical<D> {
     #[inline]
     fn to_index(&self, l: &LatticeCyclic<D>) -> usize {

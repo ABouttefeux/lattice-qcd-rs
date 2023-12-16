@@ -117,11 +117,11 @@
 #![warn(clippy::useless_let_if_seq)] // style
 #![warn(clippy::verbose_file_reads)]
 #![warn(unsafe_code)] // there is used of some unsafe code
-//
+
 //---------------------------------------
 // doc lints
 #![warn(missing_docs)] // doc
-//#![warn(clippy::missing_docs_in_private_items)] // doc
+// #![warn(clippy::missing_docs_in_private_items)] // doc
 #![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
 #![deny(rustdoc::private_intra_doc_links)]
 #![deny(rustdoc::invalid_codeblock_attributes)]

@@ -167,7 +167,19 @@ impl<const D: usize> LatticeCyclic<D> {
     ///
     /// # Example
     /// ```
-    /// todo!()
+    /// use lattice_qcd_rs::lattice::LatticeCyclic;
+    /// use rayon::prelude::*;
+    /// # use lattice_qcd_rs::error::ImplementationError;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let lattice = LatticeCyclic::<4>::new(1_f64, 10)?;
+    /// # let long_op = |p| {};
+    /// let vec = lattice
+    ///     .par_iter_points()
+    ///     .map(|point| long_op(point))
+    ///     .collect::<Vec<_>>();
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     #[inline]
@@ -202,7 +214,19 @@ impl<const D: usize> LatticeCyclic<D> {
     ///
     /// # Example
     /// ```
-    /// todo!()
+    /// use lattice_qcd_rs::lattice::LatticeCyclic;
+    /// use rayon::prelude::*;
+    /// # use lattice_qcd_rs::error::ImplementationError;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let lattice = LatticeCyclic::<4>::new(1_f64, 10)?;
+    /// # let long_op = |p| {};
+    /// let vec = lattice
+    ///     .par_iter_links()
+    ///     .map(|link| long_op(link))
+    ///     .collect::<Vec<_>>();
+    /// # Ok(())
+    /// # }
     /// ```
     #[must_use]
     #[inline]

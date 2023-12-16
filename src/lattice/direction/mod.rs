@@ -30,6 +30,13 @@ use crate::{private::Sealed, Real};
 
 /// Represent a cardinal direction
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Sealed)]
+#[allow(clippy::unsafe_derive_deserialize)]
+//^^^^^^ yes this is ok for this type,
+// the use of unsafe is just there for some fnc to be constant which is crucial
+// for performance. In the comment of [`Direction::directions_array`]
+// it is explained why it is safe and therefore does not create any other value
+// that safe code could create, so a manual implementation of [`serde::Deserialize`]
+// is not necessary.
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[derive(Getter)]
 pub struct Direction<const D: usize> {
@@ -166,7 +173,7 @@ impl<const D: usize> Direction<D> {
         self
     }
 
-    /// Get a index associated to the direction.
+    /// Get a index associated to the axis of the direction.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::{lattice::Direction, error::ImplementationError};
@@ -535,37 +542,64 @@ implement_direction_from!();
 //---------------------------------------
 // trait DirectionIndexing
 
+pub trait DirectionTrait: Sealed {}
+
 pub trait DirectionIndexing: Sealed + Sized {
+    /// Transform an element to an index.
     #[must_use]
-    fn to_index(&self) -> usize;
+    fn direction_to_index(&self) -> usize;
 
+    /// Convert an element to an index.
     #[must_use]
-    fn from_index(index: usize) -> Option<Self>;
+    fn direction_from_index(index: usize) -> Option<Self>;
 
+    /// Determine the number of element possible.
     #[must_use]
-    fn number_of_elements() -> usize;
+    fn number_of_directions() -> usize;
 }
 
 //---------------------------------------
 // trait auto impl
 
-impl<const D: usize, T: DirectionIndexing> LatticeElementToIndex<D> for T {
+impl<const D: usize, T: DirectionIndexing + DirectionTrait> LatticeElementToIndex<D> for T {
     #[inline]
     fn to_index(&self, _lattice: &LatticeCyclic<D>) -> usize {
-        self.to_index()
+        self.direction_to_index()
     }
 }
 
-impl<const D: usize, T: DirectionIndexing> NumberOfLatticeElement<D> for T {
+impl<const D: usize, T: DirectionIndexing + DirectionTrait> NumberOfLatticeElement<D> for T {
     #[inline]
     fn number_of_elements(_lattice: &LatticeCyclic<D>) -> usize {
-        T::number_of_elements()
+        T::number_of_directions()
     }
 }
 
-impl<const D: usize, T: DirectionIndexing> IndexToElement<D> for T {
+impl<const D: usize, T: DirectionIndexing + DirectionTrait> IndexToElement<D> for T {
     #[inline]
     fn index_to_element(_lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
-        T::from_index(index)
+        T::direction_from_index(index)
+    }
+}
+
+//---------------------------------------
+// direction trait impl
+
+impl<const D: usize> DirectionTrait for Direction<D> {}
+
+impl<const D: usize> DirectionIndexing for Direction<D> {
+    #[inline]
+    fn direction_to_index(&self) -> usize {
+        self.index() * 2 + if self.is_positive() { 1 } else { 0 }
+    }
+
+    #[inline]
+    fn direction_from_index(index: usize) -> Option<Self> {
+        Self::new((index.saturating_sub(1)) / 2, index % 2 == 1)
+    }
+
+    #[inline]
+    fn number_of_directions() -> usize {
+        D * 2
     }
 }

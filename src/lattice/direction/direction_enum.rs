@@ -1,3 +1,5 @@
+//! Contains [`DirectionEnum`]
+
 //---------------------------------------
 // uses
 
@@ -10,7 +12,7 @@ use nalgebra::Vector4;
 use serde::{Deserialize, Serialize};
 use utils_lib::Sealed;
 
-use super::{Direction, DirectionList};
+use super::{Direction, DirectionIndexing, DirectionList, DirectionTrait};
 use crate::lattice::{LatticeCyclic, LatticeElementToIndex};
 use crate::Real;
 
@@ -206,7 +208,7 @@ impl DirectionEnum {
         }
     }
 
-    /// Get a index associated to the direction.
+    /// Get a index associated to the axis of the direction.
     /// # Example
     /// ```
     /// # use lattice_qcd_rs::lattice::DirectionEnum;
@@ -330,7 +332,7 @@ impl Neg for &DirectionEnum {
 //---------------------------------------
 // Conversion
 
-/// Return [`DirectionEnum::to_index`].
+/// Return [`DirectionEnum::index`].
 impl From<DirectionEnum> for usize {
     #[inline]
     fn from(d: DirectionEnum) -> Self {
@@ -338,7 +340,7 @@ impl From<DirectionEnum> for usize {
     }
 }
 
-/// Return [`DirectionEnum::to_index`].
+/// Return [`DirectionEnum::index`].
 impl From<&DirectionEnum> for usize {
     #[inline]
     fn from(d: &DirectionEnum) -> Self {
@@ -381,10 +383,32 @@ impl From<&DirectionEnum> for Vector4<Real> {
 //---------------------------------------
 // Lattice index traits
 
-impl LatticeElementToIndex<4> for DirectionEnum {
+// impl LatticeElementToIndex<4> for DirectionEnum {
+//     #[inline]
+//     fn to_index(&self, l: &LatticeCyclic<4>) -> usize {
+//         Direction::<4>::from(self).to_index(l)
+//     }
+// }
+
+//---------------------------------------
+// direction trait impl
+
+impl DirectionTrait for DirectionEnum {}
+
+impl DirectionIndexing for DirectionEnum {
     #[inline]
-    fn to_index(&self, l: &LatticeCyclic<4>) -> usize {
-        Direction::<4>::from(self).to_index(l)
+    fn direction_to_index(&self) -> usize {
+        Direction::from(self).direction_to_index()
+    }
+
+    #[inline]
+    fn direction_from_index(index: usize) -> Option<Self> {
+        Direction::direction_from_index(index).map(Into::into)
+    }
+
+    #[inline]
+    fn number_of_directions() -> usize {
+        Direction::<4>::number_of_directions()
     }
 }
 

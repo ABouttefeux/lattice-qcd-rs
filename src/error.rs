@@ -259,7 +259,9 @@ impl Error for LatticeInitializationError {}
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct ErrorWithOwnedValue<Error, State> {
+    /// The error of this wrapper.
     error: Error,
+    /// The state of this wrapper
     owned: State,
 }
 

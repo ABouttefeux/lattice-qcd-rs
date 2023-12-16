@@ -34,7 +34,10 @@ use utils_lib::{Getter, Sealed};
 pub use self::direction::IteratorDirection;
 pub use self::link_canonical::{IteratorLatticeLinkCanonical, ParIterLatticeLinkCanonical};
 pub use self::point::{IteratorLatticePoint, ParIterLatticePoint};
-use super::{IndexToElement, LatticeCyclic, LatticeElementToIndex, NumberOfLatticeElement};
+use super::{
+    direction::DirectionIndexing, IndexToElement, LatticeCyclic, LatticeElementToIndex,
+    NumberOfLatticeElement,
+};
 use crate::private::Sealed;
 
 /// Trait for generic implementation of [`Iterator`] for implementor of this trait.
@@ -190,7 +193,7 @@ impl<const D: usize, T: LatticeElementToIndex<D> + NumberOfLatticeElement<D>>
     fn to_index(&self, lattice: &LatticeCyclic<D>) -> usize {
         match self {
             Self::FirstElement => 0,
-            Self::Element(element) => element.to_index(lattice) + 1,
+            Self::Element(ref element) => element.to_index(lattice) + 1,
             Self::LastElement => T::number_of_elements(lattice) + 1,
         }
     }
@@ -206,14 +209,34 @@ impl<const D: usize, T: LatticeElementToIndex<D> + NumberOfLatticeElement<D>>
     }
 }
 
+impl<D: DirectionIndexing> DirectionIndexing for IteratorElement<D> {
+    fn direction_to_index(&self) -> usize {
+        match self {
+            Self::FirstElement => 0,
+            Self::Element(ref e) => e.direction_to_index() + 1,
+            Self::LastElement => D::number_of_directions() + 1,
+        }
+    }
+
+    fn direction_from_index(index: usize) -> Option<Self> {
+        (index < Self::number_of_directions())
+            .then(|| Self::index_to_element(index, |index| D::direction_from_index(index)))
+    }
+
+    fn number_of_directions() -> usize {
+        D::number_of_directions() + 2
+    }
+}
+
 /// An iterator that track the front and the back in order to be able to implement
 /// [`DoubleEndedIterator`].
 ///
 /// By itself it is not use a lot in the library it is used as a properties and use
 /// to track the front and the back. [`Iterator`] traits are not (yet ?) implemented
 /// on this type.
-#[derive(Getter, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Sealed, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+#[derive(Getter)]
 pub struct DoubleEndedCounter<T> {
     /// Front element of the iterator. The state need to be increased before
     /// being returned by the next [`Iterator::next`] call.
@@ -237,6 +260,7 @@ impl<T> DoubleEndedCounter<T> {
     /// assert_eq!(counter.front(), IteratorElement::FirstElement);
     /// assert_eq!(counter.end(), IteratorElement::LastElement);
     /// ```
+    /// TODO restrict to valid iter ?
     pub const fn new() -> Self {
         Self {
             front: IteratorElement::FirstElement,
@@ -275,6 +299,170 @@ impl<T: Display> Display for DoubleEndedCounter<T> {
     }
 }
 
+//---------------------------------------
+// impl of RandomAccessIterator
+
+impl<D: DirectionIndexing> RandomAccessIterator for DoubleEndedCounter<D> {
+    type Item = D;
+
+    fn iter_len(&self) -> usize {
+        self.front()
+            .direction_to_index()
+            .saturating_sub(self.end().direction_to_index())
+    }
+
+    fn increase_front_element_by(&self, advance_by: usize) -> IteratorElement<Self::Item> {
+        let index = match self.front() {
+            IteratorElement::FirstElement => 0,
+            IteratorElement::Element(ref element) => element.direction_to_index() + 1,
+            IteratorElement::LastElement => {
+                // early return
+                return IteratorElement::LastElement;
+            }
+        };
+
+        let new_index = index + advance_by;
+        IteratorElement::index_to_element(new_index, |index| {
+            Self::Item::direction_from_index(index)
+        })
+    }
+
+    fn decrease_end_element_by(&self, back_by: usize) -> IteratorElement<Self::Item> {
+        let index = match self.end() {
+            IteratorElement::FirstElement => {
+                // early return
+                return IteratorElement::FirstElement;
+            }
+            IteratorElement::Element(ref element) => element.direction_to_index() + 1,
+            IteratorElement::LastElement => D::number_of_directions() + 1,
+        };
+
+        let new_index = index.saturating_sub(back_by);
+        IteratorElement::index_to_element(new_index, |index| {
+            Self::Item::direction_from_index(index)
+        })
+    }
+}
+
+//---------------------------------------
+// impl of Iterator traits
+
+/// TODO DOC
+impl<T> Iterator for DoubleEndedCounter<T>
+where
+    Self: RandomAccessIterator<Item = T>,
+    T: Clone,
+{
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.nth(0)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.iter_len();
+        (size, Some(size))
+    }
+
+    #[inline]
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.iter_len()
+    }
+
+    #[inline]
+    fn last(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+    {
+        self.nth(self.iter_len().saturating_sub(1))
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let len = self.iter_len();
+        if len <= n {
+            if len != 0 {
+                // we need to change the state of the iterator other wise it could
+                // produce element we should have otherwise skipped.
+                *self.front_mut() = self.end().clone();
+            }
+            return None;
+        }
+        let next_element = self.increase_front_element_by(n + 1);
+        *self.front_mut() = next_element.clone();
+        next_element.into()
+    }
+
+    #[inline]
+    fn max(self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.last()
+    }
+
+    #[inline]
+    fn min(mut self) -> Option<Self::Item>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        self.next()
+    }
+}
+
+/// TODO DOC
+impl<T> DoubleEndedIterator for DoubleEndedCounter<T>
+where
+    Self: RandomAccessIterator<Item = T>,
+    T: Clone,
+{
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.nth_back(0)
+    }
+
+    #[inline]
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let len = self.iter_len();
+        if len <= n {
+            if len != 0 {
+                // we need to change the state of the iterator other wise it could
+                // produce element we should have otherwise skipped.
+                *self.end_mut() = self.front().clone();
+            }
+            return None;
+        }
+        let previous_element = self.decrease_end_element_by(n + 1);
+        *self.end_mut() = previous_element.clone();
+        previous_element.into()
+    }
+}
+
+impl<T> FusedIterator for DoubleEndedCounter<T>
+where
+    Self: RandomAccessIterator<Item = T>,
+    T: Clone,
+{
+}
+
+impl<T> ExactSizeIterator for DoubleEndedCounter<T>
+where
+    Self: RandomAccessIterator<Item = T>,
+    T: Clone,
+{
+    #[inline]
+    fn len(&self) -> usize {
+        self.iter_len()
+    }
+}
+
 /// Iterator over a lattice. This is a way to generate fast a ensemble of predetermine
 /// element without the need of being allocated for big collection. It is also possible
 /// to use a parallel version of the iterator (as explained below).
@@ -296,16 +484,29 @@ impl<T: Display> Display for DoubleEndedCounter<T> {
 /// # Example
 /// TODO
 /// ```
-/// todo!()
+/// use lattice_qcd_rs::lattice::{LatticeCyclic, LatticeIterator, LatticePoint};
+/// use rayon::prelude::*;
+/// # use lattice_qcd_rs::error::ImplementationError;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let lattice = LatticeCyclic::<4>::new(1_f64, 10)?;
+/// let iter = LatticeIterator::<'_, 4, LatticePoint<4>>::new(&lattice);
+/// # let long_op = |p| {};
+/// let vec = iter
+///     .par_iter()
+///     .map(|point| long_op(point))
+///     .collect::<Vec<_>>();
+/// # Ok(())
+/// # }
 /// ```
 // TODO bound explanation
-#[derive(Sealed, Getter, Debug, Clone, PartialEq)]
+#[derive(Sealed, Debug, Clone, PartialEq, Getter)]
 pub struct LatticeIterator<'a, const D: usize, T> {
-    /// ref to the lattice
+    /// Reference to the lattice.
     #[get(Const, copy)]
     lattice: &'a LatticeCyclic<D>,
 
-    /// double ended counter using [`IteratorElement`].
+    /// Double ended counter using [`IteratorElement`].
     #[get(Const)]
     #[get_mut]
     counter: DoubleEndedCounter<T>,
@@ -702,14 +903,14 @@ where
 
 impl<'a, const D: usize, T> FusedIterator for LatticeIterator<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
+    Self: RandomAccessIterator<Item = T>,
     T: Clone,
 {
 }
 
 impl<'a, const D: usize, T> ExactSizeIterator for LatticeIterator<'a, D, T>
 where
-    LatticeIterator<'a, D, T>: RandomAccessIterator<Item = T>,
+    Self: RandomAccessIterator<Item = T>,
     T: Clone,
 {
     #[inline]
@@ -746,7 +947,11 @@ where
     }
 }
 
-// cspell: ignore repr
+//---------------------------------------
+// LatticeProducer
+
+/// [`Producer`] for the [`IndexedParallelIterator`] [`LatticeParIter`] based on
+/// the [`DoubleEndedIterator`] [`LatticeIterator`].
 #[repr(transparent)]
 #[derive(Debug, Clone, PartialEq)]
 struct LatticeProducer<'a, const D: usize, T>(LatticeIterator<'a, D, T>);
@@ -850,6 +1055,9 @@ where
         self.into_iterator()
     }
 }
+
+//---------------------------------------
+// LatticeParIter
 
 /// [`rayon::iter::ParallelIterator`] and [`rayon::iter::IndexedParallelIterator`]
 /// over a lattice. It is only used

@@ -1,3 +1,5 @@
+//! Contains [`OrientedDirection`]
+
 //---------------------------------------
 // uses
 
@@ -13,7 +15,7 @@ use nalgebra::SVector;
 use serde::{Deserialize, Serialize};
 use utils_lib::{Getter, Sealed};
 
-use super::{Axis, Direction, DirectionIndexing};
+use super::{Axis, Direction, DirectionIndexing, DirectionTrait};
 use crate::Real;
 
 //---------------------------------------
@@ -66,6 +68,32 @@ impl<const D: usize, const ORIENTATION: bool> OrientedDirection<D, ORIENTATION> 
         }
     }
 
+    /// Get a index associated to the axis of the direction.
+    /// # Example
+    /// ```
+    /// # use lattice_qcd_rs::{lattice::OrientedDirection, error::ImplementationError};
+    /// # fn main() -> Result<(), ImplementationError> {
+    /// assert_eq!(
+    ///     OrientedDirection::<4, false>::new(1)
+    ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+    ///         .index(),
+    ///     1
+    /// );
+    /// assert_eq!(
+    ///     OrientedDirection::<4, true>::new(3)
+    ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+    ///         .index(),
+    ///     3
+    /// );
+    /// assert_eq!(
+    ///     OrientedDirection::<6, false>::new(5)
+    ///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+    ///         .index(),
+    ///     5
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     #[inline]
     #[must_use]
     pub const fn index(self) -> usize {
@@ -193,26 +221,32 @@ impl<const D: usize, const DIR: bool> From<OrientedDirection<D, DIR>> for Direct
     }
 }
 
+/// Error while converting a [`Direction`] into an [`OrientedDirection`].
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[non_exhaustive]
-pub enum CardinalDirectionConversionError {
+pub enum OrientedDirectionConversionError {
+    /// The orientation does not correspond to the type of the oriented direction.
     WrongOrientation,
+    /// The index is out of bound.
     IndexOutOfBound,
 }
 
-impl Display for CardinalDirectionConversionError {
+impl Display for OrientedDirectionConversionError {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "conversion error: ")?;
         match self {
-            Self::WrongOrientation => write!(f, "wrong orientation"),
+            Self::WrongOrientation => write!(
+                f,
+                "the orientation does not correspond to the type of the oriented direction"
+            ),
             Self::IndexOutOfBound => write!(f, "the index is out of bound"),
         }
     }
 }
 
-impl Error for CardinalDirectionConversionError {
+impl Error for OrientedDirectionConversionError {
     #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -222,14 +256,14 @@ impl Error for CardinalDirectionConversionError {
 }
 
 impl<const D: usize, const DIR: bool> TryFrom<Direction<D>> for OrientedDirection<D, DIR> {
-    type Error = CardinalDirectionConversionError;
+    type Error = OrientedDirectionConversionError;
 
     #[inline]
     fn try_from(dir: Direction<D>) -> Result<Self, Self::Error> {
         if dir.is_positive() && DIR {
-            Self::new(dir.index()).ok_or(CardinalDirectionConversionError::IndexOutOfBound)
+            Self::new(dir.index()).ok_or(OrientedDirectionConversionError::IndexOutOfBound)
         } else {
-            Err(CardinalDirectionConversionError::WrongOrientation)
+            Err(OrientedDirectionConversionError::WrongOrientation)
         }
     }
 }
@@ -278,20 +312,22 @@ impl<const D: usize, const ORIENTATION: bool> DirectionIndexing
     for OrientedDirection<D, ORIENTATION>
 {
     #[inline]
-    fn to_index(&self) -> usize {
+    fn direction_to_index(&self) -> usize {
         self.index()
     }
 
     #[inline]
-    fn from_index(index: usize) -> Option<Self> {
+    fn direction_from_index(index: usize) -> Option<Self> {
         Self::new(index)
     }
 
     #[inline]
-    fn number_of_elements() -> usize {
+    fn number_of_directions() -> usize {
         D
     }
 }
+
+impl<const D: usize, const ORIENTATION: bool> DirectionTrait for OrientedDirection<D, ORIENTATION> {}
 
 // /// TODO impl doc
 // impl<const D: usize> NumberOfLatticeElement<D> for Direction<D> {
