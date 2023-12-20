@@ -285,21 +285,6 @@ impl<const D: usize> Display for Direction<D> {
     }
 }
 
-// /// TODO impl doc
-// impl<const D: usize> NumberOfLatticeElement<D> for Direction<D> {
-//     #[inline]
-//     fn number_of_elements(_lattice: &LatticeCyclic<D>) -> usize {
-//         D
-//     }
-// }
-
-// // TODO impl doc
-// impl<const D: usize> IndexToElement<D> for Direction<D> {
-//     fn index_to_element(_lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
-//         Self::new(index, true)
-//     }
-// }
-
 /// Partial ordering is set as follows: two directions can be compared if they have the same index
 /// or the same direction sign. In the first case a positive direction is greater than a negative direction
 /// In the latter case the ordering is done on the index.
@@ -542,8 +527,24 @@ implement_direction_from!();
 //---------------------------------------
 // trait DirectionIndexing
 
+/// An internal trait that direction implements. It is used for auto implementation
+/// of trait to avoid conflict. For example [`LatticeElementToIndex`] is implemented
+/// for type that are [`DirectionIndexing`] and [`DirectionTrait`]. Moreover we want
+///
+///
+/// This trait is a super trait of [`Sealed`] which is private meaning that It can't be
+/// implemented outside of this trait.
 pub trait DirectionTrait: Sealed {}
 
+/// Trait to transform (directions) Types to and from indices independently of a Lattice
+/// Contrary to [`LatticeElementToIndex`] [`NumberOfLatticeElement`] and [`IndexToElement`].
+///
+/// This trait is used to automate the code generation for [`Iterator`] and
+/// [`rayon::iter::IndexedParallelIterator`] without the overhead of a lattice.
+///
+///
+/// This trait is a super trait of [`Sealed`] which is private meaning that i
+/// it can't be implemented outside of this trait.
 pub trait DirectionIndexing: Sealed + Sized {
     /// Transform an element to an index.
     #[must_use]
@@ -590,12 +591,12 @@ impl<const D: usize> DirectionTrait for Direction<D> {}
 impl<const D: usize> DirectionIndexing for Direction<D> {
     #[inline]
     fn direction_to_index(&self) -> usize {
-        self.index() * 2 + if self.is_positive() { 1 } else { 0 }
+        self.index() * 2 + usize::from(!self.is_positive())
     }
 
     #[inline]
     fn direction_from_index(index: usize) -> Option<Self> {
-        Self::new((index.saturating_sub(1)) / 2, index % 2 == 1)
+        Self::new((index.saturating_sub(1)) / 2, index % 2 == 0)
     }
 
     #[inline]

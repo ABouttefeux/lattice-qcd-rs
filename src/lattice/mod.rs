@@ -29,7 +29,7 @@ pub use self::direction::{
 // TODO remove IteratorElement from public interface ?
 pub use self::iterator::{
     IteratorDirection, IteratorElement, IteratorLatticeLinkCanonical, IteratorLatticePoint,
-    LatticeIterator, LatticeParIter, ParIterLatticeLinkCanonical, ParIterLatticePoint,
+    LatticeIterator, ParIter, ParIterLatticeLinkCanonical, ParIterLatticePoint,
 };
 pub use self::lattice_cyclic::LatticeCyclic;
 use crate::private::Sealed;
@@ -136,6 +136,7 @@ impl<const D: usize> LatticePoint<D> {
         &mut self.data
     }
 
+    /// transform an index to a point inside a given lattice if it exists
     #[inline]
     #[must_use]
     fn index_to_point(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
@@ -352,7 +353,9 @@ impl<const D: usize> IndexToElement<D> for () {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLink<const D: usize> {
+    /// The starting point of the link.
     from: LatticePoint<D>,
+    /// The direction of the link.
     dir: Direction<D>,
 }
 
@@ -425,7 +428,9 @@ impl<const D: usize> Display for LatticeLink<D> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, Sealed)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LatticeLinkCanonical<const D: usize> {
+    /// The starting point of the link.
     from: LatticePoint<D>,
+    /// The direction of the link.
     dir: Direction<D>,
 }
 
@@ -729,10 +734,10 @@ mod test {
         assert_eq!(Direction::<4>::positive_directions().len(), 4);
 
         let l = LatticeCyclic::new(1_f64, 4).expect("lattice has an error");
-        for dir in Direction::<3>::directions() {
+        for (index, dir) in Direction::<3>::directions().iter().enumerate() {
             assert_eq!(
                 <Direction<3> as LatticeElementToIndex<3>>::to_index(dir, &l),
-                dir.index()
+                index
             );
         }
 

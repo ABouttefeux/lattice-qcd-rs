@@ -12,8 +12,7 @@ use rayon::iter::{
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{super::Direction, DoubleEndedCounter, IteratorElement, RandomAccessIterator};
-use crate::lattice::direction::DirectionIndexing;
+use super::{super::Direction, IteratorElement, RandomAccessIterator};
 
 /// Iterator over [`Direction`] with the same sign.
 /// # Example

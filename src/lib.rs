@@ -121,7 +121,7 @@
 //---------------------------------------
 // doc lints
 #![warn(missing_docs)] // doc
-// #![warn(clippy::missing_docs_in_private_items)] // doc
+#![warn(clippy::missing_docs_in_private_items)] // doc
 #![deny(rustdoc::broken_intra_doc_links)] // cspell: ignore rustdoc
 #![deny(rustdoc::private_intra_doc_links)]
 #![deny(rustdoc::invalid_codeblock_attributes)]
@@ -170,11 +170,15 @@ use utils_lib::trait_sealed;
 
 // #[cfg(feature = "serde-serialize")]
 // use serde::{Deserialize, Serialize};
-// #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord, Default)]
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 // #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 
 //---------------------------------------
 // trait
+
+// doc for sealed trait
+// This trait is a super trait of [`Sealed`] which is private meaning that It can't be
+// implemented outside of this trait.
 trait_sealed!();
 
 //---------------------------------------

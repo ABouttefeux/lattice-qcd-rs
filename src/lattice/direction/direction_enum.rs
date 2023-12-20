@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use utils_lib::Sealed;
 
 use super::{Direction, DirectionIndexing, DirectionList, DirectionTrait};
-use crate::lattice::{LatticeCyclic, LatticeElementToIndex};
 use crate::Real;
 
 //---------------------------------------

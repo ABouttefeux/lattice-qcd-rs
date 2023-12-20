@@ -84,14 +84,16 @@ nextest: $(source_files)
 test_all: fmt_check test doc_check | clippy
 
 
+fmt_check_cmd := $(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
 .PHONY: fmt_check
 fmt_check: $(source_files)
-	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
+	$(fmt_check_cmd)
 
 
 .PHONY: fmt
 fmt: $(source_files)
-	$(cargo) $(rust_nightly) $(cargo_all_flag) $(cargo_fmt)
+	- $(fmt_check_cmd)
+	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag)
 
 
 .PHONY: clippy
