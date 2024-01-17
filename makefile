@@ -55,10 +55,6 @@ git_hooks := $(foreach file, $(notdir $(wildcard tools/git_hook/*)), .git/hooks/
 .PHONY: all
 all: clippy
 
-.PHONY: fix
-fix: $(source_files)
-	- $(cargo) $(cargo_clippy) $(cargo_all_flag) $(rust_all_targets) $(fix_flags)
-
 
 .PHONY: fix
 fix: $(source_files)

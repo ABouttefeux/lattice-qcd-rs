@@ -1,4 +1,4 @@
-//! Contains [`LatticeProducer`]
+//! Contains [`Prod`]
 
 //---------------------------------------
 // uses
@@ -10,8 +10,8 @@ use super::{ParIter, RandomAccessIterator, Split};
 //---------------------------------------
 // struct definition
 
-/// [`rayon::iter::plumbing::Producer`] for the [`rayon::iter::IndexedParallelIterator`] [`super::ParIter`] based on
-/// the [`DoubleEndedIterator`] [`LatticeIterator`].
+/// [`rayon::iter::plumbing::Producer`] for the [`rayon::iter::IndexedParallelIterator`]
+/// [`super::ParIter`] based on the [`DoubleEndedIterator`] [`Prod`].
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Prod<T>(T);
@@ -25,21 +25,21 @@ impl<T> Prod<T> {
         Self(iter)
     }
 
-    /// Convert self into a [`LatticeIterator`]
+    /// Convert self into a [`Prod`]
     #[inline]
     #[must_use]
     pub fn into_iterator(self) -> T {
         self.0
     }
 
-    /// Convert as a reference of [`LatticeIterator`]
+    /// Convert as a reference of [`Prod`]
     #[inline]
     #[must_use]
     const fn as_iter(&self) -> &T {
         &self.0
     }
 
-    /// Convert as a mutable reference of [`LatticeIterator`]
+    /// Convert as a mutable reference of [`Prod`]
     #[allow(clippy::iter_not_returning_iterator)] // yes in some cases (see impl of IntoIterator)
     #[inline]
     #[must_use]

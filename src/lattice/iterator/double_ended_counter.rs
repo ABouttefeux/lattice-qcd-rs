@@ -110,9 +110,10 @@ impl<D: DirectionIndexing> RandomAccessIterator for DoubleEndedCounter<D> {
     type Item = D;
 
     fn iter_len(&self) -> usize {
-        self.front()
+        // this time it is end - front because we use index and not length
+        self.end()
             .direction_to_index()
-            .saturating_sub(self.end().direction_to_index())
+            .saturating_sub(self.front().direction_to_index())
     }
 
     fn increase_front_element_by(&self, advance_by: usize) -> IteratorElement<Self::Item> {

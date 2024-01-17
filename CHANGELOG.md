@@ -45,6 +45,9 @@
 - added [`LatticeCyclic::par_iter_links`] and [`LatticeCyclic::par_iter_points`] to get parallel iterator on the links and points respectively.
 - Added [`CardinalDirection`].
 - Added [`Axis`].
+- Added type alias [`lattice::IteratorOrientedDirection`] for [`DoubleEndedCounter<OrientedDirection>`].
+- Depreciate [`IteratorDirection`], use [`IteratorOrientedDirection`].
+
 
 # v0.2.1
 

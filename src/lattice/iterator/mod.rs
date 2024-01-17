@@ -28,7 +28,8 @@ mod producer;
 //---------------------------------------
 // uses
 
-pub use self::direction::IteratorDirection;
+#[allow(deprecated)]
+pub use self::direction::{IteratorDirection, IteratorOrientedDirection};
 pub use self::double_ended_counter::DoubleEndedCounter;
 pub use self::element::IteratorElement;
 pub use self::lattice_iterator::LatticeIterator;
@@ -76,12 +77,12 @@ pub trait RandomAccessIterator: Sealed {
     // }
 }
 
-/// Trait used by [`producer::LatticeProducer`] for implementing
+/// Trait used by [`producer::Prod`] for implementing
 /// [`rayon::iter::plumbing::Producer`].
 /// It is separate trait than [`RandomAccessIterator`] to avoid more a [`Clone`] constrain.
 ///
-/// [`Split::split_at`] return two self and not two [`producer::LatticeProducer`] the idea is that they
-/// should be converted into [`producer::LatticeProducer`].
+/// [`Split::split_at`] return two self and not two [`producer::Prod`] the idea is that they
+/// should be converted into [`producer::Prod`].
 ///
 /// This trait is a super trait of [`Sealed`] which is private meaning that It can't be
 /// implemented outside of this trait.

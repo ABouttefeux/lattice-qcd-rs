@@ -49,7 +49,7 @@ impl<T> ParIter<T> {
     }
 
     /// Take a reference of self and return a reference to an [`Iterator`].
-    /// This might not be very useful look instead at [`Self::as_iter_mut`]
+    /// This might not be very useful look instead at [`Self::iter_mut`]
     #[must_use]
     #[inline]
     pub const fn as_iter(&self) -> &T {

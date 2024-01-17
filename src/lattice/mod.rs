@@ -27,9 +27,11 @@ pub use self::direction::{
     Axis, Direction, DirectionConversionError, DirectionEnum, DirectionList, OrientedDirection,
 };
 // TODO remove IteratorElement from public interface ?
+#[allow(deprecated)]
 pub use self::iterator::{
     IteratorDirection, IteratorElement, IteratorLatticeLinkCanonical, IteratorLatticePoint,
-    LatticeIterator, ParIter, ParIterLatticeLinkCanonical, ParIterLatticePoint,
+    IteratorOrientedDirection, LatticeIterator, ParIter, ParIterLatticeLinkCanonical,
+    ParIterLatticePoint,
 };
 pub use self::lattice_cyclic::LatticeCyclic;
 use crate::private::Sealed;
@@ -524,6 +526,7 @@ impl<const D: usize> LatticeLinkCanonical<D> {
         self.dir = dir.to_positive();
     }
 
+    /// Transform an index to an canonical link inside a given lattice if it exists
     #[inline]
     #[must_use]
     fn index_to_canonical_link(lattice: &LatticeCyclic<D>, index: usize) -> Option<Self> {
