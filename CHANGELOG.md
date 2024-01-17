@@ -1,6 +1,12 @@
 
 # v0.3.0
 
+## dependencies
+
+- updating to crossbeam 0.8.4
+- updating to num-traits 0.2.17
+- updating to rayon 1.8
+
 ## breaking changes
 - update dependencies
 - [`SymplecticEulerError`](hnew_deterministtps://abouttefeux.github.io/lattice-qcd-rs/lattice_qcd_rs/integrator/symplectic_euler/enum.SymplecticEulerError.html) is now marked `#[non_exhaustive]`

@@ -13,6 +13,7 @@ cargo_test := test
 cargo_doc := doc
 cargo_clean := clean
 cargo_fmt := fmt
+cargo_update := update
 # work space
 cargo_all_flag := --all
 cargo_crate_macro := -p $(name)-procedural_macro
@@ -52,6 +53,11 @@ git_hooks := $(foreach file, $(notdir $(wildcard tools/git_hook/*)), .git/hooks/
 all: clippy
 
 
+.PHONY: fix
+fix: $(source_files)
+	- $(cargo) $(cargo_clippy) $(cargo_all_flag) $(rust_all_targets) $(fix_flags)
+
+
 .PHONY: build
 build: target/debug/$(lib_name)
 
@@ -71,7 +77,7 @@ fmt_check: $(source_files)
 	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
 
 
-.PHONY: fmt_check
+.PHONY: fmt
 fmt: $(source_files)
 	$(cargo) $(rust_nightly) $(cargo_all_flag) $(cargo_fmt)
 
@@ -110,3 +116,8 @@ target/release/$(lib_name): $(source_files)
 
 target/debug/$(lib_name): $(source_files)
 	$(cargo) $(cargo_build)
+
+
+.PHONY: update
+update: .FORCE
+	$(cargo) $(cargo_update)
