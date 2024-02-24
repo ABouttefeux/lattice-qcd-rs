@@ -3,6 +3,7 @@
 //! # example
 //! see [`IteratorDirection`]
 
+#![allow(deprecated)]
 use std::iter::FusedIterator;
 
 use rayon::iter::{
@@ -12,9 +13,68 @@ use rayon::iter::{
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{super::Direction, IteratorElement};
+use super::{super::Direction, DoubleEndedCounter, IteratorElement};
+use crate::lattice::OrientedDirection;
 
-/// Iterator over [`Direction`] with the same sign.
+/// Iterator over [`OrientedDirection`].
+/// # Example
+/// ```
+/// # use lattice_qcd_rs::lattice::{IteratorOrientedDirection, OrientedDirection, IteratorElement};
+/// # use lattice_qcd_rs::error::ImplementationError;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut iter = IteratorOrientedDirection::<4, true>::new();
+///
+/// let iter_val = iter.next();
+/// // debug
+/// println!("{iter_val:?}, {:?}", OrientedDirection::<4, true>::new(0));
+///
+/// assert_eq!(
+///     iter_val.ok_or(ImplementationError::OptionWithUnexpectedNone)?,
+///     OrientedDirection::<4, true>::new(0)
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+/// );
+/// assert_eq!(
+///     iter.next()
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?,
+///     OrientedDirection::<4, true>::new(1)
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+/// );
+/// assert_eq!(
+///     iter.next()
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?,
+///     OrientedDirection::<4, true>::new(2)
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+/// );
+/// assert_eq!(
+///     iter.next()
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?,
+///     OrientedDirection::<4, true>::new(3)
+///         .ok_or(ImplementationError::OptionWithUnexpectedNone)?
+/// );
+/// assert_eq!(iter.next(), None);
+/// assert_eq!(iter.next(), None);
+/// # Ok(())
+/// # }
+/// ```
+pub type IteratorOrientedDirection<const D: usize, const ORIENTATION: bool> =
+    DoubleEndedCounter<OrientedDirection<D, ORIENTATION>>;
+
+/// Iterator over [`Direction`] with the orientation.
+///
+/// This item is depreciated and used should used [`IteratorOrientedDirection`] instead
+/// (whose output can be converted into an [`Direction`]).
+///
+/// The reason of the depreciation is that I use a new system that use generic trait for
+/// the iterators this is an old struct where everything was more or done the same way
+/// but manually it means it does not benefit from the optimization and the correction
+/// the others iterators benefits from. Also because of the way I count element on the
+/// lattice it does not make sense any more.
+/// (before direction were counted for d = 2 `(index 0, or: true)`, `(index 1, or: true)` - end of count,
+/// negative orientation weren't taken into account. Now they are counted
+/// `(axis : 0, or: true)`, `(axis: 0, or false)`, `(axis : 1, or: true)`, `(axis: 1, or false)`).
+/// Now it make more sense to iterate over [`OrientedDirection`]
+///
+///
 /// # Example
 /// ```
 /// # use lattice_qcd_rs::lattice::{IteratorDirection, Direction, IteratorElement};
@@ -47,9 +107,13 @@ use super::{super::Direction, IteratorElement};
 /// # Ok(())
 /// # }
 /// ```
-// TODO
+// TODO remove ?
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+#[deprecated(
+    since = "0.3.0",
+    note = "use `IteratorOrientedDirection` instead with a map and a conversion"
+)]
 pub struct IteratorDirection<const D: usize, const IS_POSITIVE_DIRECTION: bool> {
     /// Front element of the iterator. The state need to be increased before
     /// being returned by the next [`Iterator::next`] call.

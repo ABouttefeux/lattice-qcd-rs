@@ -1,4 +1,4 @@
 #!/bin/sh
 
 cargo +nightly fmt --all --check
-cargo clippy --all
+cargo clippy --all --all-targets

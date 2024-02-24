@@ -29,6 +29,26 @@ command = [
 ]
 need_stdout = false
 
+[jobs.clippy-fix]
+command = [
+    "cargo",
+    "clippy",
+    "--fix",
+    "--allow-staged",
+    "--all",
+    "--all-targets",
+    "--all-features",
+    "--color",
+    "always",
+    "--",
+    # "--no-deps",
+]
+need_stdout = false
+on_success = "back"
+background = true
+allow_warnings = true
+allow_failures = true
+
 # This job lets you run
 # - all tests: bacon test
 # - a specific test: bacon test -- config::test_default_files
@@ -160,3 +180,5 @@ alt-d = "job:doc-open"
 shift-d = "job:doc-pub"
 r = "rerun"
 f5 = "rerun"
+c = "job:clippy"
+shift-c = "job:clippy-fix"

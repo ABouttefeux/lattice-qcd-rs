@@ -29,7 +29,7 @@ use super::{
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct Su3Adjoint {
-    /// the underling representation
+    /// the underling representation as height real values
     data: Vector8<Real>,
 }
 
@@ -655,7 +655,9 @@ impl From<[Real; 8]> for Su3Adjoint {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct LinkMatrix {
-    data: Vec<Matrix3<nalgebra::Complex<Real>>>,
+    // storage of the underling data
+    // TODO more doc
+    data: Vec<CMatrix3>,
 }
 
 impl LinkMatrix {
@@ -1159,6 +1161,8 @@ where
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct EField<const D: usize> {
+    // storage of the underling data
+    // TODO more doc
     data: Vec<SVector<Su3Adjoint, D>>, // use a Vec<[Su3Adjoint; D]> instead ?
 }
 
@@ -1434,6 +1438,9 @@ impl<const D: usize> EField<D> {
         lattice: &LatticeCyclic<D>,
     ) -> Option<Self> {
         // TODO improve
+        /// number of loop in between checking the gauss sum divergence
+        /// to increase performance as computing this value too often
+        /// can be too much of an overhead.
         const NUMBER_FOR_LOOP: usize = 4;
 
         if lattice.number_of_points() != self.len()
@@ -1463,6 +1470,7 @@ impl<const D: usize> EField<D> {
     ///
     /// # Panic
     /// panics if the link matrix and lattice is not of the correct size.
+    #[must_use]
     #[inline] // REVIEW
     fn project_to_gauss_step(&self, link_matrix: &LinkMatrix, lattice: &LatticeCyclic<D>) -> Self {
         /// see <https://arxiv.org/pdf/1512.02374.pdf>

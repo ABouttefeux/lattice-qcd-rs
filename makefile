@@ -21,6 +21,7 @@ cargo_crate_macro := -p $(name)-procedural_macro
 # clippy
 cargo_clippy := clippy
 cargo_clippy_flag := -- -D warnings
+fix_flags := --fix --allow-staged
 
 rust_release_flag := --release
 # doc
@@ -34,6 +35,8 @@ rust_doc_targets = --doc
 rust_example_flag := --examples
 # feature
 rust_coverage_feature := --no-default-features --features="serde-serialize"
+#nextest 
+nextest_run := nextest run
 
 rust_stable := +stable
 rust_nightly := +nightly
@@ -68,18 +71,25 @@ test: $(source_files)
 	$(cargo) $(cargo_test) $(cargo_all_flag) $(rust_doc_targets)
 
 
+.PHONY: nextest
+nextest: $(source_files)
+	$(cargo) $(nextest_run) $(cargo_all_flag) $(rust_all_targets)
+
+
 .PHONY: test_all
 test_all: fmt_check test doc_check | clippy
 
 
+fmt_check_cmd := $(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
 .PHONY: fmt_check
 fmt_check: $(source_files)
-	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag) $(rustfmt_check_flag)
+	$(fmt_check_cmd)
 
 
 .PHONY: fmt
 fmt: $(source_files)
-	$(cargo) $(rust_nightly) $(cargo_all_flag) $(cargo_fmt)
+	- $(fmt_check_cmd)
+	$(cargo) $(rust_nightly) $(cargo_fmt) $(cargo_all_flag)
 
 
 .PHONY: clippy

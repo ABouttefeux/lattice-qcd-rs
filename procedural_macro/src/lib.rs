@@ -161,12 +161,13 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
         let mut array_direction = Vec::with_capacity(MAX_DIM);
         let mut array_direction_positives = Vec::with_capacity(MAX_DIM);
         for j in 0..i {
+            // SAFETY: #j is smaller than the dimension = #i (later in the proc macro)
             array_direction.push(quote! {
-                Direction { index_dir: #j, is_positive: true },
-                Direction { index_dir: #j, is_positive: false }
+                Direction { axis: unsafe{Axis::new_unchecked(#j)}, is_positive: true },
+                Direction { axis: unsafe{Axis::new_unchecked(#j)}, is_positive: false }
             });
             array_direction_positives.push(quote! {
-                Direction { index_dir: #j, is_positive: true }
+                Direction { axis: unsafe{Axis::new_unchecked(#j)}, is_positive: true }
             });
         }
 
@@ -184,6 +185,8 @@ pub fn implement_direction_list(_item: TokenStream) -> TokenStream {
             #[doc=#comment_pos]
             const #u_dir_pos_ident: [Direction<#i>; #i] = [ #(#array_direction_positives),* ];
 
+            #[allow(unsafe_code)]
+            #[allow(undocumented_unsafe_blocks)]
             impl DirectionList for Direction<#i> {
                 #[inline]
                 fn directions() -> &'static [Self] {

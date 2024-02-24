@@ -2,7 +2,7 @@
 //! # Example
 // TODO
 
-use super::{LatticeIterator, LatticeParIter};
+use super::{LatticeIterator, ParIter};
 use crate::lattice::LatticeLinkCanonical;
 
 /// Iterator over [`LatticeLinkCanonical`] associated to a particular
@@ -14,7 +14,7 @@ pub type IteratorLatticeLinkCanonical<'a, const D: usize> =
 /// Parallel iterator over [`LatticeLinkCanonical`]
 /// # Example
 pub type ParIterLatticeLinkCanonical<'a, const D: usize> =
-    LatticeParIter<'a, D, LatticeLinkCanonical<D>>;
+    ParIter<LatticeIterator<'a, D, LatticeLinkCanonical<D>>>;
 
 #[cfg(test)]
 mod test {
