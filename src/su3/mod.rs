@@ -4,16 +4,15 @@
 //! [wikipedia](https://en.wikipedia.org/w/index.php?title=Gell-Mann_matrices&oldid=988659438#Matrices)
 //! **divided by two** such that `Tr(T^a T^b) = \delta^{ab} /2 `.
 
-use std::iter::FusedIterator;
+mod factorial;
 
-use na::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
+use nalgebra::{base::allocator::Allocator, ComplexField, DefaultAllocator, OMatrix};
 use rand::Rng;
-use rand_distr::{Distribution, Uniform};
+use rand_distr::{Bernoulli, Distribution, Uniform};
 
-use super::{
-    field::Su3Adjoint, su2, utils, utils::FactorialNumber, CMatrix2, CMatrix3, Complex, Real, I,
-    ONE, ZERO,
-};
+pub use self::factorial::factorial_size_for_exp;
+use self::factorial::FACTORIAL_STORAGE_STAT;
+use super::{field::Su3Adjoint, su2, CMatrix2, CMatrix3, Complex, Real, I, ONE, ZERO};
 
 /// SU(3) generator
 /// ```textrust
@@ -199,6 +198,7 @@ pub const GENERATORS: [&CMatrix3; 8] = [
 #[deprecated(since = "0.2.0", note = "Please use nalgebra exp instead")]
 pub trait MatrixExp<T = Self> {
     /// Return the exponential of the matrix
+    #[must_use]
     fn exp(self) -> T;
 }
 
@@ -206,24 +206,27 @@ pub trait MatrixExp<T = Self> {
 /// It does it by first diagonalizing the matrix then exponentiate the diagonal
 /// and retransforms it back to the original basis.
 #[allow(deprecated)]
-impl<T, D> MatrixExp<OMatrix<T, D, D>> for OMatrix<T, D, D>
+impl<T, D> MatrixExp<Self> for OMatrix<T, D, D>
 where
     T: ComplexField + Copy,
-    D: na::DimName + na::DimSub<na::U1>,
-    DefaultAllocator: Allocator<T, D, na::DimDiff<D, na::U1>>
-        + Allocator<T, na::DimDiff<D, na::U1>>
+    D: nalgebra::DimName + nalgebra::DimSub<nalgebra::U1>,
+    DefaultAllocator: Allocator<T, D, nalgebra::DimDiff<D, nalgebra::U1>>
+        + Allocator<T, nalgebra::DimDiff<D, nalgebra::U1>>
         + Allocator<T, D, D>
         + Allocator<T, D>,
-    OMatrix<T, D, D>: Clone,
+    Self: Clone,
 {
-    fn exp(self) -> OMatrix<T, D, D> {
+    #[inline]
+    fn exp(self) -> Self {
         let decomposition = self.schur();
         // a complex matrix is always diagonalizable
-        let eigens = decomposition.eigenvalues().unwrap();
-        let new_matrix = Self::from_diagonal(&eigens.map(|el| el.exp()));
+        let eigens = decomposition
+            .eigenvalues()
+            .expect("eigens value always exist for complex matrices");
+        let new_matrix = Self::from_diagonal(&eigens.map(ComplexField::exp));
         let (q, _) = decomposition.unpack();
         // q is always invertible
-        q.clone() * new_matrix * q.try_inverse().unwrap()
+        q.clone() * new_matrix * q.try_inverse().expect("always invertible")
     }
 }
 
@@ -276,18 +279,25 @@ where
 /// );
 /// assert_eq_matrix!(m, create_matrix_from_2_vector(v1, v2), 0.000_000_1_f64);
 /// ```
+#[inline]
+#[must_use]
 pub fn create_matrix_from_2_vector(
-    v1: na::Vector3<Complex>,
-    v2: na::Vector3<Complex>,
-) -> na::Matrix3<Complex> {
+    v1: nalgebra::Vector3<Complex>,
+    v2: nalgebra::Vector3<Complex>,
+) -> nalgebra::Matrix3<Complex> {
     // TODO find a better way
-    let cross_vec: na::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
+    let cross_vec: nalgebra::Vector3<Complex> = v1.conjugate().cross(&v2.conjugate());
     let iter = v1.iter().chain(v2.iter()).chain(cross_vec.iter()).copied();
-    na::Matrix3::<Complex>::from_iterator(iter)
+    nalgebra::Matrix3::<Complex>::from_iterator(iter)
 }
 
 /// get an orthonormalize matrix from two vector.
-fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>) -> CMatrix3 {
+#[inline]
+#[must_use]
+fn ortho_matrix_from_2_vector(
+    v1: nalgebra::Vector3<Complex>,
+    v2: nalgebra::Vector3<Complex>,
+) -> CMatrix3 {
     let v1_new = v1.try_normalize(f64::EPSILON).unwrap_or(v1);
     let v2_temp = v2 - v1_new * v1_new.conjugate().dot(&v2);
     let v2_new = v2_temp.try_normalize(f64::EPSILON).unwrap_or(v2_temp);
@@ -296,14 +306,17 @@ fn ortho_matrix_from_2_vector(v1: na::Vector3<Complex>, v2: na::Vector3<Complex>
 
 /// Try orthonormalize the given matrix.
 // TODO example
+#[inline]
+#[must_use]
 pub fn orthonormalize_matrix(matrix: &CMatrix3) -> CMatrix3 {
-    let v1 = na::Vector3::from_iterator(matrix.column(0).iter().copied());
-    let v2 = na::Vector3::from_iterator(matrix.column(1).iter().copied());
+    let v1 = nalgebra::Vector3::from_iterator(matrix.column(0).iter().copied());
+    let v2 = nalgebra::Vector3::from_iterator(matrix.column(1).iter().copied());
     ortho_matrix_from_2_vector(v1, v2)
 }
 
 /// Orthonormalize the given matrix by mutating its content.
 // TODO example
+#[inline]
 pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
     *matrix = orthonormalize_matrix(matrix);
 }
@@ -319,18 +332,22 @@ pub fn orthonormalize_matrix_mut(matrix: &mut CMatrix3) {
 ///     assert_matrix_is_su_3!(random_su3(&mut rng), 9_f64 * f64::EPSILON);
 /// }
 /// ```
+#[inline]
+#[must_use]
 pub fn random_su3<Rng>(rng: &mut Rng) -> CMatrix3
 where
     Rng: rand::Rng + ?Sized,
 {
-    rand_su3_with_dis(rng, &rand::distributions::Uniform::new(-1_f64, 1_f64))
+    rand_su3_with_dis(rng, &Uniform::new(-1_f64, 1_f64))
 }
 
 /// Get a random SU3 with the given distribution.
 ///
 /// The given distribution can be quite opaque on the distribution of the SU(3) matrix.
-/// For a matrix Uniformly distributed among SU(3) use [`get_random_su3`].
-/// For a matrix close to unity use [`get_random_su3_close_to_unity`]
+/// For a matrix Uniformly distributed among SU(3) use [`random_su3`].
+/// For a matrix close to unity use [`random_su3_close_to_unity`]
+#[inline]
+#[must_use]
 fn rand_su3_with_dis<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> CMatrix3
 where
     Rng: rand::Rng + ?Sized,
@@ -346,12 +363,17 @@ where
     ortho_matrix_from_2_vector(v1, v2)
 }
 
-/// get a random [`na::Vector3<Complex>`].
-fn random_vec_3<Rng>(rng: &mut Rng, d: &impl rand_distr::Distribution<Real>) -> na::Vector3<Complex>
+/// get a random [`nalgebra::Vector3<Complex>`].
+#[inline]
+#[must_use]
+fn random_vec_3<Rng>(
+    rng: &mut Rng,
+    d: &impl rand_distr::Distribution<Real>,
+) -> nalgebra::Vector3<Complex>
 where
     Rng: rand::Rng + ?Sized,
 {
-    na::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
+    nalgebra::Vector3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
 }
 
 /// Get a radom SU(3) matrix close to `[get_r] (+/- 1) * [get_s] (+/- 1) * [get_t] (+/- 1)`.
@@ -382,6 +404,9 @@ where
 ///     f64::EPSILON * 180_f64
 /// );
 /// ```
+#[allow(clippy::missing_panics_doc)] // does not panic
+#[inline]
+#[must_use]
 pub fn random_su3_close_to_unity<R>(spread_parameter: Real, rng: &mut R) -> CMatrix3
 where
     R: rand::Rng + ?Sized,
@@ -389,7 +414,7 @@ where
     let r = get_r(su2::random_su2_close_to_unity(spread_parameter, rng));
     let s = get_s(su2::random_su2_close_to_unity(spread_parameter, rng));
     let t = get_t(su2::random_su2_close_to_unity(spread_parameter, rng));
-    let distribution = rand::distributions::Bernoulli::new(0.5_f64).unwrap();
+    let distribution = Bernoulli::new(0.5_f64).expect("always exist");
     let mut x = r * s * t;
     if distribution.sample(rng) {
         x = x.adjoint();
@@ -425,6 +450,8 @@ where
 /// );
 /// assert_eq_matrix!(get_r(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_r(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0, 0)],
@@ -469,6 +496,8 @@ pub fn get_r(m: CMatrix2) -> CMatrix3 {
 /// );
 /// assert_eq_matrix!(get_s(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_s(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         m[(0, 0)],
@@ -513,6 +542,8 @@ pub fn get_s(m: CMatrix2) -> CMatrix3 {
 /// );
 /// assert_eq_matrix!(get_t(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_t(m: CMatrix2) -> CMatrix3 {
     CMatrix3::new(
         ONE,
@@ -556,6 +587,8 @@ pub fn get_t(m: CMatrix2) -> CMatrix3 {
 /// );
 /// assert_eq_matrix!(get_sub_block_r(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_sub_block_r(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(0, 0)],
@@ -593,6 +626,8 @@ pub fn get_sub_block_r(m: CMatrix3) -> CMatrix2 {
 /// );
 /// assert_eq_matrix!(get_sub_block_s(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_sub_block_s(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(0, 0)],
@@ -630,6 +665,8 @@ pub fn get_sub_block_s(m: CMatrix3) -> CMatrix2 {
 /// );
 /// assert_eq_matrix!(get_sub_block_t(m1), m2, f64::EPSILON);
 /// ```
+#[inline]
+#[must_use]
 pub fn get_sub_block_t(m: CMatrix3) -> CMatrix2 {
     CMatrix2::new(
         m[(1, 1)],
@@ -642,24 +679,32 @@ pub fn get_sub_block_t(m: CMatrix3) -> CMatrix2 {
 
 /// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "r" sub block see
 /// [`get_sub_block_r`] and [`su2::project_to_su2_unorm`].
+#[inline]
+#[must_use]
 pub fn get_su2_r_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_r(input))
 }
 
 /// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "s" sub block see
 /// [`get_sub_block_s`] and [`su2::project_to_su2_unorm`].
+#[inline]
+#[must_use]
 pub fn get_su2_s_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_s(input))
 }
 
 /// Get the unormalize SU(2) sub matrix of an SU(3) matrix corresponding to the "t" sub block see
 /// [`get_sub_block_t`] and [`su2::project_to_su2_unorm`].
+#[inline]
+#[must_use]
 pub fn get_su2_t_unorm(input: CMatrix3) -> CMatrix2 {
     su2::project_to_su2_unorm(get_sub_block_t(input))
 }
 
 /// Get the three unormalize sub SU(2) matrix of the given SU(3) matrix, ordered `r, s, t`
 /// see [`get_sub_block_r`], [`get_sub_block_s`] and [`get_sub_block_t`]
+#[inline]
+#[must_use]
 pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
     [get_su2_r_unorm(m), get_su2_s_unorm(m), get_su2_t_unorm(m)]
 }
@@ -702,119 +747,11 @@ pub fn extract_su2_unorm(m: CMatrix3) -> [CMatrix2; 3] {
 /// assert_eq!(m2, reverse(m1));
 /// assert_eq!(m1, reverse(m2));
 /// ```
+#[inline]
+#[must_use]
 pub fn reverse(input: CMatrix3) -> CMatrix3 {
-    input.map_with_location(|i, j, el| {
-        if i == j {
-            el
-        }
-        else {
-            -el
-        }
-    })
+    input.map_with_location(|i, j, el| if i == j { el } else { -el })
 }
-
-/// Return N such that `1/(N-7)!` < [`f64::EPSILON`].
-///
-/// This number is needed for the computation of exponential matrix
-#[allow(clippy::as_conversions)] // no try into for f64
-pub fn factorial_size_for_exp() -> usize {
-    let mut n: usize = 7;
-    let mut factorial_value = 1;
-    while 1_f64 / (factorial_value as f64) >= Real::EPSILON {
-        n += 1;
-        factorial_value *= n - 7;
-    }
-    n
-}
-
-/// Size of the array for FactorialStorageStatic
-const FACTORIAL_STORAGE_STAT_SIZE: usize = utils::MAX_NUMBER_FACTORIAL + 1;
-
-/// Static store for factorial number.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-struct FactorialStorageStatic {
-    data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE],
-}
-
-macro_rules! set_factorial_storage {
-    ($data:ident, 0) => {
-        $data[0] = 1;
-    };
-    ($data:ident, $e:expr) => {
-        $data[$e] = $data[$e - 1] * $e as FactorialNumber;
-    };
-}
-
-impl FactorialStorageStatic {
-    /// compile time evaluation of all 34 factorial numbers
-    #[allow(clippy::as_conversions)] // constant function cant use try into
-    pub const fn new() -> Self {
-        let mut data: [FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] =
-            [1; FACTORIAL_STORAGE_STAT_SIZE];
-        let mut i = 1;
-        while i < FACTORIAL_STORAGE_STAT_SIZE {
-            // still not for loop in const fn
-            set_factorial_storage!(data, i);
-            i += 1;
-        }
-        Self { data }
-    }
-
-    /// access in O(1). Return None if `value` is bigger than 34.
-    pub fn try_get_factorial(&self, value: usize) -> Option<&FactorialNumber> {
-        self.data.get(value)
-    }
-
-    /// Get an iterator over the factorial number form `0!` up to `34!`.
-    pub fn iter(
-        &self,
-    ) -> impl Iterator<Item = &FactorialNumber> + ExactSizeIterator + FusedIterator {
-        self.data.iter()
-    }
-
-    /// Get the slice of factorial number.
-    pub const fn as_slice(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
-        &self.data
-    }
-}
-
-impl Default for FactorialStorageStatic {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl std::fmt::Display for FactorialStorageStatic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "factorial Storage : ")?;
-        for (i, n) in self.iter().enumerate() {
-            write!(f, "{}! = {}", i, n)?;
-            if i < self.data.len() - 1 {
-                write!(f, ", ")?;
-            }
-        }
-        Ok(())
-    }
-}
-
-impl<'a> IntoIterator for &'a FactorialStorageStatic {
-    type IntoIter = <&'a [u128; FACTORIAL_STORAGE_STAT_SIZE] as IntoIterator>::IntoIter;
-    type Item = &'a u128;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.data.iter()
-    }
-}
-
-impl AsRef<[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE]> for FactorialStorageStatic {
-    fn as_ref(&self) -> &[FactorialNumber; FACTORIAL_STORAGE_STAT_SIZE] {
-        self.as_slice()
-    }
-}
-
-/// factorial number storage in order to find the exponential in O(1) for a set storage
-/// the set if for all number `N` such that `\frac{1}{(N-7)!} >= \mathrm{f64::EPSILON}`
-const FACTORIAL_STORAGE_STAT: FactorialStorageStatic = FactorialStorageStatic::new();
 
 /// number of step for the computation of matrix exponential using the Cayley–Hamilton theorem.
 const N: usize = 26;
@@ -828,20 +765,31 @@ const N: usize = 26;
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 #[inline]
+#[must_use]
 #[allow(clippy::as_conversions)] // no try into for f64
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::missing_panics_doc)] // does not panic
 pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
     // todo optimize even more using f64 to reduce the number of operation using complex that might be useless
+    /// numbers of loops: `N - 1`
     const N_LOOP: usize = N - 1;
-    let mut q0: Complex =
-        Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
+    let mut q0: Complex = Complex::from(
+        1_f64
+            / *FACTORIAL_STORAGE_STAT
+                .try_get_factorial(N_LOOP)
+                .expect("should exist") as f64,
+    );
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
-        let q0_n =
-            Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64)
-                + d * q2;
+        let q0_n = Complex::from(
+            1_f64
+                / *FACTORIAL_STORAGE_STAT
+                    .try_get_factorial(i)
+                    .expect("should exist") as f64,
+        ) + d * q2;
         let q1_n = I * (q0 - t * q2);
         let q2_n = I * q1;
 
@@ -864,7 +812,7 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// Note that the documentation above explain the algorithm for exp(X) here it is a modified version for
 /// exp(i X).
 ///
-/// # Panic
+/// # Panics
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximately su(3),
 /// otherwise the function will panic in debug mod, in release the output gives unexpected values.
 /// ```should_panic
@@ -877,23 +825,38 @@ pub fn su3_exp_i(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// let matrix = Matrix3::identity(); // this is NOT an su(3) matrix
 /// let output = matrix_su3_exp_i(matrix);
 /// // We panic in debug. In release the following asset will fail.
-/// // assert_eq_matrix!(output, (matrix* i).exp(), f64::EPSILON * 100_000_f64);
+/// assert_eq_matrix!(output, (matrix * i).exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
+#[must_use]
 #[allow(clippy::as_conversions)] // no try into for f64
+#[allow(clippy::cast_precision_loss)]
 pub fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
-    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
+    /// numbers of loops: `N - 1`
     const N_LOOP: usize = N - 1;
-    let mut q0: Complex =
-        Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
+
+    debug_assert!(
+        is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64),
+        "the matrix si not sufficiently close to an su3 lie"
+    );
+
+    let mut q0: Complex = Complex::from(
+        1_f64
+            / *FACTORIAL_STORAGE_STAT
+                .try_get_factorial(N_LOOP)
+                .expect("should exist") as f64,
+    );
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = matrix.determinant() * I;
     let t: Complex = -Complex::from(0.5_f64) * (matrix * matrix).trace();
     for i in (0..N_LOOP).rev() {
-        let q0_n =
-            Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64)
-                + d * q2;
+        let q0_n = Complex::from(
+            1_f64
+                / *FACTORIAL_STORAGE_STAT
+                    .try_get_factorial(i)
+                    .expect("should exist") as f64,
+        ) + d * q2;
         let q1_n = I * (q0 - t * q2);
         let q2_n = I * q1;
 
@@ -912,19 +875,30 @@ pub fn matrix_su3_exp_i(matrix: CMatrix3) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 #[inline]
+#[must_use]
 #[allow(clippy::as_conversions)] // no try into for f64
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::missing_panics_doc)] // does not panic
 pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
+    /// numbers of loops: `N - 1`
     const N_LOOP: usize = N - 1;
-    let mut q0: Complex =
-        Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
+    let mut q0: Complex = Complex::from(
+        1_f64
+            / *FACTORIAL_STORAGE_STAT
+                .try_get_factorial(N_LOOP)
+                .expect("always exist") as f64,
+    );
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = su3_adj.d();
     let t: Complex = su3_adj.t().into();
     for i in (0..N_LOOP).rev() {
-        let q0_n =
-            Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64)
-                - I * d * q2;
+        let q0_n = Complex::from(
+            1_f64
+                / *FACTORIAL_STORAGE_STAT
+                    .try_get_factorial(i)
+                    .expect("always exist") as f64,
+        ) - I * d * q2;
         let q1_n = q0 - t * q2;
         let q2_n = q1;
 
@@ -944,7 +918,7 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// [OpenQCD](https://luscher.web.cern.ch/luscher/openQCD/) documentation that can be found
 /// [here](https://github.com/sa2c/OpenQCD-AVX512/blob/master/doc/su3_fcts.pdf) or by downloading a release.
 ///
-/// # Panic
+/// # Panics
 /// The input matrix must be an su(3) (Lie algebra of SU(3)) matrix or approximately su(3),
 /// otherwise the function will panic in debug mod, in release the output gives unexpected values.
 /// ```should_panic
@@ -957,23 +931,36 @@ pub fn su3_exp_r(su3_adj: Su3Adjoint) -> CMatrix3 {
 /// let matrix = Matrix3::identity(); // this is NOT an su(3)
 /// let output = matrix_su3_exp_r(matrix);
 /// // We panic in debug. In release the following asset will fail.
-/// // assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
+/// assert_eq_matrix!(output, matrix.exp(), f64::EPSILON * 100_000_f64);
 /// ```
 #[inline]
+#[must_use]
 #[allow(clippy::as_conversions)] // no try into for f64
+#[allow(clippy::cast_precision_loss)]
 pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
-    debug_assert!(is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64));
+    /// numbers of loops: `N - 1`
     const N_LOOP: usize = N - 1;
-    let mut q0: Complex =
-        Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(N_LOOP).unwrap() as f64);
+    debug_assert!(
+        is_matrix_su3_lie(&matrix, f64::EPSILON * 100_f64),
+        "the input matrix is not on the lie su3"
+    );
+    let mut q0: Complex = Complex::from(
+        1_f64
+            / *FACTORIAL_STORAGE_STAT
+                .try_get_factorial(N_LOOP)
+                .expect("always exist") as f64,
+    );
     let mut q1: Complex = Complex::from(0_f64);
     let mut q2: Complex = Complex::from(0_f64);
     let d: Complex = matrix.determinant() * I;
     let t: Complex = -Complex::from(0.5_f64) * (matrix * matrix).trace();
     for i in (0..N_LOOP).rev() {
-        let q0_n =
-            Complex::from(1_f64 / *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap() as f64)
-                - I * d * q2;
+        let q0_n = Complex::from(
+            1_f64
+                / *FACTORIAL_STORAGE_STAT
+                    .try_get_factorial(i)
+                    .expect("always exist") as f64,
+        ) - I * d * q2;
         let q1_n = q0 - t * q2;
         let q2_n = q1;
 
@@ -987,18 +974,24 @@ pub fn matrix_su3_exp_r(matrix: CMatrix3) -> CMatrix3 {
 
 /// Return wether the input matrix is SU(3) up to epsilon.
 // TODO example
+#[inline]
+#[must_use]
 pub fn is_matrix_su3(m: &CMatrix3, epsilon: f64) -> bool {
     ((m.determinant() - Complex::from(1_f64)).modulus_squared() < epsilon)
         && ((m * m.adjoint() - CMatrix3::identity()).norm() < epsilon)
 }
 
 /// Returns wether the given matrix is in the lie algebra su(3) that generates SU(3) up to epsilon.
+#[inline]
+#[must_use]
 pub fn is_matrix_su3_lie(matrix: &CMatrix3, epsilon: Real) -> bool {
     matrix.trace().modulus() < epsilon && (matrix - matrix.adjoint()).norm() < epsilon
 }
 
-#[doc(hidden)]
 /// Crate a random 3x3 Matrix
+#[doc(hidden)]
+#[inline]
+#[must_use]
 pub fn random_matrix_3<R: Rng + ?Sized>(rng: &mut R) -> CMatrix3 {
     let d = Uniform::from(-10_f64..10_f64);
     CMatrix3::from_fn(|_, _| Complex::new(d.sample(rng), d.sample(rng)))
@@ -1006,29 +999,12 @@ pub fn random_matrix_3<R: Rng + ?Sized>(rng: &mut R) -> CMatrix3 {
 
 #[cfg(test)]
 mod test {
-    use rand::SeedableRng;
+    use rand::{rngs::StdRng, SeedableRng};
 
     use super::*;
-    use crate::{assert_eq_matrix, I};
 
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
-
-    #[test]
-    /// test that [`N`] is indeed what we need
-    fn test_constant() {
-        assert_eq!(N, factorial_size_for_exp() + 1);
-    }
-
-    #[test]
-    fn test_factorial() {
-        for i in 0..FACTORIAL_STORAGE_STAT_SIZE {
-            assert_eq!(
-                *FACTORIAL_STORAGE_STAT.try_get_factorial(i).unwrap(),
-                utils::factorial(i)
-            );
-        }
-    }
 
     #[test]
     fn sub_block() {
@@ -1125,8 +1101,8 @@ mod test {
     #[test]
     #[allow(deprecated)]
     fn exp_matrix() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
+        let d = Uniform::from(-1_f64..1_f64);
         for m in &GENERATORS {
             let output_r = matrix_su3_exp_r(**m);
             assert_eq_matrix!(output_r, m.exp(), EPSILON);
@@ -1144,10 +1120,10 @@ mod test {
     }
     #[test]
     fn test_is_matrix_su3_lie() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
-        let d = rand::distributions::Uniform::from(-1_f64..1_f64);
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
+        let d = Uniform::from(-1_f64..1_f64);
         for m in &GENERATORS {
-            assert!(is_matrix_su3_lie(*m, f64::EPSILON * 100_f64));
+            assert!(is_matrix_su3_lie(m, f64::EPSILON * 100_f64));
         }
         for _ in 0_u32..100_u32 {
             let v = Su3Adjoint::random(&mut rng, &d);
@@ -1178,7 +1154,7 @@ mod test {
 
     #[test]
     fn test_is_matrix_su3() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
         let m = CMatrix3::new(
             Complex::from(0_f64),
             Complex::from(0_f64),
@@ -1223,15 +1199,5 @@ mod test {
             let m = random_su3(&mut rng) * Complex::from(1.1_f64);
             assert!(!is_matrix_su3(&m, f64::EPSILON * 100_f64));
         }
-    }
-
-    #[test]
-    fn factorial_storage() {
-        let storage = FactorialStorageStatic::new();
-        for (i, f) in storage.data.iter().enumerate() {
-            assert_eq!(utils::factorial(i), *f);
-        }
-        assert!(storage.try_get_factorial(35).is_none());
-        assert_eq!(storage.try_get_factorial(34), Some(&utils::factorial(34)));
     }
 }

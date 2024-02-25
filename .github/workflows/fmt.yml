@@ -1,28 +1,26 @@
-name: fmt
+name: fmt check
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   fmt:
-    
+    name: check the format of the code
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     
     - name: Install Rust nightly toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: nightly
-        components: rustfmt,
+        components: rustfmt, cargo
+        default: true
     
-    - name: fmt
-      run: cargo +nightly fmt --all -- --check
+    - name: rustfmt check
+      run: cargo +nightly fmt --all --check

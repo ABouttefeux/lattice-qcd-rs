@@ -2,40 +2,55 @@
 //!
 //! module to represent numbers.
 
+use num_traits::{Signed, Unsigned};
+
 /// Fix point number.
+#[deprecated(
+    since = "0.3.0",
+    note = "Never implemented. Use alternative crate like `fixed` or `fpa`"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FixedPointNumber<I, D>
 where
-    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    I: Signed + Ord + Copy,
+    D: Unsigned + Ord + Copy,
 {
+    /// integer part
     integer: I,
+    /// decimal part
     decimal: D,
 }
 
+#[allow(deprecated)]
 impl<I, D> FixedPointNumber<I, D>
 where
-    I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D: num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    I: Signed + Ord + Copy,
+    D: Unsigned + Ord + Copy,
 {
     /// Get tje integer part of the number
+    #[inline]
+    #[must_use]
     pub const fn integer(&self) -> I {
         self.integer
     }
 
     /// Get the decimal part of the number as it is stored (as raw data)
+    #[inline]
+    #[must_use]
     pub const fn decimal(&self) -> D {
         self.decimal
     }
 }
 
 /// Fixe point number represented by i32 for the integer part and 128 bits (16 bytes) as the decimal part
+#[allow(deprecated)]
+#[deprecated(since = "0.3.0", note = "Never implemented.")]
 pub type I32U128 = FixedPointNumber<i32, u128>;
 
 /*
 impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
     type Output = Self;
 
@@ -52,15 +67,15 @@ impl<I, D> std::ops::Neg for FixedPointNumber<I, D>
 
 /*
 impl<I, D> num_traits::Num for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
 
 }
 
 impl<I, D> num_traits::real::Real for FixedPointNumber<I, D>
-    where I: num_traits::sign::Signed + std::cmp::Ord + Copy,
-    D : num_traits::sign::Unsigned + std::cmp::Ord + Copy,
+    where I: Signed + Ord + Copy,
+    D : Unsigned + Ord + Copy,
 {
     fn min_value() -> Self {
         Self {

@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use rand::SeedableRng;
+use rand::{rngs::StdRng, SeedableRng};
 
 use crate::{error::*, integrator::*, simulation::monte_carlo::*, simulation::state::*};
 
@@ -11,7 +11,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     const DT: f64 = 0.000_1_f64;
     let mut state = LatticeStateDefault::<3>::new_cold(1_f64, 8_f64, 4)?;
 
-    let rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+    let rng = StdRng::seed_from_u64(SEED_RNG);
     let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng)
         .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
 
@@ -55,7 +55,7 @@ fn integrator() -> Result<(), Box<dyn Error>> {
     let h2 = state_new.hamiltonian_total();
     assert!((h - h2).abs() < 0.000_1_f64);
 
-    let state_new = state_with_e.clone();
+    let state_new = state_with_e;
     let state_new = state_new.simulate_to_leapfrog(&integrator, DT)?;
     let state_new = state_new.simulate_leap_n(&integrator, DT, 2)?;
     let state_new = state_new.simulate_to_synchronous(&integrator, DT)?;

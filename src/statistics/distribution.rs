@@ -1,10 +1,13 @@
 //! Some statistical distribution used by other part of the library
 
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::{
+    fmt::{self, Display},
+    ops::{Add, Div, Mul, Neg, Sub},
+};
 
 use num_traits::{Float, FloatConst, One, Zero};
 use rand::distributions::Uniform;
-use rand_distr::Distribution;
+use rand_distr::{uniform::SampleUniform, Distribution, OpenClosed01};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +41,7 @@ where
         + Float
         + FloatConst
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
 {
     param_exp: T,
 }
@@ -54,10 +57,12 @@ where
         + FloatConst
         + Zero
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
 {
     getter_copy!(
         /// Returns the parameter `a`.
+        #[inline]
+        #[must_use]
         pub const,
         param_exp,
         T
@@ -65,6 +70,8 @@ where
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return [`None`].
+    #[inline]
+    #[must_use]
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
@@ -82,17 +89,18 @@ where
         + Neg<Output = T>
         + Float
         + FloatConst
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
 {
+    #[inline]
     fn sample<R>(&self, rng: &mut R) -> T
     where
         R: rand::Rng + ?Sized,
     {
         let mut r = [T::one(); 3];
-        for element in r.iter_mut() {
-            *element = rng.sample(rand::distributions::OpenClosed01);
+        for element in &mut r {
+            *element = rng.sample(OpenClosed01);
         }
         let two = T::one() + T::one();
         (-(r[0].ln() + (two * T::PI() * r[1]).cos().powi(2) * r[2].ln()) / (two * self.param_exp()))
@@ -100,7 +108,7 @@ where
     }
 }
 
-impl<T> std::fmt::Display for ModifiedNormal<T>
+impl<T> Display for ModifiedNormal<T>
 where
     T: One
         + Div<T, Output = T>
@@ -110,10 +118,11 @@ where
         + Float
         + FloatConst
         + PartialOrd
-        + std::fmt::Display,
-    rand::distributions::OpenClosed01: Distribution<T>,
+        + Display,
+    OpenClosed01: Distribution<T>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "modified normal distribution with parameter {}",
@@ -155,9 +164,9 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
     param_exp: T,
@@ -174,13 +183,15 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
     getter_copy!(
         /// Returns the parameter `param_exp`.
+        #[inline]
+        #[must_use]
         pub const,
         param_exp,
         T
@@ -188,6 +199,8 @@ where
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return [`None`].
+    #[inline]
+    #[must_use]
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
@@ -197,6 +210,7 @@ where
 }
 
 impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
+    #[inline]
     fn sample<R>(&self, rng: &mut R) -> CMatrix2
     where
         R: rand::Rng + ?Sized,
@@ -205,20 +219,20 @@ impl Distribution<CMatrix2> for HeatBathDistribution<f64> {
 
         let distr_norm = HeatBathDistributionNorm::new(self.param_exp()).expect("unreachable");
         // unreachable because self.param_exp() > 0 which Create the distribution
-        let x0: f64 = rng.sample(&distr_norm);
+        let x0: f64 = rng.sample(distr_norm);
         let uniform = Uniform::new(-1_f64, 1_f64);
-        let mut x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+        let mut x_unorm = nalgebra::Vector3::from_fn(|_, _| rng.sample(uniform));
         while x_unorm.norm() <= f64::EPSILON {
-            x_unorm = na::Vector3::from_fn(|_, _| rng.sample(&uniform));
+            x_unorm = nalgebra::Vector3::from_fn(|_, _| rng.sample(uniform));
         }
-        let x =
-            x_unorm.try_normalize(f64::EPSILON).expect("unreachable") * (1_f64 - x0 * x0).sqrt();
+        let x = x_unorm.try_normalize(f64::EPSILON).expect("unreachable")
+            * x0.mul_add(-x0, 1_f64).sqrt();
         // unreachable because the while loop above guarantee that the norm is bigger than [`f64::EPSILON`]
         su2::complex_matrix_from_vec(x0, x)
     }
 }
 
-impl<T> std::fmt::Display for HeatBathDistribution<T>
+impl<T> Display for HeatBathDistribution<T>
 where
     T: One
         + Div<T, Output = T>
@@ -229,13 +243,14 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd
-        + std::fmt::Display,
-    rand::distributions::OpenClosed01: Distribution<T>,
+        + Display,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "heat bath distribution with parameter {}",
@@ -276,9 +291,9 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
     param_exp: T,
@@ -295,13 +310,15 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
     getter_copy!(
         /// return the parameter `param_exp`.
+        #[inline]
+        #[must_use]
         pub const,
         param_exp,
         T
@@ -309,6 +326,8 @@ where
 
     /// Create the distribution. `param_exp` should be strictly greater than 0 an be finite and a number.
     /// Otherwise return [`None`].
+    #[inline]
+    #[must_use]
     pub fn new(param_exp: T) -> Option<Self> {
         if param_exp.le(&T::zero()) || param_exp.is_infinite() || param_exp.is_nan() {
             return None;
@@ -328,18 +347,20 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd,
-    rand::distributions::OpenClosed01: Distribution<T>,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
+    #[inline]
     fn sample<R>(&self, rng: &mut R) -> T
     where
         R: rand::Rng + ?Sized,
     {
         let two = T::one() + T::one();
         // the unwrap is OK because we verify that the param is not zero at creation.
-        let distributions = ModifiedNormal::new(self.param_exp()).unwrap();
+        let distributions =
+            ModifiedNormal::new(self.param_exp()).expect("wrong parameter `param_exp`");
         loop {
             let r = rng.sample(Uniform::new(T::zero(), T::one()));
             let lambda = rng.sample(distributions);
@@ -350,7 +371,7 @@ where
     }
 }
 
-impl<T> std::fmt::Display for HeatBathDistributionNorm<T>
+impl<T> Display for HeatBathDistributionNorm<T>
 where
     T: One
         + Div<T, Output = T>
@@ -361,13 +382,14 @@ where
         + Float
         + FloatConst
         + Zero
-        + rand_distr::uniform::SampleUniform
+        + SampleUniform
         + PartialOrd
-        + std::fmt::Display,
-    rand::distributions::OpenClosed01: Distribution<T>,
+        + Display,
+    OpenClosed01: Distribution<T>,
     Uniform<T>: Distribution<T>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "heat bath norm distribution with parameter {}",
@@ -405,12 +427,16 @@ pub struct CloseToUnit {
 impl CloseToUnit {
     getter_copy!(
         /// Get the spread parameter
+        #[inline]
+        #[must_use]
         pub const,
         spread_parameter,
         f64
     );
 
-    /// Create a new distribution, spread_parameter should be in `(0,1)` 0 and 1 excluded
+    /// Create a new distribution, `spread_parameter` should be in `(0,1)` 0 and 1 excluded
+    #[inline]
+    #[must_use]
     pub fn new(spread_parameter: Real) -> Option<Self> {
         if spread_parameter <= 0_f64 || spread_parameter >= 1_f64 || spread_parameter.is_nan() {
             return None;
@@ -420,6 +446,7 @@ impl CloseToUnit {
 }
 
 impl Distribution<CMatrix2> for CloseToUnit {
+    #[inline]
     fn sample<R>(&self, rng: &mut R) -> CMatrix2
     where
         R: rand::Rng + ?Sized,
@@ -429,6 +456,7 @@ impl Distribution<CMatrix2> for CloseToUnit {
 }
 
 impl Distribution<CMatrix3> for CloseToUnit {
+    #[inline]
     fn sample<R>(&self, rng: &mut R) -> CMatrix3
     where
         R: rand::Rng + ?Sized,
@@ -437,8 +465,9 @@ impl Distribution<CMatrix3> for CloseToUnit {
     }
 }
 
-impl std::fmt::Display for CloseToUnit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for CloseToUnit {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "distribution closed to unit with spread parameter {}",
@@ -449,28 +478,32 @@ impl std::fmt::Display for CloseToUnit {
 
 #[cfg(test)]
 mod test {
-    use rand::{Rng, SeedableRng};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
 
     use super::*;
+    use crate::error::ImplementationError;
 
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
     #[test]
-    fn modified_normal() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+    fn modified_normal() -> Result<(), ImplementationError> {
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
 
         for param in &[0.1_f64, 0.5_f64, 1_f64, 10_f64] {
-            let mn = ModifiedNormal::new(*param).unwrap();
+            let mn =
+                ModifiedNormal::new(*param).ok_or(ImplementationError::OptionWithUnexpectedNone)?;
 
             for _ in 0_u32..1000_u32 {
-                assert!(rng.sample(&mn) >= 0_f64);
+                assert!(rng.sample(mn) >= 0_f64);
             }
         }
+        Ok(())
     }
 
     #[test]
     #[allow(clippy::cognitive_complexity)]
-    fn distribution_creation() {
+    #[allow(clippy::float_cmp)]
+    fn distribution_creation() -> Result<(), ImplementationError> {
         assert!(ModifiedNormal::new(0_f64).is_none());
         assert!(ModifiedNormal::new(-1_f64).is_none());
         assert!(ModifiedNormal::new(f64::NAN).is_none());
@@ -479,7 +512,7 @@ mod test {
         assert!(ModifiedNormal::new(2_f32).is_some());
 
         let param = 0.5_f64;
-        let mn = ModifiedNormal::new(param).unwrap();
+        let mn = ModifiedNormal::new(param).ok_or(ImplementationError::OptionWithUnexpectedNone)?;
         assert_eq!(mn.param_exp(), param);
         assert_eq!(
             mn.to_string(),
@@ -493,7 +526,8 @@ mod test {
         assert!(HeatBathDistributionNorm::new(0.1_f64).is_some());
         assert!(HeatBathDistributionNorm::new(2_f32).is_some());
 
-        let heat_bath_norm = HeatBathDistributionNorm::new(param).unwrap();
+        let heat_bath_norm = HeatBathDistributionNorm::new(param)
+            .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
         assert_eq!(heat_bath_norm.param_exp(), param);
         assert_eq!(
             heat_bath_norm.to_string(),
@@ -507,7 +541,8 @@ mod test {
         assert!(HeatBathDistribution::new(0.1_f64).is_some());
         assert!(HeatBathDistribution::new(2_f32).is_some());
 
-        let heat_bath = HeatBathDistribution::new(param).unwrap();
+        let heat_bath = HeatBathDistribution::new(param)
+            .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
         assert_eq!(heat_bath.param_exp(), param);
         assert_eq!(
             heat_bath.to_string(),
@@ -521,11 +556,12 @@ mod test {
         assert!(CloseToUnit::new(2_f64).is_none());
         assert!(CloseToUnit::new(0.5_f64).is_some());
 
-        let cu = CloseToUnit::new(param).unwrap();
+        let cu = CloseToUnit::new(param).ok_or(ImplementationError::OptionWithUnexpectedNone)?;
         assert_eq!(cu.spread_parameter(), param);
         assert_eq!(
             cu.to_string(),
             "distribution closed to unit with spread parameter 0.5"
         );
+        Ok(())
     }
 }

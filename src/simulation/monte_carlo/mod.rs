@@ -1,14 +1,17 @@
-//! Module for Monte-Carlo algrorithme, see the trait [`MonteCarlo`].
+//! Module for Monte-Carlo algorithm, see the trait [`MonteCarlo`].
 //!
 //! This is one of the way to carry out simulation. This work by taking a state and progressively changing it (most of the time randomly).
 //!
 //! # Examples
 //! see [`MetropolisHastingsSweep`], [`HeatBathSweep`], [`overrelaxation`] etc...
 
-use std::marker::PhantomData;
+use std::{
+    fmt::{self, Display},
+    marker::PhantomData,
+};
 
-use na::ComplexField;
-use rand_distr::Distribution;
+use nalgebra::ComplexField;
+use rand_distr::{Bernoulli, Distribution};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -125,6 +128,7 @@ where
     ///
     /// # Errors
     /// Gives an error if a potential next element cannot be generated.
+
     fn potential_next_element<Rng>(
         &mut self,
         state: &State,
@@ -136,17 +140,19 @@ where
     /// probability of the next element to replace the current one.
     ///
     /// by default it is Exp(-H_old) / Exp(-H_new).
+    #[inline]
+    #[must_use]
     fn probability_of_replacement(old_state: &State, new_state: &State) -> Real {
         (old_state.hamiltonian_links() - new_state.hamiltonian_links())
             .exp()
-            .min(1_f64)
-            .max(0_f64)
+            .clamp(0_f64, 1_f64)
     }
 
     /// Get the next element in the chain either the old state or a new one replacing it.
     ///
     /// # Errors
     /// Gives an error if a potential next element cannot be generated.
+    #[inline]
     fn next_element_default<Rng>(
         &mut self,
         state: State,
@@ -155,15 +161,13 @@ where
     where
         Rng: rand::Rng + ?Sized,
     {
+        // cspell: ignore proba
         let potential_next = self.potential_next_element(&state, rng)?;
-        let proba = Self::probability_of_replacement(&state, &potential_next)
-            .min(1_f64)
-            .max(0_f64);
-        let d = rand::distributions::Bernoulli::new(proba).unwrap();
+        let proba = Self::probability_of_replacement(&state, &potential_next).clamp(0_f64, 1_f64);
+        let d = Bernoulli::new(proba).expect("always exist due to the clamp");
         if d.sample(rng) {
             Ok(potential_next)
-        }
-        else {
+        } else {
             Ok(state)
         }
     }
@@ -226,12 +230,16 @@ where
 {
     getter!(
         /// Get a ref to the rng.
+        #[must_use]
+        #[inline]
         pub const,
         rng,
         Rng
     );
 
     /// Create the wrapper.
+    #[must_use]
+    #[inline]
     pub const fn new(mcd: MCD, rng: Rng) -> Self {
         Self {
             mcd,
@@ -241,17 +249,22 @@ where
     }
 
     /// deconstruct the structure to get back the rng if necessary
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[must_use]
+    #[inline]
     pub fn deconstruct(self) -> (MCD, Rng) {
         (self.mcd, self.rng)
     }
 
     /// Get a reference to the [`MonteCarloDefault`] inside the wrapper.
+    #[must_use]
+    #[inline]
     pub const fn mcd(&self) -> &MCD {
         &self.mcd
     }
 
     /// Get a mutable reference to the rng
+    #[must_use]
+    #[inline]
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
@@ -263,6 +276,7 @@ where
     State: LatticeState<D>,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_ref(&self) -> &Rng {
         self.rng()
     }
@@ -274,6 +288,7 @@ where
     State: LatticeState<D>,
     Rng: rand::Rng,
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut Rng {
         self.rng_mut()
     }
@@ -287,6 +302,7 @@ where
 {
     type Error = T::Error;
 
+    #[inline]
     fn next_element(&mut self, state: State) -> Result<State, Self::Error> {
         self.mcd.next_element_default(state, &mut self.rng)
     }
@@ -298,18 +314,20 @@ where
     State: LatticeState<D>,
     Rng: rand::Rng + Default,
 {
+    #[inline]
     fn default() -> Self {
         Self::new(MCD::default(), Rng::default())
     }
 }
 
-impl<MCD, State, Rng, const D: usize> std::fmt::Display for McWrapper<MCD, State, Rng, D>
+impl<MCD, State, Rng, const D: usize> Display for McWrapper<MCD, State, Rng, D>
 where
-    MCD: MonteCarloDefault<State, D> + std::fmt::Display,
+    MCD: MonteCarloDefault<State, D> + Display,
     State: LatticeState<D>,
-    Rng: rand::Rng + std::fmt::Display,
+    Rng: rand::Rng + Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Monte Carlo wrapper method {} with rng {}",
@@ -321,13 +339,14 @@ where
 
 /// Get the delta of energy by changing a link.
 #[inline]
+#[must_use]
 fn delta_s_old_new_cmp<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
-    new_link: &na::Matrix3<Complex>,
+    new_link: &nalgebra::Matrix3<Complex>,
     beta: Real,
-    old_matrix: &na::Matrix3<Complex>,
+    old_matrix: &nalgebra::Matrix3<Complex>,
 ) -> Real {
     let a = staple(link_matrix, lattice, link);
     -((new_link - old_matrix) * a).trace().real() * beta / LatticeStateDefault::<D>::CA
@@ -336,11 +355,13 @@ fn delta_s_old_new_cmp<const D: usize>(
 // TODO move in state
 /// return the staple
 #[inline]
+#[must_use]
+#[allow(clippy::similar_names)]
 fn staple<const D: usize>(
     link_matrix: &LinkMatrix,
     lattice: &LatticeCyclic<D>,
     link: &LatticeLinkCanonical<D>,
-) -> na::Matrix3<Complex> {
+) -> nalgebra::Matrix3<Complex> {
     let dir_j = link.dir();
     Direction::<D>::positive_directions()
         .iter()
@@ -348,14 +369,17 @@ fn staple<const D: usize>(
         .map(|dir_i| {
             let el_1 = link_matrix
                 .sij(link.pos(), dir_j, dir_i, lattice)
-                .unwrap()
+                .expect("sij not found")
                 .adjoint();
             let l_1 = LatticeLink::new(lattice.add_point_direction(*link.pos(), dir_j), -dir_i);
-            let u1 = link_matrix.matrix(&l_1, lattice).unwrap();
+            let u1 = link_matrix.matrix(&l_1, lattice).expect("u1 not found");
             let l_2 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &-dir_i), *dir_j);
-            let u2 = link_matrix.matrix(&l_2, lattice).unwrap().adjoint();
+            let u2 = link_matrix
+                .matrix(&l_2, lattice)
+                .expect("u2 not found")
+                .adjoint();
             let l_3 = LatticeLink::new(lattice.add_point_direction(*link.pos(), &-dir_i), *dir_i);
-            let u3 = link_matrix.matrix(&l_3, lattice).unwrap();
+            let u3 = link_matrix.matrix(&l_3, lattice).expect("u3 not found");
             el_1 + u1 * u2 * u3
         })
         .sum()

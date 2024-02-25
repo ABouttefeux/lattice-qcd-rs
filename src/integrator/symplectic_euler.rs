@@ -2,29 +2,31 @@
 //!
 //! For an example see the module level documentation [`super`].
 
-use std::vec::Vec;
+use std::{
+    error,
+    fmt::{self, Display},
+};
 
-use na::SVector;
+use nalgebra::SVector;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        field::{EField, LinkMatrix, Su3Adjoint},
-        lattice::LatticeCyclic,
-        simulation::{
-            LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-            SimulationStateSynchronous,
-        },
-        thread::{run_pool_parallel_vec, ThreadError},
-        CMatrix3, Real,
+use super::{integrate_efield, integrate_link, SymplecticIntegrator};
+use crate::{
+    field::{EField, LinkMatrix, Su3Adjoint},
+    lattice::LatticeCyclic,
+    simulation::{
+        LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
+        SimulationStateSynchronous,
     },
-    integrate_efield, integrate_link, SymplecticIntegrator,
+    thread::{run_pool_parallel_vec, ThreadError},
+    CMatrix3, Real,
 };
 
 /// Error for [`SymplecticEuler`].
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
+#[non_exhaustive]
 pub enum SymplecticEulerError<Error> {
     /// multithreading error, see [`ThreadError`].
     ThreadingError(ThreadError),
@@ -33,22 +35,25 @@ pub enum SymplecticEulerError<Error> {
 }
 
 impl<Error> From<ThreadError> for SymplecticEulerError<Error> {
+    #[inline]
     fn from(err: ThreadError) -> Self {
         Self::ThreadingError(err)
     }
 }
 
-impl<Error: core::fmt::Display> core::fmt::Display for SymplecticEulerError<Error> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<Error: Display> fmt::Display for SymplecticEulerError<Error> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ThreadingError(error) => write!(f, "thread error: {}", error),
-            Self::StateInitializationError(error) => write!(f, "initialization error: {}", error),
+            Self::ThreadingError(error) => write!(f, "thread error: {error}"),
+            Self::StateInitializationError(error) => write!(f, "initialization error: {error}"),
         }
     }
 }
 
-impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerError<Error> {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl<Error: error::Error + 'static> error::Error for SymplecticEulerError<Error> {
+    #[inline]
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::ThreadingError(error) => Some(error),
             Self::StateInitializationError(error) => Some(error),
@@ -65,18 +70,23 @@ impl<Error: std::error::Error + 'static> std::error::Error for SymplecticEulerEr
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 pub struct SymplecticEuler {
+    /// The number of thread the integrator uses.
     number_of_thread: usize,
 }
 
 impl SymplecticEuler {
     getter_copy!(
         /// getter on the number of thread the integrator use.
+        #[inline]
+        #[must_use]
         pub const,
         number_of_thread,
         usize
     );
 
     /// Create a integrator using a set number of threads
+    #[inline]
+    #[must_use]
     pub const fn new(number_of_thread: usize) -> Self {
         Self { number_of_thread }
     }
@@ -91,7 +101,7 @@ impl SymplecticEuler {
     where
         State: LatticeStateWithEField<D>,
     {
-        run_pool_parallel_vec(
+        let result = run_pool_parallel_vec(
             lattice.get_links(),
             &(link_matrix, e_field, lattice),
             &|link, (link_matrix, e_field, lattice)| {
@@ -101,8 +111,9 @@ impl SymplecticEuler {
             lattice.number_of_canonical_links_space(),
             lattice,
             &CMatrix3::zeros(),
-        )
-        .map_err(|err| err.into())
+        );
+
+        Ok(result?)
     }
 
     fn e_field_integrate<State, const D: usize>(
@@ -115,7 +126,7 @@ impl SymplecticEuler {
     where
         State: LatticeStateWithEField<D>,
     {
-        run_pool_parallel_vec(
+        let result = run_pool_parallel_vec(
             lattice.get_points(),
             &(link_matrix, e_field, lattice),
             &|point, (link_matrix, e_field, lattice)| {
@@ -125,21 +136,24 @@ impl SymplecticEuler {
             lattice.number_of_points(),
             lattice,
             &SVector::<_, D>::from_element(Su3Adjoint::default()),
-        )
-        .map_err(|err| err.into())
+        );
+
+        Ok(result?)
     }
 }
 
 impl Default for SymplecticEuler {
     /// Default value using the number of threads rayon would use,
     /// see [`rayon::current_num_threads()`].
+    #[inline]
     fn default() -> Self {
         Self::new(rayon::current_num_threads().min(1))
     }
 }
 
-impl std::fmt::Display for SymplecticEuler {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for SymplecticEuler {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Euler integrator with {} thread",
@@ -155,6 +169,7 @@ where
 {
     type Error = SymplecticEulerError<State::Error>;
 
+    #[inline]
     fn integrate_sync_sync(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
         let link_matrix = self.link_matrix_integrate::<State, D>(
             l.link_matrix(),
@@ -175,6 +190,7 @@ where
         .map_err(SymplecticEulerError::StateInitializationError)
     }
 
+    #[inline]
     fn integrate_leap_leap(
         &self,
         l: &SimulationStateLeap<State, D>,
@@ -202,6 +218,7 @@ where
         .map_err(SymplecticEulerError::StateInitializationError)
     }
 
+    #[inline]
     fn integrate_sync_leap(
         &self,
         l: &State,
@@ -224,6 +241,7 @@ where
         .map_err(SymplecticEulerError::StateInitializationError)
     }
 
+    #[inline]
     fn integrate_leap_sync(
         &self,
         l: &SimulationStateLeap<State, D>,
@@ -252,6 +270,7 @@ where
         .map_err(SymplecticEulerError::StateInitializationError)
     }
 
+    #[inline]
     fn integrate_symplectic(&self, l: &State, delta_t: Real) -> Result<State, Self::Error> {
         // override for optimization.
         // This remove a clone operation.

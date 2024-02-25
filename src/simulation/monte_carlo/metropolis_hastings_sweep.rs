@@ -3,21 +3,17 @@
 //! # Example
 //! see [`MetropolisHastingsSweep`]
 
-use rand_distr::Distribution;
+use rand_distr::{Bernoulli, Distribution};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        super::{
-            error::Never,
-            field::LinkMatrix,
-            lattice::{LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
-            su3, Complex, Real,
-        },
-        state::{LatticeState, LatticeStateDefault},
-    },
-    delta_s_old_new_cmp, MonteCarlo,
+use super::{delta_s_old_new_cmp, MonteCarlo};
+use crate::{
+    error::Never,
+    field::LinkMatrix,
+    lattice::{LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
+    simulation::state::{LatticeState, LatticeStateDefault},
+    su3, Complex, Real,
 };
 
 /// Metropolis Hastings method by doing a pass on all points
@@ -63,17 +59,21 @@ pub struct MetropolisHastingsSweep<Rng: rand::Rng> {
 impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     getter!(
         /// Get a ref to the rng.
+        #[inline]
+        #[must_use]
         pub const,
         rng,
         Rng
     );
 
-    /// `spread` should be between 0 and 1 both not included and number_of_update should be greater
+    /// `spread` should be between 0 and 1 both not included and `number_of_update` should be greater
     /// than 0.
     ///
     /// `number_of_update` is the number of times a link matrix is randomly changed.
     /// `spread` is the spread factor for the random matrix change
     /// ( used in [`su3::random_su3_close_to_unity`]).
+    #[inline]
+    #[must_use]
     pub fn new(number_of_update: usize, spread: Real, rng: Rng) -> Option<Self> {
         if number_of_update == 0 || spread <= 0_f64 || spread >= 1_f64 {
             return None;
@@ -88,46 +88,55 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
     }
 
     /// Get the mean of last probably of acceptance of the random change.
+    #[inline]
+    #[must_use]
     pub const fn prob_replace_mean(&self) -> Real {
         self.prob_replace_mean
     }
 
     /// Number of accepted change during last sweep
+    #[inline]
+    #[must_use]
     pub const fn number_replace_last(&self) -> usize {
         self.number_replace_last
     }
 
     /// Get the last probably of acceptance of the random change.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
 
     /// Get a mutable reference to the rng.
+    #[inline]
+    #[must_use]
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
     #[inline]
+    #[must_use]
     fn delta_s<const D: usize>(
         link_matrix: &LinkMatrix,
         lattice: &LatticeCyclic<D>,
         link: &LatticeLinkCanonical<D>,
-        new_link: &na::Matrix3<Complex>,
+        new_link: &nalgebra::Matrix3<Complex>,
         beta: Real,
     ) -> Real {
         let old_matrix = link_matrix
             .matrix(&LatticeLink::from(*link), lattice)
-            .unwrap();
+            .expect("matrix not found");
         delta_s_old_new_cmp(link_matrix, lattice, link, new_link, beta, &old_matrix)
     }
 
     #[inline]
+    #[must_use]
     fn potential_modif<const D: usize>(
         &mut self,
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let index = link.to_index(state.lattice());
         let old_link_m = state.link_matrix()[index];
         let mut new_link = old_link_m;
@@ -142,7 +151,9 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         new_link
     }
 
+    #[allow(clippy::cast_precision_loss)]
     #[inline]
+    #[must_use]
     fn next_element_default<const D: usize>(
         &mut self,
         mut state: LatticeStateDefault<D>,
@@ -152,6 +163,7 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.potential_modif(&state, &link);
+            // cspell: ignore proba modif
             let proba = (-Self::delta_s(
                 state.link_matrix(),
                 state.lattice(),
@@ -160,13 +172,12 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
                 state.beta(),
             ))
             .exp()
-            .min(1_f64)
-            .max(0_f64);
+            .clamp(0_f64, 1_f64);
             self.prob_replace_mean += proba;
-            let d = rand::distributions::Bernoulli::new(proba).unwrap();
+            let d = Bernoulli::new(proba).expect("always exist because of the clamp");
             if d.sample(&mut self.rng) {
                 self.number_replace_last += 1;
-                *state.link_mut(&link).unwrap() = potential_modif;
+                *state.link_mut(&link).expect("link not found") = potential_modif;
             }
         });
         self.prob_replace_mean /= lattice.number_of_canonical_links_space() as f64;
@@ -175,12 +186,14 @@ impl<Rng: rand::Rng> MetropolisHastingsSweep<Rng> {
 }
 
 impl<Rng: rand::Rng> AsRef<Rng> for MetropolisHastingsSweep<Rng> {
+    #[inline]
     fn as_ref(&self) -> &Rng {
         self.rng()
     }
 }
 
 impl<Rng: rand::Rng> AsMut<Rng> for MetropolisHastingsSweep<Rng> {
+    #[inline]
     fn as_mut(&mut self) -> &mut Rng {
         self.rng_mut()
     }
@@ -205,19 +218,19 @@ where
 mod test {
     use std::error::Error;
 
-    use rand::SeedableRng;
+    use rand::{rngs::StdRng, SeedableRng};
 
     use super::*;
     use crate::error::ImplementationError;
 
     #[test]
     fn as_ref_as_mut() -> Result<(), Box<dyn Error>> {
-        let rng = rand::rngs::StdRng::seed_from_u64(0);
+        let rng = StdRng::seed_from_u64(0);
         let mut mh = MetropolisHastingsSweep::new(1, 0.1_f64, rng.clone())
             .ok_or(ImplementationError::OptionWithUnexpectedNone)?;
         assert_eq!(&rng, mh.as_ref());
 
-        let _: &mut rand::rngs::StdRng = mh.as_mut();
+        let _: &mut StdRng = mh.as_mut();
 
         Ok(())
     }

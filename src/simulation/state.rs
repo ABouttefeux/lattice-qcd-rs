@@ -12,9 +12,11 @@
 //!
 //! See item documentation for more details.
 
+use std::fmt::{self, Display};
+
 use crossbeam::thread;
-use na::{ComplexField, SVector};
-use rayon::iter::ParallelBridge;
+use nalgebra::{ComplexField, SVector};
+use rand_distr::Distribution;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -71,26 +73,30 @@ pub trait LatticeState<const D: usize> {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
     fn link_matrix(&self) -> &LinkMatrix;
 
     /// Replace the links matrices with the given input. It should panic if link matrix
     /// is not of the correct size.
     ///
     /// # Panic
-    /// Panic if the length of link_matrix is different from
+    /// Panic if the length of `link_matrix` is different from
     /// `lattice.get_number_of_canonical_links_space()`
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix);
 
     /// Get the lattice into which the state exists.
+    #[must_use]
     fn lattice(&self) -> &LatticeCyclic<D>;
 
     /// Returns the beta parameter of the states.
+    #[must_use]
     fn beta(&self) -> Real;
 
-    /// C_A constant of the model, usually it is 3.
+    /// `C_A` constant of the model, usually it is 3.
     const CA: Real;
 
     /// Returns the Hamiltonian of the links configuration.
+    #[must_use]
     fn hamiltonian_links(&self) -> Real;
 
     /// Do one monte carlo step with the given method.
@@ -100,6 +106,7 @@ pub trait LatticeState<const D: usize> {
     ///
     /// # Example
     /// see [`super::monte_carlo::hybrid_monte_carlo`].
+    #[inline]
     fn monte_carlo_step<M>(self, m: &mut M) -> Result<Self, M::Error>
     where
         Self: Sized,
@@ -112,6 +119,8 @@ pub trait LatticeState<const D: usize> {
     ///
     /// # Example
     /// see the crate documentation [`crate`].
+    #[must_use]
+    #[inline]
     fn average_trace_plaquette(&self) -> Option<Complex> {
         self.link_matrix().average_trace_plaquette(self.lattice())
     }
@@ -155,7 +164,7 @@ pub trait LatticeStateNew<const D: usize>: LatticeState<D> + Sized {
 
 /// Represent a lattice state where the conjugate momenta of the link matrices are included.
 ///
-/// If you have a LatticeState and want the default way of adding the conjugate momenta look at
+/// If you have a `[LatticeState`] and want the default way of adding the conjugate momenta look at
 /// [`LatticeStateEFSyncDefault`].
 ///
 /// If you want to solve the equation of motion using an [`SymplecticIntegrator`] also implement
@@ -163,7 +172,7 @@ pub trait LatticeStateNew<const D: usize>: LatticeState<D> + Sized {
 ///
 /// It is used for the [`super::monte_carlo::HybridMonteCarlo`] algorithm.
 pub trait LatticeStateWithEField<const D: usize>: LatticeState<D> {
-    /// Reset the e_field with radom value distributed as N(0, 1 / beta)
+    /// Reset the `e_field` with radom value distributed as N(0, 1 / beta)
     /// [`rand_distr::StandardNormal`].
     ///
     /// # Errors
@@ -171,6 +180,7 @@ pub trait LatticeStateWithEField<const D: usize>: LatticeState<D> {
     ///
     /// Gives [`StateInitializationError::GaussProjectionError`] if the Gauss projection failed
     // TODO explain why !!!
+    #[inline]
     fn reset_e_field<Rng>(&mut self, rng: &mut Rng) -> Result<(), StateInitializationError>
     where
         Rng: rand::Rng + ?Sized,
@@ -189,21 +199,24 @@ pub trait LatticeStateWithEField<const D: usize>: LatticeState<D> {
     }
 
     /// The "Electrical" field of this state.
+    #[must_use]
     fn e_field(&self) -> &EField<D>;
 
     /// Replace the electrical field with the given input. It should panic if the input is not of
     /// the correct size.
     ///
     /// # Panic
-    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
+    /// Panic if the length of `link_matrix` is different from `lattice.get_number_of_points()`
     fn set_e_field(&mut self, e_field: EField<D>);
 
     /// return the time state, i.e. the number of time the simulation ran.
+    #[must_use]
     fn t(&self) -> usize;
 
-    /// Get the derivative \partial_t U(link), returns [`None`] if the link is outside of the lattice.
+    /// Get the derivative `\partial_t U(link)`, returns [`None`] if the link is outside of the lattice.
     ///
     /// It is used in order to apply the equation of motion.
+    #[must_use]
     fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
@@ -211,9 +224,10 @@ pub trait LatticeStateWithEField<const D: usize>: LatticeState<D> {
         lattice: &LatticeCyclic<D>,
     ) -> Option<CMatrix3>;
 
-    /// Get the derivative \partial_t E(point), returns [`None`] if the link is outside of the lattice.
+    /// Get the derivative `\partial_t E(point)`, returns [`None`] if the link is outside of the lattice.
     ///
     /// It is used in order to apply the equation of motion.
+    #[must_use]
     fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
@@ -222,10 +236,13 @@ pub trait LatticeStateWithEField<const D: usize>: LatticeState<D> {
     ) -> Option<SVector<Su3Adjoint, D>>;
 
     /// Get the energy of the conjugate momenta configuration
+    #[must_use]
     fn hamiltonian_efield(&self) -> Real;
 
     /// Get the total energy, by default [`LatticeStateWithEField::hamiltonian_efield`]
     /// + [`LatticeState::hamiltonian_links`]
+    #[inline]
+    #[must_use]
     fn hamiltonian_total(&self) -> Real {
         self.hamiltonian_links() + self.hamiltonian_efield()
     }
@@ -254,11 +271,12 @@ where
         t: usize,
     ) -> Result<Self, Self::Error>;
 
-    /// Create a new state with e_field randomly distributed as [`rand_distr::Normal`]^.
+    /// Create a new state with `e_field` randomly distributed as [`rand_distr::Normal`]^.
     ///
     /// # Errors
     /// Gives an error if N(0, 0.5/beta ) is not a valid distribution (for example beta = 0)
     /// or propagate the error from [`LatticeStateWithEFieldNew::new`]
+    #[inline]
     fn new_random_e<R>(
         lattice: LatticeCyclic<D>,
         beta: Real,
@@ -281,7 +299,7 @@ where
 /// its conjugate momenta
 /// `e_field`.
 ///
-/// If you have a LatticeState and want the default way of adding the conjugate momenta and doing
+/// If you have a [`LatticeState`] and want the default way of adding the conjugate momenta and doing
 /// simulation look at
 /// [`LatticeStateEFSyncDefault`].
 ///
@@ -299,6 +317,7 @@ where
     /// Return an error if the integration could not be done.
     /// # Example
     /// see [`SimulationStateLeapFrog::simulate_leap`]
+    #[inline]
     fn simulate_to_leapfrog<I, State>(
         &self,
         integrator: &I,
@@ -311,13 +330,14 @@ where
         integrator.integrate_sync_leap(self, delta_t)
     }
 
-    /// Does `number_of_steps` with `delta_t` at each step using a leap_frog algorithm by fist
+    /// Does `number_of_steps` with `delta_t` at each step using a leap frog algorithm by fist
     /// doing half a step and then finishing by doing half step.
     ///
     /// # Errors
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     // TODO example
+    #[inline]
     fn simulate_using_leapfrog_n<I, State>(
         &self,
         integrator: &I,
@@ -363,6 +383,7 @@ where
     /// # Errors
     /// Return an error if the integration could not be done.
     // TODO example
+    #[inline]
     fn simulate_using_leapfrog_n_auto<I>(
         &self,
         integrator: &I,
@@ -380,6 +401,7 @@ where
     /// # Errors
     /// Return an error if the integration could not be done.
     // TODO example
+    #[inline]
     fn simulate_sync<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
     where
         I: SymplecticIntegrator<Self, T, D> + ?Sized,
@@ -394,6 +416,7 @@ where
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     // TODO example
+    #[inline]
     fn simulate_sync_n<I, T>(
         &self,
         integrator: &I,
@@ -453,6 +476,7 @@ where
     /// #     Ok(())
     /// # }
     /// ```
+    #[inline]
     fn simulate_symplectic<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
     where
         I: SymplecticIntegrator<Self, T, D> + ?Sized,
@@ -467,6 +491,7 @@ where
     /// Return an error if the integration could not be done
     /// or [`MultiIntegrationError::ZeroIntegration`] is the number of step is zero.
     // TODO example
+    #[inline]
     fn simulate_symplectic_n<I, T>(
         &self,
         integrator: &I,
@@ -497,6 +522,7 @@ where
     /// # Errors
     /// Return an error if the integration could not be done.
     // TODO example
+    #[inline]
     fn simulate_symplectic_n_auto<I>(
         &self,
         integrator: &I,
@@ -525,6 +551,7 @@ where
     ///
     /// # Example
     /// see [`SimulationStateLeapFrog::simulate_leap`]
+    #[inline]
     fn simulate_to_synchronous<I, State>(
         &self,
         integrator: &I,
@@ -574,6 +601,7 @@ where
     /// #     Ok(())
     /// # }
     /// ```
+    #[inline]
     fn simulate_leap<I, T>(&self, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
     where
         Self: Sized,
@@ -621,6 +649,7 @@ where
     /// #     Ok(())
     /// # }
     /// ```
+    #[inline]
     fn simulate_leap_n<I, T>(
         &self,
         integrator: &I,
@@ -668,6 +697,7 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// Returns [`StateInitializationError::LatticeInitializationError`] if the parameter is invalid
     /// for [`LatticeCyclic`].
     /// Or propagate the error form [`Self::new`].
+    #[inline]
     pub fn new_cold(
         size: Real,
         beta: Real,
@@ -692,22 +722,28 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// # Example
     /// This example demonstrate how to reproduce the same configuration
     /// ```
-    /// # use lattice_qcd_rs::{simulation::LatticeStateDefault, lattice::LatticeCyclic, dim};
+    /// use lattice_qcd_rs::{
+    ///     error::StateInitializationError, lattice::LatticeCyclic, simulation::LatticeStateDefault,
+    /// };
     /// use rand::{rngs::StdRng, SeedableRng};
     ///
+    /// # fn main() -> Result<(), StateInitializationError> {
     /// let mut rng_1 = StdRng::seed_from_u64(0);
     /// let mut rng_2 = StdRng::seed_from_u64(0);
     /// // They have the same seed and should generate the same numbers
     /// assert_eq!(
-    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_1).unwrap(),
-    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_2).unwrap()
+    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_1)?,
+    ///     LatticeStateDefault::<4>::new_determinist(1_f64, 1_f64, 4, &mut rng_2)?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
-    pub fn new_determinist(
+    #[inline]
+    pub fn new_determinist<Rng: rand::Rng + ?Sized>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        rng: &mut impl rand::Rng,
+        rng: &mut Rng,
     ) -> Result<Self, StateInitializationError> {
         let lattice = LatticeCyclic::new(size, number_of_points)?;
         let link_matrix = LinkMatrix::new_determinist(&lattice, rng);
@@ -751,23 +787,22 @@ impl<const D: usize> LatticeStateDefault<D> {
     /// # Ok(())
     /// # }
     /// ```
+    #[inline]
     pub fn normalize_link_matrices(&mut self) {
         self.link_matrix.normalize();
     }
 
     /// Get a mutable reference to the link matrix at `link`
+    #[inline]
+    #[must_use]
     pub fn link_mut(&mut self, link: &LatticeLinkCanonical<D>) -> Option<&mut CMatrix3> {
         let index = link.to_index(&self.lattice);
-        if index < self.link_matrix.len() {
-            Some(&mut self.link_matrix[index])
-        }
-        else {
-            None
-        }
+        (index < self.link_matrix.len()).then(|| &mut self.link_matrix[index])
     }
 
-    /// Absorbs self anf return the link_matrix as owned
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    /// Absorbs self anf return the `link_matrix` as owned
+    #[inline]
+    #[must_use]
     pub fn link_matrix_owned(self) -> LinkMatrix {
         self.link_matrix
     }
@@ -776,6 +811,7 @@ impl<const D: usize> LatticeStateDefault<D> {
 impl<const D: usize> LatticeStateNew<D> for LatticeStateDefault<D> {
     type Error = StateInitializationError;
 
+    #[inline]
     fn new(
         lattice: LatticeCyclic<D>,
         beta: Real,
@@ -797,20 +833,31 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
 
     getter!(
         /// The link matrices of this state.
+        #[inline]
         link_matrix,
         LinkMatrix
     );
 
-    getter!(lattice, LatticeCyclic<D>);
+    getter!(
+        #[inline]
+        lattice,
+        LatticeCyclic<D>
+    );
 
-    getter_copy!(beta, Real);
+    getter_copy!(
+        #[inline]
+        beta,
+        Real
+    );
 
     /// # Panic
-    /// Panic if the length of link_matrix is different from `lattice.get_number_of_canonical_links_space()`
+    /// Panic if the length of `link_matrix` is different from `lattice.get_number_of_canonical_links_space()`
+    #[inline]
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
-        if self.lattice.number_of_canonical_links_space() != link_matrix.len() {
-            panic!("Link matrices are not of the correct size");
-        }
+        assert!(
+            self.lattice.number_of_canonical_links_space() == link_matrix.len(),
+            "Link matrices are not of the correct size"
+        );
         self.link_matrix = link_matrix;
     }
 
@@ -818,6 +865,7 @@ impl<const D: usize> LatticeState<D> for LatticeStateDefault<D> {
     ///
     /// # Panic
     /// Panic if plaquettes cannot be found
+    #[inline] // REVIEW
     fn hamiltonian_links(&self) -> Real {
         // here it is ok to use par_bridge() as we do not care for the order
         self.lattice()
@@ -866,27 +914,34 @@ where
 {
     getter!(
         /// get a reference to the state
+        #[inline]
+        #[must_use]
         pub const,
         state,
         State
     );
 
-    /// Create a new SimulationStateLeap directly from a state without applying any modification.
+    /// Create a new [`SimulationStateLeap`] directly from a state without applying any modification.
     ///
     /// In most cases wou will prefer to build it using [`LatticeStateNew`] or [`Self::from_synchronous`].
+    #[inline]
+    #[must_use]
     pub const fn new_from_state(state: State) -> Self {
         Self { state }
     }
 
     /// get a mutable reference to the state
+    #[inline]
+    #[must_use]
     pub fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }
 
-    /// Create a leap state from a sync one by integrating by half a step the e_field.
+    /// Create a leap state from a sync one by integrating by half a step the `e_field`.
     ///
     /// # Errors
     /// Returns an error if the integration failed.
+    #[inline]
     pub fn from_synchronous<I>(s: &State, integrator: &I, delta_t: Real) -> Result<Self, I::Error>
     where
         I: SymplecticIntegrator<State, Self, D> + ?Sized,
@@ -895,6 +950,8 @@ where
     }
 
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
+    #[inline]
+    #[must_use]
     pub fn gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field()
             .gauss(self.link_matrix(), point, self.lattice())
@@ -905,16 +962,18 @@ impl<State, const D: usize> Default for SimulationStateLeap<State, D>
 where
     State: SimulationStateSynchronous<D> + Default + ?Sized,
 {
+    #[inline]
     fn default() -> Self {
         Self::new_from_state(State::default())
     }
 }
 
-impl<State, const D: usize> std::fmt::Display for SimulationStateLeap<State, D>
+impl<State, const D: usize> Display for SimulationStateLeap<State, D>
 where
-    State: SimulationStateSynchronous<D> + std::fmt::Display + ?Sized,
+    State: SimulationStateSynchronous<D> + Display + ?Sized,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "leapfrog {}", self.state())
     }
 }
@@ -922,6 +981,7 @@ where
 impl<State: SimulationStateSynchronous<D> + LatticeStateWithEField<D>, const D: usize> AsRef<State>
     for SimulationStateLeap<State, D>
 {
+    #[inline]
     fn as_ref(&self) -> &State {
         self.state()
     }
@@ -930,6 +990,7 @@ impl<State: SimulationStateSynchronous<D> + LatticeStateWithEField<D>, const D: 
 impl<State: SimulationStateSynchronous<D> + LatticeStateWithEField<D>, const D: usize> AsMut<State>
     for SimulationStateLeap<State, D>
 {
+    #[inline]
     fn as_mut(&mut self) -> &mut State {
         self.state_mut()
     }
@@ -949,24 +1010,29 @@ where
     const CA: Real = State::CA;
 
     /// The link matrices of this state.
+    #[inline]
     fn link_matrix(&self) -> &LinkMatrix {
         self.state().link_matrix()
     }
 
     /// # Panic
     /// panic under the same condition as `State::set_link_matrix`
+    #[inline]
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
         self.state.set_link_matrix(link_matrix);
     }
 
+    #[inline]
     fn lattice(&self) -> &LatticeCyclic<D> {
         self.state().lattice()
     }
 
+    #[inline]
     fn beta(&self) -> Real {
         self.state().beta()
     }
 
+    #[inline]
     fn hamiltonian_links(&self) -> Real {
         self.state().hamiltonian_links()
     }
@@ -978,6 +1044,7 @@ where
 {
     type Error = State::Error;
 
+    #[inline]
     fn new(
         lattice: LatticeCyclic<D>,
         beta: Real,
@@ -995,10 +1062,16 @@ impl<State, const D: usize> LatticeStateWithEField<D> for SimulationStateLeap<St
 where
     State: LatticeStateWithEField<D> + SimulationStateSynchronous<D> + ?Sized,
 {
-    project!(hamiltonian_efield, state, Real);
+    project!(
+        #[inline]
+        hamiltonian_efield,
+        state,
+        Real
+    );
 
     project!(
         /// The "Electrical" field of this state.
+        #[inline]
         e_field,
         state,
         &EField<D>
@@ -1007,6 +1080,7 @@ where
     project_mut!(
         /// # Panic
         /// panic under the same condition as `State::set_e_field`
+        #[inline]
         set_e_field,
         state,
         (),
@@ -1015,11 +1089,13 @@ where
 
     project!(
         /// return the time state, i.e. the number of time the simulation ran.
+        #[inline]
         t,
         state,
         usize
     );
 
+    #[inline]
     fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
@@ -1029,6 +1105,7 @@ where
         State::derivative_u(link, link_matrix, e_field, lattice)
     }
 
+    #[inline]
     fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
@@ -1067,7 +1144,8 @@ where
 {
     /// Absorbs self and return the state as owned.
     /// It essentially deconstruct the structure.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[inline]
+    #[must_use]
     pub fn state_owned(self) -> State
     where
         State: Sized,
@@ -1076,29 +1154,36 @@ where
     }
 
     /// Get a reference to the state.
+    #[inline]
+    #[must_use]
     pub const fn lattice_state(&self) -> &State {
         &self.lattice_state
     }
 
     /// Get a mutable reference to the state.
+    #[inline]
+    #[must_use]
     pub fn lattice_state_mut(&mut self) -> &mut State {
         &mut self.lattice_state
     }
 
     /// Take a state and generate a new random one and try projecting it to the Gauss law.
     ///
-    /// # Panic
+    /// # Panics
     /// Panics if N(0, 0.5/beta ) is not a valid distribution (for example beta = 0).
     /// Panics if the field could not be projected to the Gauss law.
-    pub fn new_random_e_state(lattice_state: State, rng: &mut impl rand::Rng) -> Self
+    #[inline]
+    #[must_use]
+    pub fn new_random_e_state<Rng>(lattice_state: State, rng: &mut Rng) -> Self
     where
         State: Sized,
+        Rng: rand::Rng + ?Sized,
     {
         let d = rand_distr::Normal::new(0_f64, 0.5_f64 / lattice_state.beta())
             .expect("Distribution not valid, check Beta.");
         let e_field = EField::new_determinist(lattice_state.lattice(), rng, &d)
             .project_to_gauss(lattice_state.link_matrix(), lattice_state.lattice())
-            .unwrap();
+            .expect("could not project the E field to the Gauss law");
         // TODO error management
         Self {
             lattice_state,
@@ -1108,6 +1193,8 @@ where
     }
 
     /// Create a new Self from a state and a cold configuration of the e field (i.e. set to 0)
+    #[inline]
+    #[must_use]
     pub fn new_e_cold(lattice_state: State) -> Self
     where
         State: Sized,
@@ -1121,6 +1208,8 @@ where
     }
 
     /// Get a mutable reference to the efield
+    #[inline]
+    #[must_use]
     pub fn e_field_mut(&mut self) -> &mut EField<D> {
         &mut self.e_field
     }
@@ -1132,6 +1221,8 @@ where
     State: LatticeState<D> + ?Sized,
 {
     /// Get the gauss coefficient `G(x) = \sum_i E_i(x) - U_{-i}(x) E_i(x - i) U^\dagger_{-i}(x)`.
+    #[inline]
+    #[must_use]
     pub fn gauss(&self, point: &LatticePoint<D>) -> Option<CMatrix3> {
         self.e_field
             .gauss(self.link_matrix(), point, self.lattice())
@@ -1172,15 +1263,17 @@ where
     ///     LatticeStateEFSyncDefault::<LatticeStateDefault<4>, 4>::new_determinist(1_f64, 1_f64, 4, &mut rng_2, &distribution).unwrap()
     /// );
     /// ```
-    pub fn new_determinist<R>(
+    #[inline]
+    pub fn new_determinist<R, Dist>(
         size: Real,
         beta: Real,
         number_of_points: usize,
         rng: &mut R,
-        d: &impl rand_distr::Distribution<Real>,
+        d: &Dist,
     ) -> Result<Self, <Self as LatticeStateWithEFieldNew<D>>::Error>
     where
         R: rand::Rng + ?Sized,
+        Dist: Distribution<Real> + ?Sized,
     {
         let lattice = LatticeCyclic::new(size, number_of_points)?;
         let e_field = EField::new_determinist(&lattice, rng, d);
@@ -1188,12 +1281,13 @@ where
         Self::new(lattice, beta, e_field, link_matrix, 0)
     }
 
-    /// Generate a configuration with cold e_field and hot link matrices
+    /// Generate a configuration with cold `e_field` and hot link matrices
     ///
     /// # Errors
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalid
     /// for [`LatticeCyclic`].
     /// Or propagates the error form [`Self::new`].
+    #[inline]
     pub fn new_determinist_cold_e_hot_link<R>(
         size: Real,
         beta: Real,
@@ -1218,6 +1312,7 @@ where
     /// Return [`StateInitializationError::LatticeInitializationError`] if the parameter is invalid
     /// for [`LatticeCyclic`].
     /// Or propagates the error form [`Self::new`].
+    #[inline]
     pub fn new_cold(
         size: Real,
         beta: Real,
@@ -1246,25 +1341,25 @@ where
     /// for [`LatticeCyclic`].
     /// Return [`ThreadError::ThreadNumberIncorrect`] if `number_of_points = 0`.
     /// Returns an error if a thread panicked. Finally, propagates the error form [`Self::new`].
-    pub fn new_random_threaded<Distribution>(
+    #[inline] // REVIEW
+    pub fn new_random_threaded<Dist>(
         size: Real,
         beta: Real,
         number_of_points: usize,
-        d: &Distribution,
+        d: &Dist,
         number_of_thread: usize,
     ) -> Result<Self, ThreadedStateInitializationError>
     where
-        Distribution: rand_distr::Distribution<Real> + Sync,
+        Dist: Distribution<Real> + Sync + ?Sized,
     {
         if number_of_thread == 0 {
             return Err(ThreadedStateInitializationError::ThreadingError(
                 ThreadError::ThreadNumberIncorrect,
             ));
-        }
-        else if number_of_thread == 1 {
+        } else if number_of_thread == 1 {
             let mut rng = rand::thread_rng();
             return Self::new_determinist(size, beta, number_of_points, &mut rng, d)
-                .map_err(|err| err.into());
+                .map_err(Into::into);
         }
         let lattice = LatticeCyclic::new(size, number_of_points).map_err(|err| {
             ThreadedStateInitializationError::StateInitializationError(err.into())
@@ -1304,24 +1399,29 @@ where
 {
     const CA: Real = State::CA;
 
+    #[inline]
     fn link_matrix(&self) -> &LinkMatrix {
         self.lattice_state.link_matrix()
     }
 
     /// # Panic
     /// panic under the same condition as `State::set_link_matrix`
+    #[inline]
     fn set_link_matrix(&mut self, link_matrix: LinkMatrix) {
         self.lattice_state.set_link_matrix(link_matrix);
     }
 
+    #[inline]
     fn lattice(&self) -> &LatticeCyclic<D> {
         self.lattice_state.lattice()
     }
 
+    #[inline]
     fn beta(&self) -> Real {
         self.lattice_state.beta()
     }
 
+    #[inline]
     fn hamiltonian_links(&self) -> Real {
         self.lattice_state.hamiltonian_links()
     }
@@ -1339,6 +1439,7 @@ where
     /// create a new simulation state. If `e_field` or `link_matrix` does not have the corresponding
     /// amount of data compared to lattice it fails to create the state.
     /// `t` is the number of time the simulation ran. i.e. the time sate.
+    #[inline]
     fn new(
         lattice: LatticeCyclic<D>,
         beta: Real,
@@ -1366,7 +1467,8 @@ impl<const D: usize> LatticeStateWithEField<D>
 where
     Direction<D>: DirectionList,
 {
-    /// By default \sum_x Tr(E_i E_i)
+    /// By default `\sum_x Tr(E_i E_i)`
+    #[inline] // REVIEW
     fn hamiltonian_efield(&self) -> Real {
         self.lattice()
             .get_points()
@@ -1375,7 +1477,10 @@ where
                 Direction::positive_directions()
                     .iter()
                     .map(|dir_i| {
-                        let e_i = self.e_field().e_field(&el, dir_i, self.lattice()).unwrap();
+                        let e_i = self
+                            .e_field()
+                            .e_field(&el, dir_i, self.lattice())
+                            .expect("e flied not found");
                         e_i.trace_squared()
                     })
                     .sum::<Real>()
@@ -1385,25 +1490,30 @@ where
     }
 
     /// The "Electrical" field of this state.
+    #[inline]
     fn e_field(&self) -> &EField<D> {
         &self.e_field
     }
 
     /// # Panic
-    /// Panic if the length of link_matrix is different from `lattice.get_number_of_points()`
+    /// Panic if the length of `link_matrix` is different from `lattice.get_number_of_points()`
+    #[inline]
     fn set_e_field(&mut self, e_field: EField<D>) {
-        if self.lattice().number_of_points() != e_field.len() {
-            panic!("e_field is not of the correct size");
-        }
+        assert!(
+            self.lattice().number_of_points() == e_field.len(),
+            "e_field is not of the correct size"
+        );
         self.e_field = e_field;
     }
 
     /// return the time state, i.e. the number of time the simulation ran.
+    #[inline]
     fn t(&self) -> usize {
         self.t
     }
 
-    /// Get the derive of U_i(x).
+    /// Get the derive of `U_i(x)`.
+    #[inline] // REVIEW
     fn derivative_u(
         link: &LatticeLinkCanonical<D>,
         link_matrix: &LinkMatrix,
@@ -1416,7 +1526,8 @@ where
         Some(e_i.to_matrix() * u_i * c * Complex::from(1_f64 / lattice.size()))
     }
 
-    /// Get the derive of E(x) (as a vector of Su3Adjoint).
+    /// Get the derive of E(x) (as a vector of [`Su3Adjoint`]).
+    #[inline] // REVIEW
     fn derivative_e(
         point: &LatticePoint<D>,
         link_matrix: &LinkMatrix,
@@ -1450,9 +1561,7 @@ where
 
 #[cfg(test)]
 mod test {
-
     use super::*;
-    use crate::error::StateInitializationError;
 
     #[test]
     fn leap_frog_simulation() -> Result<(), StateInitializationError> {

@@ -1,4 +1,6 @@
-//! Tool for easy use of multi threading.
+//! Tool for easy use of multi threading and parallel job execution.
+
+// TODO review all of this
 
 use std::{
     any::Any,
@@ -6,12 +8,11 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
-    iter::Iterator,
+    panic::{catch_unwind, AssertUnwindSafe},
     sync::{mpsc, Arc, Mutex},
-    vec::Vec,
 };
 
-use crossbeam::thread;
+use crossbeam::thread::{self, ScopedJoinHandle};
 use rayon::iter::IntoParallelIterator;
 use rayon::prelude::ParallelIterator;
 #[cfg(feature = "serde-serialize")]
@@ -26,7 +27,7 @@ use super::lattice::{LatticeCyclic, LatticeElementToIndex};
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ThreadAnyError {
-    /// Tried to run some jobs with 0 threads
+    /// Error returned by job with thread number argument being 0.
     ThreadNumberIncorrect,
     /// One or more of the threads panicked. Inside the [`Box`] is the panic message.
     /// see [`run_pool_parallel`] example.
@@ -34,6 +35,7 @@ pub enum ThreadAnyError {
 }
 
 impl Display for ThreadAnyError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::ThreadNumberIncorrect => write!(f, "number of thread is incorrect"),
@@ -41,29 +43,25 @@ impl Display for ThreadAnyError {
                 let n = any.len();
                 if n == 0 {
                     write!(f, "0 thread panicked")?;
-                }
-                else if n == 1 {
+                } else if n == 1 {
                     write!(f, "a thread panicked with")?;
-                }
-                else {
-                    write!(f, "{} threads panicked with [", n)?;
+                } else {
+                    write!(f, "{n} threads panicked with [")?;
                 }
 
                 for (index, element_any) in any.iter().enumerate() {
                     if let Some(string) = element_any.downcast_ref::<String>() {
-                        write!(f, "\"{}\"", string)?;
-                    }
-                    else if let Some(string) = element_any.downcast_ref::<&str>() {
-                        write!(f, "\"{}\"", string)?;
-                    }
-                    else {
-                        write!(f, "{:?}", element_any)?;
+                        write!(f, "\"{string}\"")?;
+                    } else if let Some(string) = element_any.downcast_ref::<&str>() {
+                        write!(f, "\"{string}\"")?;
+                    } else {
+                        #[allow(clippy::use_debug)]
+                        write!(f, "{element_any:?}")?;
                     }
 
                     if index < any.len() - 1 {
                         write!(f, " ,")?;
-                    }
-                    else if n > 1 {
+                    } else if n > 1 {
                         write!(f, "]")?;
                     }
                 }
@@ -74,7 +72,14 @@ impl Display for ThreadAnyError {
     }
 }
 
-impl Error for ThreadAnyError {}
+impl Error for ThreadAnyError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ThreadNumberIncorrect | Self::Panic(_) => None,
+        }
+    }
+}
 
 /// Multithreading error with a string panic message.
 ///
@@ -84,7 +89,7 @@ impl Error for ThreadAnyError {}
 #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum ThreadError {
-    /// Tried to run some jobs with 0 threads
+    /// Error returned by job with thread number argument being 0.
     ThreadNumberIncorrect,
     /// One of the thread panicked with the given messages.
     /// see [`run_pool_parallel`] example.
@@ -92,6 +97,7 @@ pub enum ThreadError {
 }
 
 impl Display for ThreadError {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::ThreadNumberIncorrect => write!(f, "number of thread is incorrect"),
@@ -100,26 +106,22 @@ impl Display for ThreadError {
                 if n == 0 {
                     // this should not be used but it is possible to create an instance with an empty vec.
                     write!(f, "0 thread panicked")?;
-                }
-                else if n == 1 {
+                } else if n == 1 {
                     write!(f, "a thread panicked with")?;
-                }
-                else {
-                    write!(f, "{} threads panicked with [", n)?;
+                } else {
+                    write!(f, "{n} threads panicked with [")?;
                 }
 
                 for (index, string) in strings.iter().enumerate() {
                     if let Some(string) = string {
-                        write!(f, "\"{}\"", string)?;
-                    }
-                    else {
+                        write!(f, "\"{string}\"")?;
+                    } else {
                         write!(f, "None")?;
                     }
 
                     if index < strings.len() - 1 {
                         write!(f, " ,")?;
-                    }
-                    else if n > 1 {
+                    } else if n > 1 {
                         write!(f, "]")?;
                     }
                 }
@@ -130,25 +132,31 @@ impl Display for ThreadError {
     }
 }
 
-impl Error for ThreadError {}
+impl Error for ThreadError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ThreadNumberIncorrect | Self::Panic(_) => None,
+        }
+    }
+}
 
 impl From<ThreadAnyError> for ThreadError {
-    #[allow(clippy::manual_map)] // clarity / false positive ?
+    #[inline]
     fn from(f: ThreadAnyError) -> Self {
         match f {
             ThreadAnyError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadAnyError::Panic(any) => Self::Panic(
-                any.iter()
+                any.into_iter()
                     .map(|element| {
-                        if let Some(string) = element.downcast_ref::<String>() {
-                            Some(string.clone())
-                        }
-                        else if let Some(string) = element.downcast_ref::<&str>() {
-                            Some(string.to_string())
-                        }
-                        else {
-                            None
-                        }
+                        element.downcast::<String>().map_or_else(
+                            |element| {
+                                // In case of "Error" we try downcast to str
+                                element.downcast_ref::<&str>().map(ToString::to_string)
+                            },
+                            // if some
+                            |string| Some(*string),
+                        )
                     })
                     .collect(),
             ),
@@ -157,19 +165,15 @@ impl From<ThreadAnyError> for ThreadError {
 }
 
 impl From<ThreadError> for ThreadAnyError {
+    #[inline]
     fn from(f: ThreadError) -> Self {
         match f {
             ThreadError::ThreadNumberIncorrect => Self::ThreadNumberIncorrect,
             ThreadError::Panic(strings) => Self::Panic(
                 strings
-                    .iter()
+                    .into_iter()
                     .map(|string| -> Box<dyn Any + Send + 'static> {
-                        if let Some(string) = string {
-                            Box::new(string.clone())
-                        }
-                        else {
-                            Box::new("".to_string())
-                        }
+                        string.map_or_else(Box::<String>::default, Box::new)
                     })
                     .collect(),
             ),
@@ -208,7 +212,7 @@ impl From<ThreadError> for ThreadAnyError {
 /// ```should_panic
 /// # use lattice_qcd_rs::thread::{run_pool_parallel, ThreadAnyError};
 /// let iter = 0..10;
-/// let result = run_pool_parallel(iter, &(), &|_, _| panic!("{}", "panic message"), 4, 10);
+/// let result = run_pool_parallel(iter, &(), &|_, ()| panic!("{}", "panic message"), 4, 10);
 /// match result {
 ///     Ok(_) => {}
 ///     Err(err) => panic!("{}", err),
@@ -224,6 +228,8 @@ impl From<ThreadError> for ThreadAnyError {
 /// thread '<unnamed>' panicked at 'panic message', src\thread.rs:6:51
 /// thread 'main' panicked at '4 threads panicked with ["panic message" ,"panic message" ,"panic message" ,"panic message"]', src\thread.rs:9:17
 /// ```
+#[allow(clippy::impl_trait_in_params)] // don't want to make a breaking change
+#[inline]
 pub fn run_pool_parallel<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -233,15 +239,15 @@ pub fn run_pool_parallel<Key, Data, CommonData, F>(
 ) -> Result<HashMap<Key, Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Clone + Hash + Send + Sync,
     Data: Send,
-    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
+    F: Clone + Sync + Fn(&Key, &CommonData) -> Data,
 {
     run_pool_parallel_with_initializations_mutable(
         iter,
         common_data,
-        &|_, key, common| closure(key, common),
-        &|| (),
+        &|(), key, common| closure(key, common),
+        || (),
         number_of_thread,
         capacity,
     )
@@ -250,7 +256,7 @@ where
 /// run jobs in parallel. Similar to [`run_pool_parallel`] but with initiation.
 ///
 /// see [`run_pool_parallel`]. Moreover let some data to be initialize per thread.
-/// closure_init is run once per thread and store inside a mutable data which closure can modify.
+/// `closure_init` is run once per thread and store inside a mutable data which closure can modify.
 ///
 /// # Errors
 /// Returns [`ThreadAnyError::ThreadNumberIncorrect`] is the number of threads is 0.
@@ -308,8 +314,10 @@ where
 /// # Ok(())
 /// # }
 /// ```
-#[allow(clippy::needless_return)] // for readability
 #[allow(clippy::semicolon_if_nothing_returned)] // I actually want to returns a never in the future
+#[allow(clippy::missing_panics_doc)] // does not panic
+#[allow(clippy::impl_trait_in_params)]
+#[inline]
 pub fn run_pool_parallel_with_initializations_mutable<Key, Data, CommonData, InitData, F, FInit>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -320,27 +328,25 @@ pub fn run_pool_parallel_with_initializations_mutable<Key, Data, CommonData, Ini
 ) -> Result<HashMap<Key, Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Hash + Send + Clone + Sync,
+    Key: Eq + Clone + Hash + Send + Sync,
     Data: Send,
-    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
-    FInit: Send + Clone + FnOnce() -> InitData,
+    F: Clone + Sync + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Clone + Send + FnOnce() -> InitData,
 {
     if number_of_thread == 0 {
-        return Err(ThreadAnyError::ThreadNumberIncorrect);
-    }
-    else if number_of_thread == 1 {
+        Err(ThreadAnyError::ThreadNumberIncorrect) // return
+    } else if number_of_thread == 1 {
         let mut hash_map = HashMap::<Key, Data>::with_capacity(capacity);
         let mut init_data = closure_init();
         for i in iter {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            catch_unwind(AssertUnwindSafe(|| {
                 hash_map.insert(i.clone(), closure(&mut init_data, &i, common_data))
             }))
             .map_err(|err| ThreadAnyError::Panic(vec![err]))?;
         }
-        return Ok(hash_map);
-    }
-    else {
-        let result = thread::scope(|s| {
+        Ok(hash_map) // return
+    } else {
+        thread::scope(|s| {
             let mutex_iter = Arc::new(Mutex::new(iter));
             let mut threads = Vec::with_capacity(number_of_thread);
             let (result_tx, result_rx) = mpsc::channel::<(Key, Data)>();
@@ -351,11 +357,11 @@ where
                 let handel = s.spawn(move |_| {
                     let mut init_data = closure_init_clone();
                     loop {
-                        let val = iter_clone.lock().unwrap().next();
+                        let val = iter_clone.lock().expect("lock error").next();
                         match val {
                             Some(i) => transmitter
                                 .send((i.clone(), closure(&mut init_data, &i, common_data)))
-                                .unwrap(),
+                                .expect("send error"),
                             None => break,
                         }
                     }
@@ -372,8 +378,8 @@ where
 
             let panics = threads
                 .into_iter()
-                .map(|handel| handel.join())
-                .filter_map(|res| res.err())
+                .map(ScopedJoinHandle::join)
+                .filter_map(Result::err)
                 .collect::<Vec<_>>();
             if !panics.is_empty() {
                 return Err(ThreadAnyError::Panic(panics));
@@ -389,8 +395,7 @@ where
                 unreachable!("a failing handle is not joined")
             }
             unreachable!("main thread panicked")
-        });
-        return result;
+        })
     }
 }
 
@@ -431,6 +436,8 @@ where
 /// # Ok(())
 /// # }
 /// ```
+#[allow(clippy::impl_trait_in_params)] // I don't want to make a breaking change
+#[inline]
 pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -442,15 +449,15 @@ pub fn run_pool_parallel_vec<Key, Data, CommonData, F, const D: usize>(
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Send + Clone + Sync + LatticeElementToIndex<D>,
-    Data: Send + Clone,
-    F: Sync + Clone + Fn(&Key, &CommonData) -> Data,
+    Key: Eq + Clone + LatticeElementToIndex<D> + Send + Sync,
+    Data: Clone + Send,
+    F: Clone + Sync + Fn(&Key, &CommonData) -> Data,
 {
     run_pool_parallel_vec_with_initializations_mutable(
         iter,
         common_data,
-        &|_, key, common| closure(key, common),
-        &|| (),
+        &|(), key, common| closure(key, common),
+        || (),
         number_of_thread,
         capacity,
         l,
@@ -525,9 +532,11 @@ where
 /// # Ok(())
 /// # }
 /// ```
+#[allow(clippy::missing_panics_doc)] // should not panic
+#[allow(clippy::impl_trait_in_params)]
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::needless_return)] // for readability
 #[allow(clippy::semicolon_if_nothing_returned)] // I actually want to return a never in the future
+#[inline]
 pub fn run_pool_parallel_vec_with_initializations_mutable<
     Key,
     Data,
@@ -548,20 +557,19 @@ pub fn run_pool_parallel_vec_with_initializations_mutable<
 ) -> Result<Vec<Data>, ThreadAnyError>
 where
     CommonData: Sync,
-    Key: Eq + Send + Clone + Sync,
-    Data: Send + Clone,
-    F: Sync + Clone + Fn(&mut InitData, &Key, &CommonData) -> Data,
-    FInit: Send + Clone + FnOnce() -> InitData,
+    Key: Eq + Clone + Send + Sync,
+    Data: Clone + Send,
+    F: Clone + Sync + Fn(&mut InitData, &Key, &CommonData) -> Data,
+    FInit: Clone + Send + FnOnce() -> InitData,
     Key: LatticeElementToIndex<D>,
 {
     if number_of_thread == 0 {
-        return Err(ThreadAnyError::ThreadNumberIncorrect);
-    }
-    else if number_of_thread == 1 {
+        Err(ThreadAnyError::ThreadNumberIncorrect) // return
+    } else if number_of_thread == 1 {
         let mut vec = Vec::<Data>::with_capacity(capacity);
         let mut init_data = closure_init();
         for i in iter {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            catch_unwind(AssertUnwindSafe(|| {
                 insert_in_vec(
                     &mut vec,
                     i.clone().to_index(l),
@@ -571,10 +579,12 @@ where
             }))
             .map_err(|err| ThreadAnyError::Panic(vec![err]))?;
         }
-        return Ok(vec);
-    }
-    else {
-        let result = thread::scope(|s| {
+        Ok(vec) // return
+    } else {
+        thread::scope(|s| {
+            // TODO improvements: use crossbeam channel, use channel for the iter, while let loops,
+            // remove a clone for result_tx, merge function
+            //
             // I try to put the thread creation in a function but the life time annotation were a mess.
             // I did not manage to make it working.
             let mutex_iter = Arc::new(Mutex::new(iter));
@@ -587,11 +597,11 @@ where
                 let handel = s.spawn(move |_| {
                     let mut init_data = closure_init_clone();
                     loop {
-                        let val = iter_clone.lock().unwrap().next();
+                        let val = iter_clone.lock().expect("lock error").next();
                         match val {
                             Some(i) => transmitter
                                 .send((i.clone(), closure(&mut init_data, &i, common_data)))
-                                .unwrap(),
+                                .expect("send error"),
                             None => break,
                         }
                     }
@@ -608,8 +618,8 @@ where
 
             let panics = threads
                 .into_iter()
-                .map(|handel| handel.join())
-                .filter_map(|res| res.err())
+                .map(ScopedJoinHandle::join)
+                .filter_map(Result::err)
                 .collect::<Vec<_>>();
             if !panics.is_empty() {
                 return Err(ThreadAnyError::Panic(panics));
@@ -625,8 +635,7 @@ where
                 unreachable!("a failing handle is not joined")
             }
             unreachable!("main thread panicked")
-        });
-        return result;
+        })
     }
 }
 
@@ -648,22 +657,29 @@ where
 /// insert_in_vec(&mut vec, 1, 3, &1);
 /// assert_eq!(vec, vec![1, 3, 0, 9, 1, 10]);
 /// ```
+#[inline]
 pub fn insert_in_vec<Data>(vec: &mut Vec<Data>, pos: usize, data: Data, default_data: &Data)
 where
     Data: Clone,
 {
     if pos < vec.len() {
         vec[pos] = data;
-    }
-    else {
-        for _ in vec.len()..pos {
-            vec.push(default_data.clone());
+    } else {
+        if vec.capacity() < pos + 1 {
+            // it reserve base on length and not on capacity
+            vec.reserve(pos + 1 - vec.len());
+        }
+        if pos > vec.len() {
+            vec.resize(pos, default_data.clone());
         }
         vec.push(data);
     }
 }
 
 /// Run a parallel pool using external crate [`rayon`].
+/// There is a significant cost to that function as it will allocate the whole
+/// iterator inside a vector and the use a [`rayon::iter::IndexedParallelIterator`]
+/// to run the closure.
 ///
 /// # Example.
 /// ```
@@ -671,8 +687,8 @@ where
 /// let iter = 0..1000;
 /// let c = 5;
 /// let result = run_pool_parallel_rayon(iter, &c, |i, c1| i * i * c1);
-/// assert_eq!(result[687], 687 * 687 * c);
 /// assert_eq!(result[10], 10 * 10 * c);
+/// assert_eq!(result[687], 687 * 687 * c);
 /// ```
 /// # Panic.
 /// panic if the closure panic at any point during the evaluation
@@ -681,6 +697,9 @@ where
 /// let iter = 0..10;
 /// let result = run_pool_parallel_rayon(iter, &(), |_, _| panic!("message"));
 /// ```
+#[allow(clippy::impl_trait_in_params)]
+#[inline]
+#[must_use]
 pub fn run_pool_parallel_rayon<Key, Data, CommonData, F>(
     iter: impl Iterator<Item = Key> + Send,
     common_data: &CommonData,
@@ -692,6 +711,7 @@ where
     Data: Send,
     F: Sync + Fn(&Key, &CommonData) -> Data,
 {
+    // TODO avoid allocation
     iter.collect::<Vec<Key>>()
         .into_par_iter()
         .map(|el| closure(&el, common_data))
@@ -702,7 +722,7 @@ where
 mod test {
     use std::error::Error;
 
-    use super::*;
+    use super::{insert_in_vec, ThreadAnyError, ThreadError};
     use crate::error::ImplementationError;
 
     #[test]
@@ -736,19 +756,18 @@ mod test {
         );
         assert!(format!("{}", ThreadError::Panic(vec![None])).contains("a thread panicked"));
         assert!(format!("{}", ThreadError::Panic(vec![None, None])).contains("2 threads panicked"));
-        assert!(format!(
-            "{}",
-            ThreadError::Panic(vec![Some("message 1".to_string())])
-        )
-        .contains("message 1"));
+        assert!(
+            format!("{}", ThreadError::Panic(vec![Some("message 1".to_owned())]))
+                .contains("message 1")
+        );
         assert!(format!("{}", ThreadError::Panic(vec![])).contains("0 thread panicked"));
 
         assert!(ThreadError::ThreadNumberIncorrect.source().is_none());
         assert!(ThreadError::Panic(vec![None]).source().is_none());
-        assert!(ThreadError::Panic(vec![Some("".to_string())])
+        assert!(ThreadError::Panic(vec![Some(String::new())])
             .source()
             .is_none());
-        assert!(ThreadError::Panic(vec![Some("test".to_string())])
+        assert!(ThreadError::Panic(vec![Some("test".to_owned())])
             .source()
             .is_none());
         //---------------
@@ -756,14 +775,14 @@ mod test {
         let error = ThreadAnyError::Panic(vec![
             Box::new(()),
             Box::new("t1"),
-            Box::new("t2".to_string()),
+            Box::new("t2".to_owned()),
         ]);
         let error2 = ThreadAnyError::Panic(vec![
             Box::new(""),
-            Box::new("t1".to_string()),
-            Box::new("t2".to_string()),
+            Box::new("t1".to_owned()),
+            Box::new("t2".to_owned()),
         ]);
-        let error3 = ThreadError::Panic(vec![None, Some("t1".to_string()), Some("t2".to_string())]);
+        let error3 = ThreadError::Panic(vec![None, Some("t1".to_owned()), Some("t2".to_owned())]);
         assert_eq!(ThreadError::from(error), error3);
         assert_eq!(ThreadAnyError::from(error3).to_string(), error2.to_string());
 
@@ -772,5 +791,27 @@ mod test {
         assert_eq!(ThreadError::from(error), error2);
         let error = ThreadAnyError::ThreadNumberIncorrect;
         assert_eq!(ThreadAnyError::from(error2).to_string(), error.to_string());
+    }
+
+    #[test]
+    fn test_insert_in_vec() {
+        let mut vec = Vec::<u32>::with_capacity(17);
+        insert_in_vec(&mut vec, 0, 1, &0);
+        assert_eq!(vec, vec![1]);
+        insert_in_vec(&mut vec, 0, 2, &0);
+        assert_eq!(vec, vec![2]);
+        insert_in_vec(&mut vec, 1, 3, &0);
+        assert_eq!(vec, vec![2, 3]);
+        insert_in_vec(&mut vec, 4, 1, &0);
+        assert_eq!(vec, vec![2, 3, 0, 0, 1]);
+        insert_in_vec(&mut vec, 3, 10, &0);
+        assert_eq!(vec, vec![2, 3, 0, 10, 1]);
+        insert_in_vec(&mut vec, 6, 11, &0);
+        assert_eq!(vec, vec![2, 3, 0, 10, 1, 0, 11]);
+        insert_in_vec(&mut vec, 16, 12, &0);
+        assert_eq!(
+            vec,
+            vec![2, 3, 0, 10, 1, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12]
+        );
     }
 }

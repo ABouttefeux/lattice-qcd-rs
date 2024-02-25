@@ -1,3 +1,9 @@
+# v0.3.0
+
+- update version-sync to 0.9.5
+- added doc on direction const item
+- moved the definition of [`DirectionConversionError`] out of the proc macro into lattice.rs
+
 
 # v0.2.1
 

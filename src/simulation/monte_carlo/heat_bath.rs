@@ -3,7 +3,7 @@
 //! # Example
 //! see [`HeatBathSweep`].
 
-use na::ComplexField;
+use nalgebra::ComplexField;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -48,54 +48,64 @@ pub struct HeatBathSweep<Rng: rand::Rng> {
 
 impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     /// Create a new Self form a rng.
+    #[must_use]
+    #[inline]
     pub const fn new(rng: Rng) -> Self {
         Self { rng }
     }
 
     /// Absorbed self and return the RNG as owned. It essentially deconstruct the structure.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[must_use]
+    #[inline]
     pub fn rng_owned(self) -> Rng {
         self.rng
     }
 
     /// Get a mutable reference to the rng.
+    #[must_use]
+    #[inline]
     pub fn rng_mut(&mut self) -> &mut Rng {
         &mut self.rng
     }
 
     /// Get a reference to the rng.
+    #[must_use]
+    #[inline]
     pub const fn rng(&self) -> &Rng {
         &self.rng
     }
 
     /// Apply te SU2 heat bath method.
     #[inline]
+    #[must_use]
     fn heat_bath_su2(&mut self, staple: CMatrix2, beta: f64) -> CMatrix2 {
         let staple_coefficient = staple.determinant().real().sqrt();
         if staple_coefficient.is_normal() {
             let v_r: CMatrix2 = staple.adjoint() / Complex::from(staple_coefficient);
-            let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coefficient).unwrap();
+            let d_heat_bath_r = HeatBathDistribution::new(beta * staple_coefficient)
+                .expect("unable to create a heat bath distribution");
             let rand_m_r: CMatrix2 = self.rng.sample(d_heat_bath_r);
             rand_m_r * v_r
-        }
-        else {
+        } else {
             // just return a random matrix as all matrices
             // have the same selection probability
             su2::random_su2(&mut self.rng)
         }
     }
 
+    // cspell: ignore modif
     /// Apply the pseudo heat bath methods and return the new link.
     #[inline]
+    #[must_use]
     fn get_modif<const D: usize>(
         &mut self,
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())
-            .unwrap();
+            .expect("link matrix not found");
         let a = staple(state.link_matrix(), state.lattice(), link);
 
         let r = su3::get_r(self.heat_bath_su2(su3::get_su2_r_unorm(link_matrix * a), state.beta()));
@@ -109,6 +119,7 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
     }
 
     #[inline]
+    #[must_use]
     // TODO improve error handling
     fn next_element_default<const D: usize>(
         &mut self,
@@ -117,25 +128,28 @@ impl<Rng: rand::Rng> HeatBathSweep<Rng> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = self.get_modif(&state, &link);
-            *state.link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).expect("unreachable") = potential_modif;
         });
         state
     }
 }
 
 impl<Rng: rand::Rng> AsRef<Rng> for HeatBathSweep<Rng> {
+    #[inline]
     fn as_ref(&self) -> &Rng {
         self.rng()
     }
 }
 
 impl<Rng: rand::Rng> AsMut<Rng> for HeatBathSweep<Rng> {
+    #[inline]
     fn as_mut(&mut self) -> &mut Rng {
         self.rng_mut()
     }
 }
 
 impl<Rng: rand::Rng + Default> Default for HeatBathSweep<Rng> {
+    #[inline]
     fn default() -> Self {
         Self::new(Rng::default())
     }

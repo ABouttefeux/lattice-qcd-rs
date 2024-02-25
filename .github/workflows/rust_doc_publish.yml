@@ -1,4 +1,4 @@
-name: Rust doc check
+name: Rust doc publish
 
 on:
   workflow_call:
@@ -6,40 +6,40 @@ on:
       toolchain:
         description: 'rust toolchain'
         required: false
+        default: 'stable'
         type: string
         # options:
         # - stable
         # - nightly
         # - beta
-      check_private_items:
-        description: 'wether to check documentation for private item'
-        required: false
-        default: true
-        type: boolean
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  rustdoc-check:
-    name: Rust Doc check
+
+  rustdoc:
+    name: Rust doc publish
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Install Rust stable toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ inputs.toolchain }}
         components: rust-docs, cargo
         default: true
-    
-    - name: Doc check
-      if: ${{ inputs.check_private_items }}
-      run: cargo doc --verbose --all --no-deps --document-private-items --all-features
 
-    - name: Doc check
-      if: ${{ !inputs.check_private_items }}
+    - name: build Doc
       run: cargo doc --verbose --all --no-deps --all-features
+
+    - name: Deploy Docs
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: ./target/doc
+        force_orphan: true

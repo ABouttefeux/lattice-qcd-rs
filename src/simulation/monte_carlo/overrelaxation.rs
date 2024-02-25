@@ -31,6 +31,10 @@
 //! # }
 //! ```
 
+// cspell: ignore overrelax
+
+use std::fmt::{self, Display};
+
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
@@ -78,45 +82,55 @@ pub struct OverrelaxationSweepRotation;
 
 impl OverrelaxationSweepRotation {
     /// Create a new Self with an given RNG
+    #[inline]
+    #[must_use]
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 
+    /// # Panics
+    /// Panics if the given link isn't found
     #[inline]
+    #[must_use]
     fn get_modif<const D: usize>(
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())
-            .unwrap();
+            .expect("matrix does not exists");
         let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
-        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
-        let rot = svd.u.unwrap() * svd.v_t.unwrap();
+        let svd = nalgebra::SVD::<Complex, nalgebra::U3, nalgebra::U3>::new(a, true, true);
+        let rot =
+            svd.u.expect("svd u part doesn't exist") * svd.v_t.expect("svd v_t part doesn't exist");
         rot * link_matrix.adjoint() * rot
     }
 
     #[inline]
+    #[must_use]
     fn next_element_default<const D: usize>(
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
+        // cspell: ignore modif
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
-            *state.link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).expect("links not found") = potential_modif;
         });
         state
     }
 }
 
-impl std::fmt::Display for OverrelaxationSweepRotation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for OverrelaxationSweepRotation {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "overrelaxation method by rotation")
     }
 }
 
 impl Default for OverrelaxationSweepRotation {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -150,47 +164,59 @@ pub struct OverrelaxationSweepReverse;
 
 impl OverrelaxationSweepReverse {
     /// Create a new Self with an given RNG
+    #[inline]
+    #[must_use]
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 
+    /// # Panics
+    /// Panics if the given link isn't found
     #[inline]
+    #[must_use]
     fn get_modif<const D: usize>(
         state: &LatticeStateDefault<D>,
         link: &LatticeLinkCanonical<D>,
-    ) -> na::Matrix3<Complex> {
+    ) -> nalgebra::Matrix3<Complex> {
         let link_matrix = state
             .link_matrix()
             .matrix(&link.into(), state.lattice())
-            .unwrap();
+            .expect("matrix does not exists");
         let a = staple(state.link_matrix(), state.lattice(), link).adjoint();
-        let svd = na::SVD::<Complex, na::U3, na::U3>::new(a, true, true);
-        svd.u.unwrap()
-            * su3::reverse(svd.u.unwrap().adjoint() * link_matrix * svd.v_t.unwrap().adjoint())
-            * svd.v_t.unwrap()
+        let svd = nalgebra::SVD::<Complex, nalgebra::U3, nalgebra::U3>::new(a, true, true);
+        svd.u.expect("svd u part doesn't exist")
+            * su3::reverse(
+                svd.u.expect("svd u part doesn't exist").adjoint()
+                    * link_matrix
+                    * svd.v_t.expect("svd v_t part doesn't exist").adjoint(),
+            )
+            * svd.v_t.expect("svd v_t part doesn't exist")
     }
 
     #[inline]
+    #[must_use]
     fn next_element_default<const D: usize>(
         mut state: LatticeStateDefault<D>,
     ) -> LatticeStateDefault<D> {
         let lattice = state.lattice().clone();
         lattice.get_links().for_each(|link| {
             let potential_modif = Self::get_modif(&state, &link);
-            *state.link_mut(&link).unwrap() = potential_modif;
+            *state.link_mut(&link).expect("unreachable") = potential_modif;
         });
         state
     }
 }
 
 impl Default for OverrelaxationSweepReverse {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl std::fmt::Display for OverrelaxationSweepReverse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for OverrelaxationSweepReverse {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "overrelaxation method by reverse")
     }
 }
@@ -209,46 +235,50 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
 
 #[cfg(test)]
 mod test {
+    use std::error::Error;
+
+    use rand::rngs::StdRng;
     use rand::SeedableRng;
 
-    use super::super::super::state::{LatticeState, LatticeStateDefault};
-    use super::super::MonteCarlo;
     use super::*;
 
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
 
-    fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng)
+    fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng) -> Result<(), Box<dyn Error>>
     where
         MC: MonteCarlo<LatticeStateDefault<3>, 3>,
-        MC::Error: core::fmt::Debug,
+        MC::Error: Error + 'static,
     {
-        let state = LatticeStateDefault::<3>::new_determinist(1_f64, 1_f64, 4, rng).unwrap();
+        let state = LatticeStateDefault::<3>::new_determinist(1_f64, 1_f64, 4, rng)?;
         let h = state.hamiltonian_links();
-        let state2 = mc.next_element(state).unwrap();
+        let state2 = mc.next_element(state)?;
         let h2 = state2.hamiltonian_links();
-        println!("h1 {}, h2 {}", h, h2);
+        println!("h1 {h}, h2 {h2}");
         // Relative assert : we need to multi by the mean value of h
         // TODO use crate approx ?
         assert!((h - h2).abs() < f64::EPSILON * 100_f64 * 4_f64.powi(3) * (h + h2) * 0.5_f64);
+        Ok(())
     }
 
-    /// Here we test that OverrelaxationSweepReverse conserve the energy.
+    /// Here we test that [`OverrelaxationSweepReverse`] conserve the energy.
     #[test]
-    fn same_energy_reverse() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+    fn same_energy_reverse() -> Result<(), Box<dyn Error>> {
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepReverse::new();
         for _ in 0_u32..10_u32 {
-            test_same_energy(&mut overrelax, &mut rng);
+            test_same_energy(&mut overrelax, &mut rng)?;
         }
+        Ok(())
     }
 
-    /// Here we test that OverrelaxationSweepRotation conserve the energy.
+    /// Here we test that [`OverrelaxationSweepRotation`] conserve the energy.
     #[test]
-    fn same_energy_rotation() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(SEED_RNG);
+    fn same_energy_rotation() -> Result<(), Box<dyn Error>> {
+        let mut rng = StdRng::seed_from_u64(SEED_RNG);
         let mut overrelax = OverrelaxationSweepRotation::new();
         for _ in 0_u32..10_u32 {
-            test_same_energy(&mut overrelax, &mut rng);
+            test_same_energy(&mut overrelax, &mut rng)?;
         }
+        Ok(())
     }
 }

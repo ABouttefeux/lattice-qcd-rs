@@ -1,6 +1,9 @@
 //! Provide statistical tools
 
-use std::ops::{Div, Mul, Sub};
+use std::{
+    iter,
+    ops::{Div, Mul, Sub},
+};
 
 use num_traits::Zero;
 use rayon::prelude::*;
@@ -23,15 +26,11 @@ pub use distribution::*;
 /// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64 /* ... */];
 /// let mean = mean_par_iter(vec.par_iter());
 /// ```
+#[inline]
+#[must_use]
 pub fn mean_par_iter<'a, It, T>(data: It) -> T
 where
-    T: Clone
-        + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It::Item>
-        + Send
-        + 'a
-        + Sync,
+    T: Clone + Div<f64, Output = T> + iter::Sum<T> + iter::Sum<It::Item> + Send + 'a + Sync,
     It: IndexedParallelIterator<Item = &'a T>,
 {
     mean_par_iter_val(data.cloned())
@@ -54,9 +53,12 @@ where
 /// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
 /// let mean = mean_par_iter_val(vec.par_iter().map(|input| expensive_computation(input)));
 /// ```
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean_par_iter_val<It, T>(data: It) -> T
 where
-    T: Clone + Div<f64, Output = T> + std::iter::Sum<T> + std::iter::Sum<It::Item> + Send,
+    T: Clone + Div<f64, Output = T> + iter::Sum<T> + iter::Sum<It::Item> + Send,
     It: IndexedParallelIterator<Item = T>,
 {
     let len = data.len();
@@ -76,12 +78,14 @@ where
 /// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64 /* ... */];
 /// let variance = variance_par_iter(vec.par_iter());
 /// ```
+#[inline]
+#[must_use]
 pub fn variance_par_iter<'a, It, T>(data: It) -> T
 where
     T: Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It::Item>
+        + iter::Sum<T>
+        + iter::Sum<It::Item>
         + Send
         + Sync
         + 'a
@@ -110,12 +114,14 @@ where
 /// let vec = vec![1_f64, 2_f64, 3_f64, 4_f64];
 /// let mean = variance_par_iter_val(vec.par_iter().map(|input| expensive_computation(input)));
 /// ```
+#[inline]
+#[must_use]
 pub fn variance_par_iter_val<It, T>(data: It) -> T
 where
     T: Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It::Item>
+        + iter::Sum<T>
+        + iter::Sum<It::Item>
         + Send
         + Sub<T, Output = T>
         + Mul<T, Output = T>
@@ -135,12 +141,14 @@ where
 /// is [`mean_and_variance_par_iter_val`]
 /// # Examples
 /// see the example of [`mean_par_iter`] and [`variance_par_iter`].
+#[inline]
+#[must_use]
 pub fn mean_and_variance_par_iter<'a, It, T>(data: It) -> [T; 2]
 where
     T: Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It::Item>
+        + iter::Sum<T>
+        + iter::Sum<It::Item>
         + Send
         + Sync
         + 'a
@@ -160,12 +168,15 @@ where
 /// The alternative for iterators returning references is [`mean_and_variance_par_iter`].
 /// # Example
 /// see the example of [`mean_par_iter_val`] and [`variance_par_iter_val`].
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean_and_variance_par_iter_val<It, T>(data: It) -> [T; 2]
 where
     T: Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It::Item>
+        + iter::Sum<T>
+        + iter::Sum<It::Item>
         + Send
         + Sub<T, Output = T>
         + Mul<T, Output = T>
@@ -186,6 +197,8 @@ where
 /// The statistical error is defined by `sqrt(variance / len)`.
 ///
 /// The alternative for iterators returning non-references is [`mean_with_error_par_iter_val`].
+#[inline]
+#[must_use]
 pub fn mean_with_error_par_iter<'a, It: IndexedParallelIterator<Item = &'a f64> + Clone>(
     data: It,
 ) -> [f64; 2] {
@@ -198,6 +211,9 @@ pub fn mean_with_error_par_iter<'a, It: IndexedParallelIterator<Item = &'a f64> 
 /// The statistical error is defined by `sqrt(variance / len)`.
 ///
 /// The alternative for iterators returning references is [`mean_with_error_par_iter`]
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean_with_error_par_iter_val<It: IndexedParallelIterator<Item = f64> + Clone>(
     data: It,
 ) -> [f64; 2] {
@@ -227,13 +243,15 @@ pub fn mean_with_error_par_iter_val<It: IndexedParallelIterator<Item = f64> + Cl
 /// let cov = covariance_par_iter(vec.par_iter(), vec_2.par_iter());
 /// assert_eq!(cov, Some(1.25_f64));
 /// ```
+#[inline]
+#[must_use]
 pub fn covariance_par_iter<'a, It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
 where
     T: 'a
         + Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It1::Item>
+        + iter::Sum<T>
+        + iter::Sum<It1::Item>
         + Send
         + Sync
         + Mul<T, Output = T>
@@ -245,7 +263,7 @@ where
     covariance_par_iter_val(data_1.cloned(), data_2.cloned())
 }
 
-/// Computes the covariance between two [rayon::iter::IndexedParallelIterator] by value.
+/// Computes the covariance between two [`rayon::iter::IndexedParallelIterator`] by value.
 /// Returns `None` if the par iters are not of the same length.
 ///
 /// The alternative for iterators returning references is [`covariance_par_iter`].
@@ -276,12 +294,15 @@ where
 /// );
 /// assert_eq!(cov, Some(0_f64));
 /// ```
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn covariance_par_iter_val<It1, It2, T>(data_1: It1, data_2: It2) -> Option<T>
 where
     T: Clone
         + Div<f64, Output = T>
-        + std::iter::Sum<T>
-        + std::iter::Sum<It1::Item>
+        + iter::Sum<T>
+        + iter::Sum<It1::Item>
         + Send
         + Mul<T, Output = T>
         + Sub<T, Output = T>,
@@ -289,7 +310,7 @@ where
     It2: IndexedParallelIterator<Item = T> + Clone,
     T: Zero,
 {
-    if data_1.len() == data_2.len() {
+    (data_1.len() == data_2.len()).then(|| {
         let len = data_1.len() as f64;
         let r = data_1
             .zip(data_2)
@@ -298,11 +319,8 @@ where
                 || (T::zero(), T::zero(), T::zero()),
                 |a, b| (a.0 + b.0, a.1 + b.1, a.2 + b.2),
             );
-        Some((r.2 - r.0 * r.1 / len) / len)
-    }
-    else {
-        None
-    }
+        (r.2 - r.0 * r.1 / len) / len
+    })
 }
 
 /// compute the mean from a collections
@@ -317,10 +335,12 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// mean(&vec_complex);
 /// ```
-#[allow(clippy::type_repetition_in_bounds)] // false positive
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean<'a, T, IntoIter>(data: IntoIter) -> T
 where
-    T: Div<f64, Output = T> + std::iter::Sum<&'a T> + 'a,
+    T: Div<f64, Output = T> + iter::Sum<&'a T> + 'a,
     IntoIter: IntoIterator<Item = &'a T>,
     IntoIter::IntoIter: ExactSizeIterator,
 {
@@ -342,13 +362,14 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// variance(&vec_complex);
 /// ```
-#[allow(clippy::type_repetition_in_bounds)] // false positive
+#[inline]
+#[must_use]
 pub fn variance<'a, T, IntoIter>(data: IntoIter) -> T
 where
     T: 'a
         + Div<f64, Output = T>
-        + std::iter::Sum<&'a T>
-        + std::iter::Sum<T>
+        + iter::Sum<&'a T>
+        + iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
@@ -371,13 +392,15 @@ where
 /// let vec_complex = vec![Complex::new(1_f64, 2_f64), Complex::new(-7_f64, -9_f64)];
 /// mean_and_variance(&vec_complex);
 /// ```
-#[allow(clippy::type_repetition_in_bounds)] // false positive
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean_and_variance<'a, T, IntoIter>(data: IntoIter) -> [T; 2]
 where
     T: 'a
         + Div<f64, Output = T>
-        + std::iter::Sum<&'a T>
-        + std::iter::Sum<T>
+        + iter::Sum<&'a T>
+        + iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
@@ -398,6 +421,9 @@ where
 /// compute the mean the statistical error on this value a slice.
 ///
 /// The statistical error is defined by `sqrt(variance / len)`.
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
     let len = data.len();
     let [mean, variance] = mean_and_variance(data);
@@ -423,7 +449,9 @@ pub fn mean_with_error(data: &[f64]) -> [f64; 2] {
 ///
 /// assert!(covariance(&[], &[1_f64]).is_none());
 /// ```
-#[allow(clippy::type_repetition_in_bounds)] // false positive
+#[allow(clippy::cast_precision_loss)]
+#[inline]
+#[must_use]
 pub fn covariance<'a, 'b, T, IntoIter1, IntoIter2>(
     data_1: IntoIter1,
     data_2: IntoIter2,
@@ -432,8 +460,8 @@ where
     T: 'a
         + 'b
         + Div<f64, Output = T>
-        + for<'c> std::iter::Sum<&'c T>
-        + std::iter::Sum<T>
+        + for<'c> iter::Sum<&'c T>
+        + iter::Sum<T>
         + Mul<T, Output = T>
         + Clone
         + Sub<T, Output = T>,
@@ -444,29 +472,29 @@ where
 {
     let iter_1 = data_1.clone().into_iter();
     let iter_2 = data_2.clone().into_iter();
-    if iter_1.len() == iter_2.len() {
+    (iter_1.len() == iter_2.len()).then(|| {
         let len = iter_1.len();
         let mean_prod = iter_1
             .zip(iter_2)
             .map(|(el1, el2)| el1.clone() * el2.clone())
             .sum::<T>()
             / len as f64;
-        Some(mean_prod - mean(data_1) * mean(data_2))
-    }
-    else {
-        None
-    }
+        mean_prod - mean(data_1) * mean(data_2)
+    })
 }
 
 #[cfg(test)]
 mod test {
-    use rand::SeedableRng;
-    use rand_distr::Distribution;
+    #![allow(clippy::float_cmp)]
+
+    use rand::{rngs::StdRng, SeedableRng};
+    use rand_distr::{Distribution, Uniform};
 
     use super::*;
+    use crate::error::ImplementationError;
 
     #[test]
-    fn mean_var() {
+    fn mean_var() -> Result<(), ImplementationError> {
         let a = [1_f64; 100];
         assert_eq!(mean_and_variance_par_iter(a.par_iter()), [1_f64, 0_f64]);
         assert_eq!(mean_and_variance(&a), [1_f64, 0_f64]);
@@ -500,8 +528,8 @@ mod test {
             None
         );
 
-        let mut rng = rand::rngs::StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
-        let d = rand::distributions::Uniform::new(-1_f64, 1_f64);
+        let mut rng = StdRng::seed_from_u64(0x45_78_93_f4_4a_b0_67_f0);
+        let d = Uniform::new(-1_f64, 1_f64);
         for _ in 0_u32..100_u32 {
             let mut vec = vec![];
             for _ in 0_u32..100_u32 {
@@ -520,11 +548,13 @@ mod test {
                     < 0.000_000_01_f64
             );
             assert!(
-                (covariance(&vec, &vec2).unwrap()
-                    - covariance_par_iter(vec.par_iter(), vec2.par_iter()).unwrap())
+                (covariance(&vec, &vec2).ok_or(ImplementationError::OptionWithUnexpectedNone)?
+                    - covariance_par_iter(vec.par_iter(), vec2.par_iter())
+                        .ok_or(ImplementationError::OptionWithUnexpectedNone)?)
                 .abs()
                     < 0.000_000_01_f64
             );
         }
+        Ok(())
     }
 }
