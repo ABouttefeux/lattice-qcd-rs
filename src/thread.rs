@@ -8,10 +8,8 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
-    iter::Iterator,
     panic::{catch_unwind, AssertUnwindSafe},
     sync::{mpsc, Arc, Mutex},
-    vec::Vec,
 };
 
 use crossbeam::thread::{self, ScopedJoinHandle};
@@ -724,7 +722,7 @@ where
 mod test {
     use std::error::Error;
 
-    use super::*;
+    use super::{insert_in_vec, ThreadAnyError, ThreadError};
     use crate::error::ImplementationError;
 
     #[test]

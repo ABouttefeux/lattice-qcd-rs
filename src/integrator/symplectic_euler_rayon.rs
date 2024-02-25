@@ -1,26 +1,21 @@
 //! Basic symplectic Euler integrator using [`Rayon`](https://docs.rs/rayon/1.5.1/rayon/).
 
-use std::{
-    fmt::{self, Display},
-    vec::Vec,
-};
+use std::fmt::{self, Display};
 
 use nalgebra::SVector;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        field::{EField, LinkMatrix, Su3Adjoint},
-        lattice::LatticeCyclic,
-        simulation::{
-            LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-            SimulationStateSynchronous,
-        },
-        thread::run_pool_parallel_rayon,
-        Real,
+use super::{integrate_efield, integrate_link, CMatrix3, SymplecticIntegrator};
+use crate::{
+    field::{EField, LinkMatrix, Su3Adjoint},
+    lattice::LatticeCyclic,
+    simulation::{
+        LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
+        SimulationStateSynchronous,
     },
-    integrate_efield, integrate_link, CMatrix3, SymplecticIntegrator,
+    thread::run_pool_parallel_rayon,
+    Real,
 };
 
 /// Basic symplectic Euler integrator using Rayon.

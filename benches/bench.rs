@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f64, vec::Vec};
+use std::{collections::HashMap, f64};
 
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion, Throughput};
 use lattice_qcd_rs::{
@@ -8,8 +8,7 @@ use lattice_qcd_rs::{
         HybridMonteCarloDiagnostic, LatticeState, LatticeStateDefault, LatticeStateEFSyncDefault,
         MetropolisHastingsSweep, SimulationStateSynchronous,
     },
-    su3::su3_exp_i,
-    su3::su3_exp_r,
+    su3::{su3_exp_i, su3_exp_r},
     Complex, Real,
 };
 use rand::rngs::ThreadRng;

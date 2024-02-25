@@ -235,13 +235,11 @@ impl<const D: usize> MonteCarlo<LatticeStateDefault<D>, D> for OverrelaxationSwe
 
 #[cfg(test)]
 mod test {
-    use std::error::{self, Error};
+    use std::error::Error;
 
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
-    use super::super::super::state::{LatticeState, LatticeStateDefault};
-    use super::super::MonteCarlo;
     use super::*;
 
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
@@ -249,7 +247,7 @@ mod test {
     fn test_same_energy<MC>(mc: &mut MC, rng: &mut impl rand::Rng) -> Result<(), Box<dyn Error>>
     where
         MC: MonteCarlo<LatticeStateDefault<3>, 3>,
-        MC::Error: error::Error + 'static,
+        MC::Error: Error + 'static,
     {
         let state = LatticeStateDefault::<3>::new_determinist(1_f64, 1_f64, 4, rng)?;
         let h = state.hamiltonian_links();

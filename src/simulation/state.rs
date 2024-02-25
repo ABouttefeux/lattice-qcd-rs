@@ -17,7 +17,6 @@ use std::fmt::{self, Display};
 use crossbeam::thread;
 use nalgebra::{ComplexField, SVector};
 use rand_distr::Distribution;
-use rayon::iter::ParallelBridge;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -1562,9 +1561,7 @@ where
 
 #[cfg(test)]
 mod test {
-
     use super::*;
-    use crate::error::StateInitializationError;
 
     #[test]
     fn leap_frog_simulation() -> Result<(), StateInitializationError> {

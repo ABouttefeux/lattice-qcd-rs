@@ -5,25 +5,22 @@
 use std::{
     error,
     fmt::{self, Display},
-    vec::Vec,
 };
 
 use nalgebra::SVector;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        field::{EField, LinkMatrix, Su3Adjoint},
-        lattice::LatticeCyclic,
-        simulation::{
-            LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
-            SimulationStateSynchronous,
-        },
-        thread::{run_pool_parallel_vec, ThreadError},
-        CMatrix3, Real,
+use super::{integrate_efield, integrate_link, SymplecticIntegrator};
+use crate::{
+    field::{EField, LinkMatrix, Su3Adjoint},
+    lattice::LatticeCyclic,
+    simulation::{
+        LatticeState, LatticeStateWithEField, LatticeStateWithEFieldNew, SimulationStateLeap,
+        SimulationStateSynchronous,
     },
-    integrate_efield, integrate_link, SymplecticIntegrator,
+    thread::{run_pool_parallel_vec, ThreadError},
+    CMatrix3, Real,
 };
 
 /// Error for [`SymplecticEuler`].

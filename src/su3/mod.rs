@@ -1002,7 +1002,6 @@ mod test {
     use rand::{rngs::StdRng, SeedableRng};
 
     use super::*;
-    use crate::{assert_eq_matrix, I};
 
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;

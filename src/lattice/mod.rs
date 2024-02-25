@@ -13,7 +13,6 @@ mod iterator;
 mod lattice_cyclic;
 
 use std::cmp::Ordering;
-use std::convert::TryInto;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::iter::FusedIterator;

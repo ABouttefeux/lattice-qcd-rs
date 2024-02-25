@@ -7,17 +7,13 @@ use rand_distr::{Bernoulli, Distribution};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        super::{
-            error::Never,
-            field::LinkMatrix,
-            lattice::{LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
-            su3, Complex, Real,
-        },
-        state::{LatticeState, LatticeStateDefault},
-    },
-    delta_s_old_new_cmp, MonteCarlo,
+use super::{delta_s_old_new_cmp, MonteCarlo};
+use crate::{
+    error::Never,
+    field::LinkMatrix,
+    lattice::{LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical},
+    simulation::state::{LatticeState, LatticeStateDefault},
+    su3, Complex, Real,
 };
 
 /// Metropolis Hastings method by doing a pass on all points

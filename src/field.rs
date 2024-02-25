@@ -1,15 +1,13 @@
 //! Represent the fields on the lattice.
 
 use std::fmt::{self, Display};
-use std::iter::{FromIterator, FusedIterator};
-use std::{
-    ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
-    vec::Vec,
+use std::iter::FusedIterator;
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
 use nalgebra::{ComplexField, Matrix3, SVector};
 use rand_distr::Distribution;
-use rayon::iter::FromParallelIterator;
 use rayon::prelude::*;
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
@@ -1656,14 +1654,17 @@ mod test {
     use std::error::Error;
 
     use approx::*;
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
+    use nalgebra::SVector;
+    use rand::{rngs::StdRng, SeedableRng};
     use rand_distr::Uniform;
 
-    use super::super::{lattice::*, Complex};
-    use super::*;
+    use super::{EField, LinkMatrix, Su3Adjoint};
     use crate::error::{ImplementationError, LatticeInitializationError};
-    use crate::su3::su3_exp_r;
+    use crate::lattice::{
+        Direction, LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical,
+        LatticePoint,
+    };
+    use crate::{su3::su3_exp_r, thread::ThreadError, CMatrix3, Complex, ComplexField};
 
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;

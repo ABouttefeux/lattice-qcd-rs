@@ -47,20 +47,16 @@ use rand_distr::{Bernoulli, Distribution, Uniform};
 #[cfg(feature = "serde-serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    super::{
-        super::{
-            error::Never,
-            field::LinkMatrix,
-            lattice::{
-                Direction, LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical,
-                LatticePoint,
-            },
-            su3, Complex, Real,
-        },
-        state::{LatticeState, LatticeStateDefault, LatticeStateNew},
+use super::{delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault};
+use crate::{
+    error::Never,
+    field::LinkMatrix,
+    lattice::{
+        Direction, LatticeCyclic, LatticeElementToIndex, LatticeLink, LatticeLinkCanonical,
+        LatticePoint,
     },
-    delta_s_old_new_cmp, MonteCarlo, MonteCarloDefault,
+    simulation::state::{LatticeState, LatticeStateDefault, LatticeStateNew},
+    su3, Complex, Real,
 };
 
 /// Metropolis Hastings algorithm. Very slow, use [`MetropolisHastingsDeltaDiagnostic`]

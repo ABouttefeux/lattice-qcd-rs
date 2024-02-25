@@ -28,7 +28,6 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::vec::Vec;
 use std::{
     error::Error,
     fmt::{self, Debug, Display},

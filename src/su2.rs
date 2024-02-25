@@ -272,9 +272,10 @@ pub fn random_matrix_2<R: Rng + ?Sized>(rng: &mut R) -> CMatrix2 {
 #[cfg(test)]
 mod test {
     use rand::{rngs::StdRng, SeedableRng};
-    use rand_distr::Distribution;
+    use rand_distr::{Distribution, Uniform};
 
-    use super::*;
+    use super::{is_matrix_su2, project_to_su2, project_to_su2_unorm, random_su2, PAULI_MATRICES};
+    use crate::{CMatrix2, Complex, ComplexField};
 
     const EPSILON: f64 = 0.000_000_001_f64;
     const SEED_RNG: u64 = 0x45_78_93_f4_4a_b0_67_f0;
